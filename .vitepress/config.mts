@@ -9,8 +9,8 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Accueil', link: '/' },
-      { text: 'Modules', link: '/modules/00-prerequis-et-introduction' },
-      { text: 'Labs', link: '/labs/lab-01-algebre-lineaire/' },
+      { text: 'Modules', link: '/modules/prerequis-maths-pour-la-3d' },
+      { text: 'Labs', link: '/labs/lab-00-maths-prereq/' },
       { text: 'Quizzes', link: '/quizzes/' },
       { text: 'Visualizations', link: '/visualizations/' },
       { text: 'Glossaire', link: '/glossaire' },
@@ -18,10 +18,17 @@ export default defineConfig({
 
     sidebar: [
       {
+        text: 'Prérequis',
+        collapsed: false,
+        items: [
+          { text: 'Maths pour la 3D (depuis zéro)', link: '/modules/prerequis-maths-pour-la-3d' },
+          { text: '00. Prérequis et introduction', link: '/modules/00-prerequis-et-introduction' },
+        ],
+      },
+      {
         text: 'Phase 1 — Théorie 3D',
         collapsed: false,
         items: [
-          { text: '00. Prérequis et introduction', link: '/modules/00-prerequis-et-introduction' },
           { text: '01. Algèbre linéaire pour la 3D', link: '/modules/01-algebre-lineaire' },
           { text: '02. Transformations et quaternions', link: '/modules/02-transformations-quaternions' },
           { text: '03. Caméras et projections', link: '/modules/03-cameras-projections' },
@@ -77,9 +84,22 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Phase 6 — Expert',
+        collapsed: false,
+        items: [
+          { text: '23. Ray tracing et path tracing', link: '/modules/23-ray-tracing' },
+          { text: '24. Global illumination et screen-space', link: '/modules/24-global-illumination-screen-space' },
+          { text: '25. Rendu volumétrique', link: '/modules/25-rendu-volumetrique' },
+          { text: '26. WebXR et animation procédurale', link: '/modules/26-webxr-animation-procedurale' },
+          { text: '27. Audio 3D spatial', link: '/modules/27-audio-3d-spatial' },
+          { text: '28. Virtual textures et streaming', link: '/modules/28-virtual-textures-streaming' },
+        ],
+      },
+      {
         text: 'Labs',
         collapsed: true,
         items: [
+          { text: 'Lab 00 — Maths prérequis', link: '/labs/lab-00-maths-prereq/' },
           { text: 'Lab 01 — Algèbre linéaire', link: '/labs/lab-01-algebre-lineaire/' },
           { text: 'Lab 02 — Transformations', link: '/labs/lab-02-transformations/' },
           { text: 'Lab 03 — Caméra et projection', link: '/labs/lab-03-camera-projection/' },
@@ -102,6 +122,12 @@ export default defineConfig({
           { text: 'Lab 20 — Physique', link: '/labs/lab-20-physique/' },
           { text: 'Lab 21 — Projet final', link: '/labs/lab-21-projet-final/' },
           { text: 'Lab 22 — Modélisation', link: '/labs/lab-22-modelisation/' },
+          { text: 'Lab 23 — Ray tracing', link: '/labs/lab-23-ray-tracing/' },
+          { text: 'Lab 24 — Global illumination', link: '/labs/lab-24-global-illumination/' },
+          { text: 'Lab 25 — Rendu volumétrique', link: '/labs/lab-25-rendu-volumetrique/' },
+          { text: 'Lab 26 — WebXR et animation', link: '/labs/lab-26-webxr-animation-procedurale/' },
+          { text: 'Lab 27 — Audio 3D', link: '/labs/lab-27-audio-3d/' },
+          { text: 'Lab 28 — Virtual textures', link: '/labs/lab-28-virtual-textures/' },
         ],
       },
       {

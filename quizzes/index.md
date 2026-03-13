@@ -4,6 +4,7 @@ Testez vos connaissances apres chaque module.
 
 | # | Quiz | Module |
 |---|------|--------|
+| Maths | [Prerequis mathematiques](./quiz-maths-prereq.html) | Prerequis |
 | 00 | [Prerequis et introduction](./quiz-00-prerequis.html) | Module 00 |
 | 01 | [Algebre lineaire](./quiz-01-algebre-lineaire.html) | Module 01 |
 | 02 | [Transformations et quaternions](./quiz-02-transformations.html) | Module 02 |
@@ -27,3 +28,9 @@ Testez vos connaissances apres chaque module.
 | 20 | [Physique](./quiz-20-physique.html) | Module 20 |
 | 21 | [Projet final](./quiz-21-projet-final.html) | Module 21 |
 | 22 | [Modelisation 3D](./quiz-22-modelisation.html) | Module 22 |
+| 23 | [Ray Tracing](./quiz-23-ray-tracing.html) | Module 23 |
+| 24 | [Global Illumination](./quiz-24-global-illumination.html) | Module 24 |
+| 25 | [Rendu volumetrique](./quiz-25-volumetrique.html) | Module 25 |
+| 26 | [WebXR et Animation](./quiz-26-webxr-animation.html) | Module 26 |
+| 27 | [Audio 3D](./quiz-27-audio-3d.html) | Module 27 |
+| 28 | [Virtual Textures](./quiz-28-virtual-textures.html) | Module 28 |

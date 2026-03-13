@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 28 — Virtual Textures</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1a1a2e;color:#e0e0e0;padding:2rem;max-width:800px;margin:0 auto}h1{color:#00d4ff;margin-bottom:2rem;font-size:1.5rem}.question{background:#16213e;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;border:1px solid #0f3460}.question h3{color:#00d4ff;margin-bottom:1rem;font-size:1.1rem}.options label{display:block;padding:.75rem 1rem;margin:.5rem 0;background:#1a1a2e;border:1px solid #0f3460;border-radius:8px;cursor:pointer;transition:all .2s}.options label:hover{border-color:#00d4ff;background:#1a2744}.options input[type=radio]{margin-right:.75rem;accent-color:#00d4ff}.feedback{display:none;margin-top:1rem;padding:1rem;border-radius:8px;font-weight:500}.feedback.correct{display:block;background:#0a3d2a;border:1px solid #00ff88;color:#00ff88}.feedback.incorrect{display:block;background:#3d0a0a;border:1px solid #ff4444;color:#ff4444}button{background:#00d4ff;color:#1a1a2e;border:none;padding:.75rem 2rem;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1rem}button:hover{background:#00b8d9}.score{text-align:center;font-size:1.5rem;color:#00d4ff;margin-top:2rem;padding:2rem;background:#16213e;border-radius:12px}code{background:#0f3460;padding:.15rem .4rem;border-radius:4px;font-size:.9em}</style>
+</head>
+<body>
+<h1>Quiz 28 — Virtual Textures</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Quel est le role de la page table dans un systeme de virtual textures ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Stocker les pixels de toutes les textures en memoire centrale</label>
+    <label><input type="radio" name="q1" value="b"> Faire correspondre les coordonnees UV virtuelles aux emplacements physiques des pages dans l'atlas en VRAM</label>
+    <label><input type="radio" name="q1" value="c"> Generer les mip maps a la volee</label>
+    <label><input type="radio" name="q1" value="d"> Compresser les textures avant le transfert GPU</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! La page table est une structure d'indirection : pour chaque page virtuelle (pageX, pageY, mip), elle stocke l'emplacement physique correspondant dans l'atlas texture en VRAM. Le shader la consulte pour transformer les UV virtuels en UV physiques.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. La page table fait le lien entre les coordonnees virtuelles (UV + mip) et les emplacements physiques des tuiles dans l'atlas texture en VRAM.</div>
+</div>
+
+<div class="question">
+  <h3>2. Dans un cache LRU (Least Recently Used) pour les pages de texture, quelle page est evincee en premier quand le cache est plein ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> La page la plus recemment accedee</label>
+    <label><input type="radio" name="q2" value="b"> La page avec le mip level le plus bas</label>
+    <label><input type="radio" name="q2" value="c"> La page qui n'a pas ete accedee depuis le plus longtemps</label>
+    <label><input type="radio" name="q2" value="d"> La page la plus grande en memoire</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! Le LRU evince la page la moins recemment utilisee. C'est la strategie la plus courante pour les virtual textures car les pages visibles a l'ecran sont accedees frequemment et restent dans le cache.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. LRU signifie Least Recently Used : la page qui n'a pas ete accedee depuis le plus longtemps est evincee en premier.</div>
+</div>
+
+<div class="question">
+  <h3>3. Comment le GPU determine-t-il quel mip level charger pour une page donnee lors du rendu ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Un mip level fixe est defini par l'artiste pour chaque objet</label>
+    <label><input type="radio" name="q3" value="b"> Un feedback pass rend la scene avec un shader special qui ecrit les coordonnees de page et le mip level demande dans un buffer de retour</label>
+    <label><input type="radio" name="q3" value="c"> Le CPU calcule le mip level a partir de la taille de la fenetre</label>
+    <label><input type="radio" name="q3" value="d"> Le mip level est toujours 0 (pleine resolution)</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Le feedback buffer (ou feedback pass) est un rendu a resolution reduite ou chaque pixel encode l'identifiant de la page virtuelle et le mip level requis. Le CPU analyse ensuite ce buffer pour savoir quelles pages charger.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le feedback buffer est un rendu special qui ecrit, pour chaque pixel visible, les coordonnees de la page virtuelle et le mip level necessaire.</div>
+</div>
+
+<div class="question">
+  <h3>4. Qu'est-ce que Basis Universal ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> Un format de texture non compresse universel</label>
+    <label><input type="radio" name="q4" value="b"> Un format de texture supercompresse (`.basis` / `.ktx2`) transcodable a la volee vers BC7, ASTC, ETC2 selon le GPU cible</label>
+    <label><input type="radio" name="q4" value="c"> Un moteur de rendu 3D universel</label>
+    <label><input type="radio" name="q4" value="d"> Un algorithme de debruitage pour textures</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! Basis Universal est un format de texture supercompresse. Un seul fichier `.basis` ou `.ktx2` est distribue, puis transcode cote client vers le format GPU natif (BC7 sur desktop, ASTC sur mobile, ETC2 en fallback). Ideal pour le streaming de virtual textures.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. Basis Universal est un format supercompresse transcodable vers BC7/ASTC/ETC2 selon le GPU, permettant de distribuer un seul fichier pour toutes les plateformes.</div>
+</div>
+
+<div class="question">
+  <h3>5. Qu'est-ce qu'un "page fault" dans un systeme de virtual textures ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> Une erreur de segmentation dans le shader</label>
+    <label><input type="radio" name="q5" value="b"> Une page demandee par le shader qui n'est pas encore chargee dans le cache physique en VRAM</label>
+    <label><input type="radio" name="q5" value="c"> Un defaut dans la generation des mip maps</label>
+    <label><input type="radio" name="q5" value="d"> Une page de texture corrompue sur le disque</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! Un page fault survient quand le shader a besoin d'une page qui n'est pas en VRAM. Le systeme utilise alors un mip level inferieur en fallback et planifie le chargement de la page manquante pour les frames suivantes.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. Un page fault indique qu'une page demandee n'est pas dans le cache VRAM. Le systeme affiche un mip de substitution en attendant le chargement.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers={q1:'b',q2:'c',q3:'b',q4:'b',q5:'b'};
+function checkAnswers(){let s=0;for(const[q,c]of Object.entries(answers)){const sel=document.querySelector(`input[name="${q}"]:checked`);const fc=document.getElementById(`${q}-correct`);const fi=document.getElementById(`${q}-incorrect`);if(sel&&sel.value===c){s++;fc.style.display='block';fi.style.display='none'}else{fc.style.display='none';fi.style.display='block'}}const d=document.getElementById('score');d.style.display='block';d.textContent=`Score : ${s} / ${Object.keys(answers).length}`}
+</script>
+</body>
+</html>
