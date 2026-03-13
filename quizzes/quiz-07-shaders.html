@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 07 — Shaders et textures</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 07 — Shaders et textures</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Qu'est-ce qu'un VBO (Vertex Buffer Object) ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Un objet JavaScript qui stocke les parametres de rendu</label>
+    <label><input type="radio" name="q1" value="b"> Un buffer en memoire GPU contenant les donnees des sommets (positions, normales, UVs)</label>
+    <label><input type="radio" name="q1" value="c"> Un type de shader specialise pour les sommets</label>
+    <label><input type="radio" name="q1" value="d"> Un format de fichier pour les modeles 3D</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! Un VBO est un buffer alloue en memoire GPU qui contient les attributs des sommets (positions, normales, coordonnees UV, couleurs, etc.).</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. Un VBO est un buffer en memoire GPU stockant les donnees de sommets comme les positions, normales et coordonnees de texture.</div>
+</div>
+
+<div class="question">
+  <h3>2. Quelle est la difference entre un <code>uniform</code> et un <code>attribute</code> en GLSL ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> Un uniform change par sommet, un attribute est constant</label>
+    <label><input type="radio" name="q2" value="b"> Un attribute varie par sommet, un uniform est constant pour tout le draw call</label>
+    <label><input type="radio" name="q2" value="c"> Il n'y a pas de difference</label>
+    <label><input type="radio" name="q2" value="d"> Les attributes sont reserves au fragment shader</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! Les attributes sont des donnees per-vertex (position, normale...) lues depuis les VBOs. Les uniforms sont constants pour tout le draw call (matrices, temps, couleur globale...).</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. Les attributes varient par sommet (lus depuis les VBOs), tandis que les uniforms restent constants pendant tout le draw call.</div>
+</div>
+
+<div class="question">
+  <h3>3. Que fait le filtrage bilineaire lors de l'echantillonnage d'une texture ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Il compresse la texture pour economiser de la memoire</label>
+    <label><input type="radio" name="q3" value="b"> Il interpole lineairement entre les 4 texels les plus proches de la coordonnee UV</label>
+    <label><input type="radio" name="q3" value="c"> Il applique un flou gaussien a toute la texture</label>
+    <label><input type="radio" name="q3" value="d"> Il selectionne le texel le plus proche sans interpolation</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Le filtrage bilineaire interpole entre les 4 texels voisins les plus proches, produisant un rendu plus lisse que le filtrage nearest (point).</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le filtrage bilineaire interpole lineairement entre les 4 texels les plus proches de la coordonnee UV demandee.</div>
+</div>
+
+<div class="question">
+  <h3>4. A quoi servent les mipmaps ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> A augmenter la resolution des textures a l'ecran</label>
+    <label><input type="radio" name="q4" value="b"> A fournir des versions pre-reduites de la texture pour ameliorer la qualite et les performances quand l'objet est loin</label>
+    <label><input type="radio" name="q4" value="c"> A compresser les textures en JPEG</label>
+    <label><input type="radio" name="q4" value="d"> A animer les textures</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! Les mipmaps sont une chaine de versions reduites de la texture (chaque niveau divise par 2). Le GPU selectionne le niveau adapte a la taille a l'ecran, reduisant le moire et ameliorant les performances cache.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. Les mipmaps sont des copies pre-calculees a resolutions decroissantes, utilisees quand la texture est vue de loin pour eviter l'aliasing et ameliorer les performances.</div>
+</div>
+
+<div class="question">
+  <h3>5. Qu'est-ce qu'un framebuffer object (FBO) en WebGL ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> Le buffer principal qui affiche le resultat a l'ecran</label>
+    <label><input type="radio" name="q5" value="b"> Un objet permettant le rendu hors-ecran (off-screen) vers des textures ou renderbuffers</label>
+    <label><input type="radio" name="q5" value="c"> Un buffer pour stocker les animations</label>
+    <label><input type="radio" name="q5" value="d"> Un buffer utilise uniquement pour le post-processing</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! Un FBO permet de rediriger le rendu vers des textures ou renderbuffers au lieu de l'ecran. C'est essentiel pour le shadow mapping, le post-processing, et le rendu multi-passes.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. Un FBO (Framebuffer Object) permet le rendu off-screen vers des textures, indispensable pour les effets multi-passes comme les ombres ou le post-processing.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>

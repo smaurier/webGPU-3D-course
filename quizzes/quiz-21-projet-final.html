@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 21 — Projet final</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 21 — Projet final</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Quel patron d'architecture est recommande pour organiser une scene 3D complexe ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Tout mettre dans un seul fichier JavaScript</label>
+    <label><input type="radio" name="q1" value="b"> Un scene graph hierarchique avec des composants modulaires (ECS ou module pattern) separant logique, rendu et donnees</label>
+    <label><input type="radio" name="q1" value="c"> Un pattern MVC classique</label>
+    <label><input type="radio" name="q1" value="d"> Un pattern singleton pour chaque objet 3D</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! Un scene graph hierarchique (parent-enfant) combine avec un systeme de composants (ECS : Entity-Component-System ou modules) permet une separation claire des responsabilites et une bonne scalabilite.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. Un scene graph hierarchique avec des composants modulaires (ECS ou modules) est recommande pour les scenes complexes.</div>
+</div>
+
+<div class="question">
+  <h3>2. Comment implementer un terrain avec LOD (Level of Detail) ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> Charger un seul maillage tres detaille</label>
+    <label><input type="radio" name="q2" value="b"> Diviser le terrain en tuiles (chunks) avec un quadtree, et ajuster la tessellation de chaque tuile selon sa distance a la camera</label>
+    <label><input type="radio" name="q2" value="c"> Utiliser uniquement une heightmap sans geometrie</label>
+    <label><input type="radio" name="q2" value="d"> Rendre le terrain en ray marching</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! Le terrain est divise en chunks via un quadtree. Les chunks proches ont une tessellation elevee, les lointains une faible. Des techniques comme le geomorphing ou le CDLOD lissent les transitions entre niveaux.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le terrain LOD divise le terrain en tuiles (quadtree) avec une tessellation variable selon la distance a la camera.</div>
+</div>
+
+<div class="question">
+  <h3>3. Quelle approche est la plus efficace pour un systeme de particules massif (100k+) ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Creer un mesh Three.js par particule</label>
+    <label><input type="radio" name="q3" value="b"> Utiliser un BufferGeometry avec des attributs personnalises (position, velocity, life) mis a jour par compute shader ou CPU, avec du point rendering ou instancing</label>
+    <label><input type="radio" name="q3" value="c"> Utiliser des sprites CSS positionnes en 3D</label>
+    <label><input type="radio" name="q3" value="d"> Pre-rendre les particules en video</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Pour 100k+ particules, on utilise un BufferGeometry (Points ou InstancedMesh) avec les positions dans un Float32Array. Idealement, la simulation tourne dans un compute shader GPU pour zero overhead CPU.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Un systeme de particules massif utilise des BufferGeometry avec attributs personnalises et idealement un compute shader GPU pour la simulation.</div>
+</div>
+
+<div class="question">
+  <h3>4. Qu'est-ce qu'un frame budget et pourquoi est-il important ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> Le budget financier pour le developpement du projet</label>
+    <label><input type="radio" name="q4" value="b"> Le temps maximum disponible pour tout calculer en un frame (ex: 16.67ms pour 60 FPS), reparti entre simulation, rendu, et autres taches</label>
+    <label><input type="radio" name="q4" value="c"> Le nombre maximum de frames stockes en memoire</label>
+    <label><input type="radio" name="q4" value="d"> La quantite de VRAM allouee par frame</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! A 60 FPS, chaque frame dispose de 16.67ms. Ce budget est reparti : physique (~2ms), logique (~2ms), rendu (~10ms), overhead (~2ms). Depasser le budget cause des drops de framerate.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le frame budget est le temps maximum par frame (16.67ms a 60 FPS), reparti entre les differentes taches de simulation et rendu.</div>
+</div>
+
+<div class="question">
+  <h3>5. Quelles sont les bonnes pratiques de gestion memoire pour une application 3D web ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> Laisser le garbage collector tout gerer</label>
+    <label><input type="radio" name="q5" value="b"> Disposer les ressources GPU inutilisees, utiliser des pools d'objets pour eviter les allocations, pre-allouer les buffers, et monitorer la VRAM</label>
+    <label><input type="radio" name="q5" value="c"> Recharger la page regulierement</label>
+    <label><input type="radio" name="q5" value="d"> Limiter la scene a 10 objets maximum</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! Bonnes pratiques : dispose() des geometries/materiaux/textures, object pooling pour eviter le GC, pre-allocation des typed arrays, monitoring de renderer.info pour les fuites, et destruction propre lors de la navigation.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. Il faut disposer les ressources GPU, utiliser des pools d'objets, pre-allouer les buffers et monitorer la memoire GPU.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>

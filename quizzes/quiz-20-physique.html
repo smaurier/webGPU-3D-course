@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 20 — Physique</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 20 — Physique</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Quels sont les trois types de rigid body dans un moteur physique ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Solide, liquide, gazeux</label>
+    <label><input type="radio" name="q1" value="b"> Dynamic (affecte par les forces), Kinematic (controle par le code, affecte les autres), Static (immobile)</label>
+    <label><input type="radio" name="q1" value="c"> Petit, moyen, grand</label>
+    <label><input type="radio" name="q1" value="d"> Sphere, cube, mesh</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! Dynamic : soumis a la gravite et aux forces. Kinematic : deplace par le code, pousse les dynamic mais n'est pas affecte par eux. Static : immobile (sol, murs), infinite mass.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. Les trois types sont : Dynamic (soumis aux forces), Kinematic (controle par code), et Static (immobile).</div>
+</div>
+
+<div class="question">
+  <h3>2. Quelle est la phase de broad phase dans la detection de collisions ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> Le calcul exact des points de contact</label>
+    <label><input type="radio" name="q2" value="b"> Un filtrage rapide avec des volumes englobants simples (AABB) pour eliminer les paires d'objets qui ne peuvent pas se toucher</label>
+    <label><input type="radio" name="q2" value="c"> La resolution des contraintes physiques</label>
+    <label><input type="radio" name="q2" value="d"> L'application des forces de friction</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! La broad phase utilise des AABB (Axis-Aligned Bounding Boxes) et des structures spatiales (BVH, grille) pour rapidement eliminer les paires qui ne se chevauchent pas, avant la narrow phase couteuse.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. La broad phase filtre rapidement les paires d'objets via des volumes englobants (AABB) pour reduire les tests de collision couteux de la narrow phase.</div>
+</div>
+
+<div class="question">
+  <h3>3. Qu'est-ce que Rapier.js ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Un moteur de rendu 3D</label>
+    <label><input type="radio" name="q3" value="b"> Un moteur physique ecrit en Rust et compile en WebAssembly, offrant des performances elevees pour le web</label>
+    <label><input type="radio" name="q3" value="c"> Une librairie d'animations</label>
+    <label><input type="radio" name="q3" value="d"> Un outil de modelisation 3D</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Rapier est un moteur physique open-source ecrit en Rust, compile en WASM pour le web. Il supporte rigid bodies, colliders, joints, et character controllers avec d'excellentes performances.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Rapier.js est un moteur physique Rust compile en WebAssembly, offrant des performances elevees pour la simulation physique dans le navigateur.</div>
+</div>
+
+<div class="question">
+  <h3>4. Pourquoi utilise-t-on un fixed timestep pour la simulation physique ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> Pour limiter le framerate a 60 FPS</label>
+    <label><input type="radio" name="q4" value="b"> Pour garantir un comportement deterministe et stable independamment du framerate, en decoupant la simulation en pas de temps fixes</label>
+    <label><input type="radio" name="q4" value="c"> Pour economiser de la memoire</label>
+    <label><input type="radio" name="q4" value="d"> Pour synchroniser l'audio et la physique</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! Un fixed timestep (ex: 1/60s) garantit que la physique se comporte identiquement quel que soit le framerate. Un delta variable causerait des tunneling, instabilites et non-determinisme.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le fixed timestep garantit un comportement physique deterministe et stable, independant des variations de framerate.</div>
+</div>
+
+<div class="question">
+  <h3>5. Qu'est-ce que l'algorithme GJK (Gilbert-Johnson-Keerthi) ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> Un algorithme de tri des objets par profondeur</label>
+    <label><input type="radio" name="q5" value="b"> Un algorithme de narrow phase qui determine si deux formes convexes se chevauchent en utilisant la difference de Minkowski et les simplexes</label>
+    <label><input type="radio" name="q5" value="c"> Un algorithme de generation de terrain</label>
+    <label><input type="radio" name="q5" value="d"> Un algorithme de pathfinding</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! GJK travaille sur la difference de Minkowski de deux formes convexes. Si l'origine est contenue dans cette difference, les formes se chevauchent. Il construit iterativement un simplexe pour le determiner.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. GJK est un algorithme de narrow phase qui detecte l'intersection entre formes convexes via la difference de Minkowski et la construction iterative de simplexes.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>

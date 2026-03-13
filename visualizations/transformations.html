@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformations 2D interactives</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .container { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1100px; }
+  canvas { background: #0d1117; border-radius: 12px; border: 2px solid #0f3460; }
+  .controls { background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1.5rem; min-width: 300px; }
+  .control-group { margin-bottom: 1.2rem; }
+  .control-group label { display: block; color: #00d4ff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .control-group input[type="range"] { width: 100%; accent-color: #00d4ff; }
+  .control-group .value { text-align: right; font-size: 0.8rem; color: #888; font-family: monospace; }
+  .matrix-display { background: #0d1117; border-radius: 8px; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.6; color: #7ee787; margin-top: 1rem; }
+  .matrix-display .label { color: #00d4ff; font-weight: 600; margin-bottom: 0.5rem; font-family: 'Segoe UI', sans-serif; }
+  .order-info { background: #1a2a4e; border-radius: 8px; padding: 1rem; margin-top: 1rem; font-size: 0.85rem; line-height: 1.5; }
+  .order-info strong { color: #00d4ff; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; border-radius: 8px; padding: 0.6rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; font-size: 0.85rem; }
+  button:hover { background: #00b8d9; }
+</style>
+</head>
+<body>
+
+<h1>Transformations 2D</h1>
+<p class="subtitle">Manipulez les sliders pour voir Scale, Rotation et Translation en action</p>
+
+<div class="container">
+  <canvas id="canvas" width="500" height="500"></canvas>
+  <div class="controls">
+    <div class="control-group">
+      <label>Translation X : <span class="value" id="txVal">0</span></label>
+      <input type="range" id="tx" min="-200" max="200" value="0">
+    </div>
+    <div class="control-group">
+      <label>Translation Y : <span class="value" id="tyVal">0</span></label>
+      <input type="range" id="ty" min="-200" max="200" value="0">
+    </div>
+    <div class="control-group">
+      <label>Rotation (degres) : <span class="value" id="rotVal">0</span></label>
+      <input type="range" id="rot" min="-180" max="180" value="0">
+    </div>
+    <div class="control-group">
+      <label>Scale X : <span class="value" id="sxVal">1.0</span></label>
+      <input type="range" id="sx" min="10" max="300" value="100">
+    </div>
+    <div class="control-group">
+      <label>Scale Y : <span class="value" id="syVal">1.0</span></label>
+      <input type="range" id="sy" min="10" max="300" value="100">
+    </div>
+    <button id="resetBtn">Reinitialiser</button>
+
+    <div class="matrix-display">
+      <div class="label">Matrice resultante (SRT) :</div>
+      <pre id="matrixText"></pre>
+    </div>
+
+    <div class="order-info">
+      <strong>Ordre SRT :</strong> On applique d'abord le <strong>Scale</strong>, puis la <strong>Rotation</strong>, puis la <strong>Translation</strong>.<br><br>
+      M = T x R x S<br>
+      Le vertex est multiplie par S d'abord (le plus a droite).
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const txSlider = document.getElementById('tx');
+const tySlider = document.getElementById('ty');
+const rotSlider = document.getElementById('rot');
+const sxSlider = document.getElementById('sx');
+const sySlider = document.getElementById('sy');
+const matrixText = document.getElementById('matrixText');
+
+const sliders = [txSlider, tySlider, rotSlider, sxSlider, sySlider];
+sliders.forEach(s => s.addEventListener('input', draw));
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  txSlider.value = 0; tySlider.value = 0; rotSlider.value = 0;
+  sxSlider.value = 100; sySlider.value = 100;
+  draw();
+});
+
+const squareVerts = [[-30, -30], [30, -30], [30, 30], [-30, 30]];
+
+function draw() {
+  const tx = parseFloat(txSlider.value);
+  const ty = parseFloat(tySlider.value);
+  const angle = parseFloat(rotSlider.value) * Math.PI / 180;
+  const scx = parseFloat(sxSlider.value) / 100;
+  const scy = parseFloat(sySlider.value) / 100;
+
+  document.getElementById('txVal').textContent = tx.toFixed(0);
+  document.getElementById('tyVal').textContent = ty.toFixed(0);
+  document.getElementById('rotVal').textContent = rotSlider.value;
+  document.getElementById('sxVal').textContent = scx.toFixed(2);
+  document.getElementById('syVal').textContent = scy.toFixed(2);
+
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+
+  // SRT matrix: T * R * S
+  const m00 = cos * scx;
+  const m01 = -sin * scy;
+  const m02 = tx;
+  const m10 = sin * scx;
+  const m11 = cos * scy;
+  const m12 = ty;
+
+  matrixText.textContent =
+    `| ${m00.toFixed(3)}  ${m01.toFixed(3)}  ${m02.toFixed(1)} |\n` +
+    `| ${m10.toFixed(3)}  ${m11.toFixed(3)}  ${m12.toFixed(1)} |\n` +
+    `| 0.000   0.000   1.0   |`;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+
+  // Grid
+  ctx.strokeStyle = '#1a2a4e';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= canvas.width; x += 50) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y <= canvas.height; y += 50) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
+
+  // Original square (ghost)
+  ctx.strokeStyle = 'rgba(0, 212, 255, 0.2)';
+  ctx.setLineDash([5, 5]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  squareVerts.forEach((v, i) => {
+    const px = cx + v[0];
+    const py = cy + v[1];
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Transformed square
+  const transformed = squareVerts.map(v => [
+    m00 * v[0] + m01 * v[1] + m02,
+    m10 * v[0] + m11 * v[1] + m12
+  ]);
+
+  ctx.fillStyle = 'rgba(0, 212, 255, 0.15)';
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  transformed.forEach((v, i) => {
+    const px = cx + v[0];
+    const py = cy + v[1];
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Origin dot
+  ctx.fillStyle = '#ff7b72';
+  ctx.beginPath();
+  ctx.arc(cx + m02, cy + m12, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vertex labels
+  ctx.fillStyle = '#7ee787';
+  ctx.font = '11px monospace';
+  transformed.forEach((v, i) => {
+    ctx.fillText(`v${i}(${v[0].toFixed(0)},${v[1].toFixed(0)})`, cx + v[0] + 5, cy + v[1] - 5);
+  });
+}
+
+draw();
+</script>
+</body>
+</html>

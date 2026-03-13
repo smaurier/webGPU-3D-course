@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebGL vs WebGPU — Architecture comparee</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .comparison { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; max-width: 1200px; width: 100%; }
+  .column { flex: 1; min-width: 400px; }
+  .column-header { text-align: center; padding: 1rem; border-radius: 12px 12px 0 0; font-size: 1.2rem; font-weight: 700; }
+  .column-header.webgl { background: linear-gradient(135deg, #1a3a2a, #16213e); color: #7ee787; border: 2px solid #7ee787; border-bottom: none; }
+  .column-header.webgpu { background: linear-gradient(135deg, #1a2a4e, #16213e); color: #00d4ff; border: 2px solid #00d4ff; border-bottom: none; }
+  .column-body { background: #16213e; border: 2px solid #0f3460; border-radius: 0 0 12px 12px; padding: 1.5rem; }
+  .step { background: #0d1117; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; position: relative; }
+  .step:hover { border-left-color: #00d4ff; }
+  .step.highlight { border-left-color: #ffa657; background: #1a2a3e; }
+  .step-num { display: inline-block; width: 24px; height: 24px; background: #0f3460; border-radius: 50%; text-align: center; line-height: 24px; font-size: 0.75rem; font-weight: 700; margin-right: 0.5rem; color: #00d4ff; }
+  .step-title { font-weight: 600; font-size: 0.9rem; color: #fff; display: inline; }
+  .step-code { font-family: 'Courier New', monospace; font-size: 0.75rem; color: #7ee787; background: #161b22; border-radius: 4px; padding: 0.5rem; margin-top: 0.5rem; white-space: pre; overflow-x: auto; }
+  .step-desc { font-size: 0.8rem; color: #888; margin-top: 0.4rem; }
+  .arrow-down { text-align: center; color: #0f3460; font-size: 1.2rem; margin: 0.2rem 0; }
+  .diff-badge { display: inline-block; background: #ffa657; color: #1a1a2e; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.5rem; }
+  .same-badge { display: inline-block; background: #0f3460; color: #888; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.5rem; }
+  .summary { max-width: 1200px; width: 100%; margin-top: 2rem; background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1.5rem; }
+  .summary h2 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .diff-table th { text-align: left; color: #00d4ff; padding: 0.5rem; border-bottom: 1px solid #0f3460; }
+  .diff-table td { padding: 0.5rem; border-bottom: 1px solid #0f346033; }
+  .diff-table tr:hover { background: #1a2a4e; }
+  .gl { color: #7ee787; }
+  .gpu { color: #00d4ff; }
+</style>
+</head>
+<body>
+
+<h1>WebGL vs WebGPU</h1>
+<p class="subtitle">Comparaison de l'architecture et des appels API pour dessiner un triangle</p>
+
+<div class="comparison">
+  <div class="column">
+    <div class="column-header webgl">WebGL 2.0</div>
+    <div class="column-body" id="webglSteps"></div>
+  </div>
+  <div class="column">
+    <div class="column-header webgpu">WebGPU</div>
+    <div class="column-body" id="webgpuSteps"></div>
+  </div>
+</div>
+
+<div class="summary">
+  <h2>Differences cles</h2>
+  <table class="diff-table">
+    <tr><th>Aspect</th><th class="gl">WebGL</th><th class="gpu">WebGPU</th></tr>
+    <tr>
+      <td>Paradigme</td>
+      <td class="gl">Machine a etats globale</td>
+      <td class="gpu">Objets immutables + commandes</td>
+    </tr>
+    <tr>
+      <td>Langage shader</td>
+      <td class="gl">GLSL (syntaxe C)</td>
+      <td class="gpu">WGSL (syntaxe Rust-like)</td>
+    </tr>
+    <tr>
+      <td>Ressources</td>
+      <td class="gl">gl.bindBuffer, gl.uniform*</td>
+      <td class="gpu">Bind Groups explicites</td>
+    </tr>
+    <tr>
+      <td>Validation</td>
+      <td class="gl">Au draw call (tard)</td>
+      <td class="gpu">A la creation du pipeline (tot)</td>
+    </tr>
+    <tr>
+      <td>Multi-thread</td>
+      <td class="gl">Non (un seul contexte)</td>
+      <td class="gpu">Oui (command encoders paralleles)</td>
+    </tr>
+    <tr>
+      <td>Compute shaders</td>
+      <td class="gl">Non supporte</td>
+      <td class="gpu">Supporte nativement</td>
+    </tr>
+    <tr>
+      <td>Gestion erreurs</td>
+      <td class="gl">gl.getError() (codes numeriques)</td>
+      <td class="gpu">Messages explicites, error scopes</td>
+    </tr>
+  </table>
+</div>
+
+<script>
+const webglSteps = [
+  {
+    title: 'Obtenir le contexte',
+    code: `const gl = canvas.getContext('webgl2');`,
+    desc: 'Contexte global, machine a etats',
+    diff: false
+  },
+  {
+    title: 'Compiler les shaders GLSL',
+    code: `const vs = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vs, vertexGLSL);
+gl.compileShader(vs);
+// idem pour fragment shader`,
+    desc: 'Compilation a l\'execution, verifier getShaderInfoLog',
+    diff: true
+  },
+  {
+    title: 'Creer le programme',
+    code: `const prog = gl.createProgram();
+gl.attachShader(prog, vs);
+gl.attachShader(prog, fs);
+gl.linkProgram(prog);`,
+    desc: 'Linkage vertex + fragment dans un programme',
+    diff: true
+  },
+  {
+    title: 'Creer le vertex buffer',
+    code: `const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);`,
+    desc: 'Bind puis upload — modifie l\'etat global',
+    diff: true
+  },
+  {
+    title: 'Configurer les attributes',
+    code: `const loc = gl.getAttribLocation(prog, 'position');
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);`,
+    desc: 'Lie a l\'etat courant du buffer binde',
+    diff: true
+  },
+  {
+    title: 'Dessiner',
+    code: `gl.useProgram(prog);
+gl.clear(gl.COLOR_BUFFER_BIT);
+gl.drawArrays(gl.TRIANGLES, 0, 3);`,
+    desc: 'Validation au moment du draw call',
+    diff: false
+  }
+];
+
+const webgpuSteps = [
+  {
+    title: 'Obtenir le device',
+    code: `const adapter = await navigator.gpu.requestAdapter();
+const device = await adapter.requestDevice();
+const ctx = canvas.getContext('webgpu');
+ctx.configure({ device, format: 'bgra8unorm' });`,
+    desc: 'Adapter → Device → configurer le canvas',
+    diff: false
+  },
+  {
+    title: 'Ecrire le shader WGSL',
+    code: `const shaderModule = device.createShaderModule({
+  code: \`
+    @vertex fn vs(@builtin(vertex_index) i: u32)
+      -> @builtin(position) vec4f { ... }
+    @fragment fn fs() -> @location(0) vec4f {
+      return vec4f(0, 0.8, 1, 1); }
+  \`
+});`,
+    desc: 'WGSL : annotations @vertex/@fragment, types explicites',
+    diff: true
+  },
+  {
+    title: 'Creer le render pipeline',
+    code: `const pipeline = device.createRenderPipeline({
+  layout: 'auto',
+  vertex: { module: shaderModule, entryPoint: 'vs' },
+  fragment: {
+    module: shaderModule, entryPoint: 'fs',
+    targets: [{ format: 'bgra8unorm' }]
+  },
+  primitive: { topology: 'triangle-list' }
+});`,
+    desc: 'Pipeline immutable, validation a la creation',
+    diff: true
+  },
+  {
+    title: 'Creer le vertex buffer',
+    code: `const buffer = device.createBuffer({
+  size: data.byteLength,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+device.queue.writeBuffer(buffer, 0, data);`,
+    desc: 'Usage explicite, ecriture via la queue',
+    diff: true
+  },
+  {
+    title: 'Enregistrer les commandes',
+    code: `const encoder = device.createCommandEncoder();
+const pass = encoder.beginRenderPass({
+  colorAttachments: [{
+    view: ctx.getCurrentTexture().createView(),
+    loadOp: 'clear', storeOp: 'store',
+    clearValue: { r: 0, g: 0, b: 0, a: 1 }
+  }]
+});`,
+    desc: 'Command encoder : enregistrement hors execution',
+    diff: true
+  },
+  {
+    title: 'Dessiner et soumettre',
+    code: `pass.setPipeline(pipeline);
+pass.draw(3);
+pass.end();
+device.queue.submit([encoder.finish()]);`,
+    desc: 'Soumission explicite du command buffer',
+    diff: false
+  }
+];
+
+function renderSteps(containerId, steps, side) {
+  const container = document.getElementById(containerId);
+  steps.forEach((step, i) => {
+    const div = document.createElement('div');
+    div.className = 'step';
+    div.dataset.index = i;
+    div.dataset.side = side;
+
+    const badge = step.diff
+      ? '<span class="diff-badge">DIFFERENT</span>'
+      : '<span class="same-badge">SIMILAIRE</span>';
+
+    div.innerHTML = `
+      <span class="step-num">${i + 1}</span>
+      <span class="step-title">${step.title}</span>
+      ${badge}
+      <div class="step-desc">${step.desc}</div>
+      <div class="step-code">${step.code}</div>
+    `;
+
+    div.addEventListener('mouseenter', () => highlightPair(i, true));
+    div.addEventListener('mouseleave', () => highlightPair(i, false));
+
+    container.appendChild(div);
+
+    if (i < steps.length - 1) {
+      const arrow = document.createElement('div');
+      arrow.className = 'arrow-down';
+      arrow.textContent = '↓';
+      container.appendChild(arrow);
+    }
+  });
+}
+
+function highlightPair(index, active) {
+  document.querySelectorAll(`.step[data-index="${index}"]`).forEach(el => {
+    el.classList.toggle('highlight', active);
+  });
+}
+
+renderSteps('webglSteps', webglSteps, 'webgl');
+renderSteps('webgpuSteps', webgpuSteps, 'webgpu');
+</script>
+</body>
+</html>

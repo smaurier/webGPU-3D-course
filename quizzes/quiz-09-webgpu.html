@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 09 — WebGPU et WGSL</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 09 — WebGPU et WGSL</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Quel est le type vecteur 4 composantes flottant en WGSL ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> <code>float4</code></label>
+    <label><input type="radio" name="q1" value="b"> <code>vec4f</code> (ou <code>vec4&lt;f32&gt;</code>)</label>
+    <label><input type="radio" name="q1" value="c"> <code>vec4</code></label>
+    <label><input type="radio" name="q1" value="d"> <code>Vector4</code></label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! En WGSL, le type est <code>vec4&lt;f32&gt;</code> ou sa forme courte <code>vec4f</code>. WGSL utilise des types explicites contrairement a GLSL.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. En WGSL, on utilise <code>vec4&lt;f32&gt;</code> ou le raccourci <code>vec4f</code> pour un vecteur de 4 floats 32 bits.</div>
+</div>
+
+<div class="question">
+  <h3>2. A quoi servent les decorateurs <code>@group</code> et <code>@binding</code> en WGSL ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> A definir la priorite d'execution des shaders</label>
+    <label><input type="radio" name="q2" value="b"> A specifier l'emplacement d'une ressource (buffer, texture, sampler) dans le bind group layout</label>
+    <label><input type="radio" name="q2" value="c"> A nommer les variables pour le debug</label>
+    <label><input type="radio" name="q2" value="d"> A definir la taille des workgroups</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! <code>@group(N) @binding(M)</code> identifie a quel bind group et a quel slot une ressource est liee, permettant au CPU de fournir les bons buffers/textures au shader.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. <code>@group</code> et <code>@binding</code> identifient l'emplacement d'une ressource dans le bind group layout pour la liaison CPU-GPU.</div>
+</div>
+
+<div class="question">
+  <h3>3. Quel est le role du command encoder en WebGPU ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Il compile les shaders WGSL</label>
+    <label><input type="radio" name="q3" value="b"> Il enregistre une sequence de commandes GPU (render passes, copies, compute) qui seront soumises en une fois a la queue</label>
+    <label><input type="radio" name="q3" value="c"> Il encode les textures en format compresse</label>
+    <label><input type="radio" name="q3" value="d"> Il gere la synchronisation entre le CPU et le GPU</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Le command encoder enregistre des commandes (beginRenderPass, dispatch, copyBufferToBuffer...) dans un command buffer qui est ensuite soumis a la GPU queue via <code>queue.submit()</code>.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le command encoder enregistre des commandes GPU dans un command buffer, qui est ensuite soumis a la queue pour execution.</div>
+</div>
+
+<div class="question">
+  <h3>4. Quelle est une difference majeure entre GLSL et WGSL en termes de syntaxe ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> WGSL utilise des accolades, GLSL non</label>
+    <label><input type="radio" name="q4" value="b"> WGSL utilise <code>fn</code> pour declarer les fonctions et <code>var/let</code> pour les variables, avec un typage explicite style Rust</label>
+    <label><input type="radio" name="q4" value="c"> GLSL est plus recent que WGSL</label>
+    <label><input type="radio" name="q4" value="d"> WGSL ne supporte pas les structures</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! WGSL a une syntaxe inspiree de Rust : <code>fn</code> pour les fonctions, <code>var</code>/<code>let</code> pour les variables, types apres le nom (<code>x: f32</code>), et <code>-></code> pour le type de retour.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. WGSL utilise une syntaxe style Rust avec <code>fn</code>, <code>var/let</code>, et un typage explicite (<code>param: type</code>), contrairement a la syntaxe C de GLSL.</div>
+</div>
+
+<div class="question">
+  <h3>5. Comment obtient-on un GPUDevice en WebGPU ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> <code>canvas.getContext('webgpu')</code></label>
+    <label><input type="radio" name="q5" value="b"> Via <code>navigator.gpu.requestAdapter()</code> puis <code>adapter.requestDevice()</code></label>
+    <label><input type="radio" name="q5" value="c"> <code>new GPUDevice()</code></label>
+    <label><input type="radio" name="q5" value="d"> <code>WebGPU.createDevice()</code></label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! On demande d'abord un adapter (representation du GPU physique) via <code>navigator.gpu.requestAdapter()</code>, puis on obtient un device (connexion logique) via <code>adapter.requestDevice()</code>.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. On obtient un GPUDevice en deux etapes : <code>navigator.gpu.requestAdapter()</code> pour l'adapter, puis <code>adapter.requestDevice()</code> pour le device.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>

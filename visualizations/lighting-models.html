@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modeles d'eclairage interactifs</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .layout { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; max-width: 1100px; width: 100%; }
+  .canvas-area { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .sphere-panel { text-align: center; }
+  .sphere-panel h3 { color: #00d4ff; font-size: 0.95rem; margin-bottom: 0.5rem; }
+  canvas { background: #0d1117; border-radius: 12px; border: 2px solid #0f3460; }
+  canvas.active { border-color: #00d4ff; box-shadow: 0 0 15px rgba(0,212,255,0.3); }
+  .controls { background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1.5rem; min-width: 280px; }
+  .control-group { margin-bottom: 1.2rem; }
+  .control-group label { display: block; color: #00d4ff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .control-group input[type="range"] { width: 100%; accent-color: #00d4ff; }
+  .control-group .value { text-align: right; font-size: 0.8rem; color: #888; font-family: monospace; }
+  .radio-group { margin-bottom: 1.2rem; }
+  .radio-group label { display: block; color: #ccc; font-size: 0.85rem; margin-bottom: 0.4rem; cursor: pointer; }
+  .radio-group input { accent-color: #00d4ff; margin-right: 0.5rem; }
+  .formula { background: #0d1117; border-radius: 8px; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; line-height: 1.5; color: #7ee787; margin-top: 1rem; }
+  .formula .label { color: #00d4ff; font-weight: 600; margin-bottom: 0.5rem; font-family: 'Segoe UI', sans-serif; font-size: 0.85rem; }
+  .color-picker { display: flex; gap: 0.5rem; align-items: center; }
+  .color-picker input[type="color"] { width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Modeles d'eclairage</h1>
+<p class="subtitle">Comparez Lambert, Phong, Blinn-Phong et PBR sur une sphere</p>
+
+<div class="layout">
+  <div>
+    <div class="canvas-area" id="canvasArea"></div>
+  </div>
+  <div class="controls">
+    <div class="control-group">
+      <label>Position lumiere X : <span class="value" id="lxVal">0.5</span></label>
+      <input type="range" id="lx" min="-100" max="100" value="50">
+    </div>
+    <div class="control-group">
+      <label>Position lumiere Y : <span class="value" id="lyVal">-0.5</span></label>
+      <input type="range" id="ly" min="-100" max="100" value="-50">
+    </div>
+    <div class="control-group">
+      <label>Shininess / Roughness : <span class="value" id="shVal">32</span></label>
+      <input type="range" id="shininess" min="1" max="256" value="32">
+    </div>
+    <div class="control-group">
+      <label>Metalness (PBR) : <span class="value" id="metVal">0.0</span></label>
+      <input type="range" id="metalness" min="0" max="100" value="0">
+    </div>
+    <div class="control-group color-picker">
+      <label>Couleur objet :</label>
+      <input type="color" id="objColor" value="#cc4444">
+    </div>
+    <div class="formula" id="formulaBox">
+      <div class="label">Formule active</div>
+      <pre>Selectionnez un modele</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+const models = ['Lambert', 'Phong', 'Blinn-Phong', 'PBR'];
+const formulas = {
+  Lambert: 'I = Kd * (N . L)\n\nKd = couleur diffuse\nN  = normale\nL  = direction lumiere\n\nEclairage diffus pur.\nPas de reflet speculaire.',
+  Phong: 'I = Ka + Kd*(N.L) + Ks*(R.V)^n\n\nR = reflect(-L, N)\nV = direction vue\nn = shininess\n\nAjout du reflet speculaire\nvia la reflexion de la lumiere.',
+  'Blinn-Phong': 'I = Ka + Kd*(N.L) + Ks*(N.H)^n\n\nH = normalize(L + V)\nn = shininess\n\nOptimisation de Phong :\nle half-vector H remplace R.\nPlus rapide a calculer.',
+  PBR: 'f = D*F*G / (4*(N.V)*(N.L))\n\nD = GGX distribution\nF = Fresnel-Schlick\nG = Smith geometry\n\nPhysiquement correct :\nconservation d\'energie,\nFresnel aux angles rasants.'
+};
+
+const canvasArea = document.getElementById('canvasArea');
+const canvases = [];
+
+models.forEach((name, i) => {
+  const panel = document.createElement('div');
+  panel.className = 'sphere-panel';
+  panel.innerHTML = `<h3>${name}</h3>`;
+  const c = document.createElement('canvas');
+  c.width = 200; c.height = 200;
+  c.className = i === 0 ? 'active' : '';
+  c.addEventListener('click', () => {
+    canvases.forEach(cv => cv.classList.remove('active'));
+    c.classList.add('active');
+    showFormula(name);
+  });
+  panel.appendChild(c);
+  canvasArea.appendChild(panel);
+  canvases.push(c);
+});
+
+const lxSlider = document.getElementById('lx');
+const lySlider = document.getElementById('ly');
+const shSlider = document.getElementById('shininess');
+const metSlider = document.getElementById('metalness');
+const colorInput = document.getElementById('objColor');
+
+[lxSlider, lySlider, shSlider, metSlider, colorInput].forEach(el =>
+  el.addEventListener('input', render)
+);
+
+function showFormula(name) {
+  document.getElementById('formulaBox').innerHTML =
+    `<div class="label">${name}</div><pre>${formulas[name]}</pre>`;
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return [r, g, b];
+}
+
+function render() {
+  const lx = parseFloat(lxSlider.value) / 100;
+  const ly = parseFloat(lySlider.value) / 100;
+  const shininess = parseFloat(shSlider.value);
+  const metalness = parseFloat(metSlider.value) / 100;
+  const baseColor = hexToRgb(colorInput.value);
+
+  document.getElementById('lxVal').textContent = lx.toFixed(2);
+  document.getElementById('lyVal').textContent = ly.toFixed(2);
+  document.getElementById('shVal').textContent = shininess.toFixed(0);
+  document.getElementById('metVal').textContent = metalness.toFixed(2);
+
+  const lightDir = normalize([lx, ly, 0.8]);
+  const viewDir = [0, 0, 1];
+
+  models.forEach((name, idx) => {
+    const c = canvases[idx];
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(c.width, c.height);
+    const data = img.data;
+    const radius = c.width / 2 - 10;
+    const cx = c.width / 2;
+    const cy = c.height / 2;
+
+    for (let y = 0; y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        const dx = x - cx;
+        const dy = y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const i = (y * c.width + x) * 4;
+
+        if (dist > radius) {
+          data[i] = 13; data[i + 1] = 17; data[i + 2] = 23; data[i + 3] = 255;
+          continue;
+        }
+
+        const nx = dx / radius;
+        const ny = dy / radius;
+        const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+        const normal = [nx, ny, nz];
+
+        let color;
+        const roughness = 1 - (shininess - 1) / 255;
+
+        switch (name) {
+          case 'Lambert': color = lambert(normal, lightDir, baseColor); break;
+          case 'Phong': color = phong(normal, lightDir, viewDir, baseColor, shininess); break;
+          case 'Blinn-Phong': color = blinnPhong(normal, lightDir, viewDir, baseColor, shininess); break;
+          case 'PBR': color = pbr(normal, lightDir, viewDir, baseColor, roughness, metalness); break;
+        }
+
+        data[i] = Math.min(255, color[0] * 255);
+        data[i + 1] = Math.min(255, color[1] * 255);
+        data[i + 2] = Math.min(255, color[2] * 255);
+        data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  });
+}
+
+function normalize(v) {
+  const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+  return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 0, 0];
+}
+
+function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+
+function reflect(I, N) {
+  const d = 2 * dot(I, N);
+  return [I[0] - d * N[0], I[1] - d * N[1], I[2] - d * N[2]];
+}
+
+function lambert(N, L, color) {
+  const ambient = 0.08;
+  const diff = Math.max(0, dot(N, L));
+  return [color[0] * (ambient + diff), color[1] * (ambient + diff), color[2] * (ambient + diff)];
+}
+
+function phong(N, L, V, color, shininess) {
+  const ambient = 0.08;
+  const diff = Math.max(0, dot(N, L));
+  const R = reflect([-L[0], -L[1], -L[2]], N);
+  const spec = Math.pow(Math.max(0, dot(R, V)), shininess);
+  return [
+    color[0] * (ambient + diff) + spec * 0.5,
+    color[1] * (ambient + diff) + spec * 0.5,
+    color[2] * (ambient + diff) + spec * 0.5
+  ];
+}
+
+function blinnPhong(N, L, V, color, shininess) {
+  const ambient = 0.08;
+  const diff = Math.max(0, dot(N, L));
+  const H = normalize([L[0] + V[0], L[1] + V[1], L[2] + V[2]]);
+  const spec = Math.pow(Math.max(0, dot(N, H)), shininess);
+  return [
+    color[0] * (ambient + diff) + spec * 0.5,
+    color[1] * (ambient + diff) + spec * 0.5,
+    color[2] * (ambient + diff) + spec * 0.5
+  ];
+}
+
+function pbr(N, L, V, albedo, roughness, metalness) {
+  const NdotL = Math.max(0, dot(N, L));
+  const NdotV = Math.max(0.001, dot(N, V));
+  const H = normalize([L[0] + V[0], L[1] + V[1], L[2] + V[2]]);
+  const NdotH = Math.max(0, dot(N, H));
+  const VdotH = Math.max(0, dot(V, H));
+
+  const a = roughness * roughness;
+  const a2 = a * a;
+
+  // GGX Distribution
+  const denom = NdotH * NdotH * (a2 - 1) + 1;
+  const D = a2 / (Math.PI * denom * denom + 0.0001);
+
+  // Fresnel-Schlick
+  const F0base = 0.04;
+  const F0 = [
+    F0base * (1 - metalness) + albedo[0] * metalness,
+    F0base * (1 - metalness) + albedo[1] * metalness,
+    F0base * (1 - metalness) + albedo[2] * metalness
+  ];
+  const fresnel = Math.pow(1 - VdotH, 5);
+  const F = [
+    F0[0] + (1 - F0[0]) * fresnel,
+    F0[1] + (1 - F0[1]) * fresnel,
+    F0[2] + (1 - F0[2]) * fresnel
+  ];
+
+  // Smith geometry
+  function ggxG(NdotX) {
+    const k = (roughness + 1) * (roughness + 1) / 8;
+    return NdotX / (NdotX * (1 - k) + k);
+  }
+  const G = ggxG(NdotV) * ggxG(NdotL);
+
+  const denomBRDF = 4 * NdotV * NdotL + 0.001;
+  const ambient = 0.05;
+
+  return [
+    ambient * albedo[0] + (albedo[0] * (1 - metalness) * (1 - F[0]) / Math.PI + F[0] * D * G / denomBRDF) * NdotL,
+    ambient * albedo[1] + (albedo[1] * (1 - metalness) * (1 - F[1]) / Math.PI + F[1] * D * G / denomBRDF) * NdotL,
+    ambient * albedo[2] + (albedo[2] * (1 - metalness) * (1 - F[2]) / Math.PI + F[2] * D * G / denomBRDF) * NdotL
+  ];
+}
+
+showFormula('Lambert');
+render();
+</script>
+</body>
+</html>

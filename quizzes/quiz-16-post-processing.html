@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 16 — Post-processing</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 16 — Post-processing</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Quel est le role de l'EffectComposer dans Three.js ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Composer la musique de fond de la scene</label>
+    <label><input type="radio" name="q1" value="b"> Chainer des passes de post-processing (render pass, bloom, FXAA...) en rendant dans des framebuffers intermediaires</label>
+    <label><input type="radio" name="q1" value="c"> Combiner plusieurs scenes en une seule</label>
+    <label><input type="radio" name="q1" value="d"> Optimiser automatiquement les performances</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! L'EffectComposer gere une chaine de passes : chaque passe lit le resultat de la precedente et ecrit dans un framebuffer. La derniere passe ecrit a l'ecran.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. L'EffectComposer chaine des passes de post-processing, chacune lisant le framebuffer precedent et ecrivant dans le suivant.</div>
+</div>
+
+<div class="question">
+  <h3>2. Comment fonctionne l'effet bloom ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> Il augmente la luminosite globale de la scene</label>
+    <label><input type="radio" name="q2" value="b"> Il extrait les pixels lumineux (au-dessus d'un seuil), les floute avec un gaussian blur, puis les additionne a l'image originale</label>
+    <label><input type="radio" name="q2" value="c"> Il ajoute des particules brillantes</label>
+    <label><input type="radio" name="q2" value="d"> Il simule l'exposition photographique</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! Le bloom fonctionne en 3 etapes : extraction des zones lumineuses (threshold), flou gaussien multi-passe (souvent a resolution reduite), puis addition du resultat floute sur l'image originale.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le bloom extrait les pixels lumineux, les floute, puis les ajoute a l'image originale pour creer un halo lumineux.</div>
+</div>
+
+<div class="question">
+  <h3>3. Que signifie SSAO (Screen Space Ambient Occlusion) ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Un algorithme de shadow mapping</label>
+    <label><input type="radio" name="q3" value="b"> Une technique qui estime l'occlusion ambiante en espace ecran en echantillonnant la profondeur autour de chaque pixel pour assombrir les creux et coins</label>
+    <label><input type="radio" name="q3" value="c"> Un format de texture pour l'ambient occlusion</label>
+    <label><input type="radio" name="q3" value="d"> Un type d'anti-aliasing</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! SSAO echantillonne le depth buffer autour de chaque pixel pour estimer combien de geometrie proche l'occlude. Les zones encaissees (coins, plis) sont assombries, ajoutant de la profondeur visuelle.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. SSAO estime l'occlusion ambiante en espace ecran via le depth buffer pour assombrir les creux et les coins de la geometrie.</div>
+</div>
+
+<div class="question">
+  <h3>4. A quoi sert le Raycaster dans Three.js ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> A calculer le ray tracing pour l'eclairage</label>
+    <label><input type="radio" name="q4" value="b"> A determiner quels objets de la scene sont intersectes par un rayon (picking souris, detection de collision)</label>
+    <label><input type="radio" name="q4" value="c"> A generer des rayons de lumiere volumetrique</label>
+    <label><input type="radio" name="q4" value="d"> A tracer des lignes de debug</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! Raycaster lance un rayon dans la scene et retourne les intersections triees par distance. Utilise pour le picking souris (convertir un clic 2D en selection 3D), les collisions, et la detection de visibilite.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le Raycaster determine quels objets sont intersectes par un rayon, utilise pour le picking souris et la detection de collision.</div>
+</div>
+
+<div class="question">
+  <h3>5. Quel est le role de CSS2DRenderer ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> Remplacer le WebGLRenderer pour du rendu CSS</label>
+    <label><input type="radio" name="q5" value="b"> Superposer des elements HTML/CSS (labels, tooltips) positionnes en 3D dans la scene, qui restent toujours face a la camera</label>
+    <label><input type="radio" name="q5" value="c"> Appliquer des styles CSS aux materiaux 3D</label>
+    <label><input type="radio" name="q5" value="d"> Convertir des animations CSS en animations 3D</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! CSS2DRenderer projette des elements DOM (CSS2DObject) dans l'espace 3D de la scene. Les elements HTML sont positionnes via CSS transform pour suivre les coordonnees 3D, ideals pour les labels et annotations.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. CSS2DRenderer superpose des elements HTML positionnes dans l'espace 3D, utile pour les labels et tooltips qui suivent les objets 3D.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>

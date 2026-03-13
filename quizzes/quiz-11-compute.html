@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 11 — Compute shaders</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 11 — Compute shaders</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Que definit <code>@workgroup_size(64)</code> dans un compute shader WGSL ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Le nombre total d'invocations du shader</label>
+    <label><input type="radio" name="q1" value="b"> Le nombre de threads dans un workgroup (groupe de travail local)</label>
+    <label><input type="radio" name="q1" value="c"> La taille du buffer de sortie en octets</label>
+    <label><input type="radio" name="q1" value="d"> Le nombre de workgroups a dispatcher</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! <code>@workgroup_size(64)</code> definit que chaque workgroup contient 64 invocations (threads). Le nombre total de threads est workgroup_size * nombre de workgroups dispatches.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. <code>@workgroup_size</code> definit le nombre de threads par workgroup. Le nombre total de threads depend aussi du nombre de workgroups dispatches.</div>
+</div>
+
+<div class="question">
+  <h3>2. Que represente <code>@builtin(global_invocation_id)</code> ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> L'identifiant du workgroup courant</label>
+    <label><input type="radio" name="q2" value="b"> L'identifiant global unique de l'invocation, combine du workgroup_id et du local_invocation_id</label>
+    <label><input type="radio" name="q2" value="c"> Le nombre total de threads lances</label>
+    <label><input type="radio" name="q2" value="d"> L'index du sommet courant</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! <code>global_invocation_id = workgroup_id * workgroup_size + local_invocation_id</code>. C'est l'index global unique de chaque thread, utilise pour adresser les donnees dans les buffers.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le global_invocation_id est l'identifiant unique global du thread, calcule comme workgroup_id * workgroup_size + local_invocation_id.</div>
+</div>
+
+<div class="question">
+  <h3>3. Quelle est la difference entre un uniform buffer et un storage buffer en WebGPU ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Le uniform buffer est plus lent</label>
+    <label><input type="radio" name="q3" value="b"> Le storage buffer supporte la lecture et l'ecriture dans le shader et n'a pas de limite de taille stricte, contrairement au uniform buffer (read-only, limite a 64 Ko minimum garanti)</label>
+    <label><input type="radio" name="q3" value="c"> Il n'y a aucune difference</label>
+    <label><input type="radio" name="q3" value="d"> Le uniform buffer est reserve aux compute shaders</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Les uniform buffers sont read-only et limites a 64 Ko (minUniformBufferOffsetAlignment). Les storage buffers supportent read/write, sont beaucoup plus grands, mais avec un acces potentiellement moins rapide.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Les storage buffers sont read/write et de grande taille, tandis que les uniform buffers sont read-only et limites a 64 Ko minimum garanti.</div>
+</div>
+
+<div class="question">
+  <h3>4. Comment lance-t-on un compute shader en WebGPU ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> Avec <code>renderPass.draw()</code></label>
+    <label><input type="radio" name="q4" value="b"> Avec <code>computePass.dispatchWorkgroups(x, y, z)</code> dans un compute pass</label>
+    <label><input type="radio" name="q4" value="c"> Avec <code>device.compute()</code></label>
+    <label><input type="radio" name="q4" value="d"> Les compute shaders s'executent automatiquement</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! On cree un compute pass via <code>commandEncoder.beginComputePass()</code>, on set le pipeline et les bind groups, puis on appelle <code>dispatchWorkgroups(x, y, z)</code> pour lancer la grille de workgroups.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. On lance un compute shader via <code>computePass.dispatchWorkgroups(x, y, z)</code> apres avoir configure le pipeline et les bind groups.</div>
+</div>
+
+<div class="question">
+  <h3>5. A quoi sert un staging buffer en WebGPU ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> A stocker les shaders compiles</label>
+    <label><input type="radio" name="q5" value="b"> A transferer des donnees entre le CPU et le GPU, car les buffers GPU ne sont pas directement mappables en lecture</label>
+    <label><input type="radio" name="q5" value="c"> A accelerer le rendu des textures</label>
+    <label><input type="radio" name="q5" value="d"> A stocker temporairement les resultats de compute</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! Un staging buffer (avec usage MAP_READ | COPY_DST) sert d'intermediaire pour lire les resultats GPU cote CPU. On copie du buffer GPU vers le staging buffer, puis on mappe le staging buffer pour le lire.</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. Un staging buffer est un buffer intermediaire (MAP_READ + COPY_DST) qui permet de lire les donnees GPU cote CPU, car les buffers GPU ne sont pas directement accessibles.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>

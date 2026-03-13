@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 17 — Performance</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; max-width: 800px; margin: 0 auto; }
+  h1 { color: #00d4ff; margin-bottom: 2rem; font-size: 1.5rem; }
+  .question { background: #16213e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #0f3460; }
+  .question h3 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.1rem; }
+  .options label { display: block; padding: 0.75rem 1rem; margin: 0.5rem 0; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .options label:hover { border-color: #00d4ff; background: #1a2744; }
+  .options input[type="radio"] { margin-right: 0.75rem; accent-color: #00d4ff; }
+  .feedback { display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-weight: 500; }
+  .feedback.correct { display: block; background: #0a3d2a; border: 1px solid #00ff88; color: #00ff88; }
+  .feedback.incorrect { display: block; background: #3d0a0a; border: 1px solid #ff4444; color: #ff4444; }
+  button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  button:hover { background: #00b8d9; }
+  .score { text-align: center; font-size: 1.5rem; color: #00d4ff; margin-top: 2rem; padding: 2rem; background: #16213e; border-radius: 12px; }
+  code { background: #0f3460; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #0f3460; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Quiz 17 — Performance</h1>
+<div id="quiz">
+
+<div class="question">
+  <h3>1. Pourquoi le nombre de draw calls est-il un facteur critique de performance ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q1" value="a"> Chaque draw call consomme de la VRAM</label>
+    <label><input type="radio" name="q1" value="b"> Chaque draw call implique une communication CPU-GPU couteuse (validation d'etat, envoi de commandes au driver)</label>
+    <label><input type="radio" name="q1" value="c"> Le GPU ne peut executer qu'un draw call a la fois</label>
+    <label><input type="radio" name="q1" value="d"> Les draw calls ralentissent le fragment shader</label>
+  </div>
+  <div id="q1-correct" class="feedback correct" style="display:none">Correct ! Chaque draw call necessite une validation d'etat cote driver et un envoi de commandes au GPU. L'overhead est principalement cote CPU. Regrouper les draw calls (batching, instancing) est essentiel.</div>
+  <div id="q1-incorrect" class="feedback incorrect" style="display:none">Incorrect. Les draw calls sont couteux car chacun implique une validation d'etat et une communication CPU-GPU via le driver graphique.</div>
+</div>
+
+<div class="question">
+  <h3>2. Qu'est-ce que le LOD (Level of Detail) ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q2" value="a"> Un format de fichier pour les modeles 3D</label>
+    <label><input type="radio" name="q2" value="b"> Une technique qui affiche differentes versions d'un modele (haute/basse resolution) selon sa distance a la camera</label>
+    <label><input type="radio" name="q2" value="c"> Un algorithme de compression de textures</label>
+    <label><input type="radio" name="q2" value="d"> Un type de shader optimise</label>
+  </div>
+  <div id="q2-correct" class="feedback correct" style="display:none">Correct ! Le LOD utilise des versions simplifiees du mesh quand l'objet est loin (moins de triangles), et la version detaillee quand il est proche. Three.js fournit la classe <code>THREE.LOD</code>.</div>
+  <div id="q2-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le LOD affiche des versions plus ou moins detaillees d'un modele selon sa distance a la camera pour economiser des triangles.</div>
+</div>
+
+<div class="question">
+  <h3>3. Comment fonctionne le frustum culling ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q3" value="a"> Il supprime les pixels transparents</label>
+    <label><input type="radio" name="q3" value="b"> Il evite d'envoyer au GPU les objets dont la bounding box/sphere est completement hors du frustum de la camera</label>
+    <label><input type="radio" name="q3" value="c"> Il reduit la resolution des objets lointains</label>
+    <label><input type="radio" name="q3" value="d"> Il desactive l'eclairage des objets non visibles</label>
+  </div>
+  <div id="q3-correct" class="feedback correct" style="display:none">Correct ! Le frustum culling teste la bounding sphere/box de chaque objet contre les 6 plans du frustum. Si l'objet est entierement hors du champ, il n'est pas soumis au GPU. Three.js le fait automatiquement.</div>
+  <div id="q3-incorrect" class="feedback incorrect" style="display:none">Incorrect. Le frustum culling elimine les objets hors du champ de vision de la camera avant de les envoyer au GPU, en testant leur bounding volume.</div>
+</div>
+
+<div class="question">
+  <h3>4. Pourquoi est-il important d'appeler <code>dispose()</code> sur les geometries, materiaux et textures ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q4" value="a"> Pour sauvegarder l'etat de la scene</label>
+    <label><input type="radio" name="q4" value="b"> Pour liberer les ressources GPU (buffers, textures) qui ne sont pas collectees par le garbage collector JavaScript</label>
+    <label><input type="radio" name="q4" value="c"> Pour notifier le serveur que les ressources ne sont plus utilisees</label>
+    <label><input type="radio" name="q4" value="d"> Ce n'est pas necessaire, le GC s'en occupe</label>
+  </div>
+  <div id="q4-correct" class="feedback correct" style="display:none">Correct ! Le garbage collector JS ne peut pas liberer les ressources GPU (VBOs, textures). Sans <code>dispose()</code>, la VRAM fuit a chaque changement de scene. Il faut disposer manuellement geometries, materiaux et textures.</div>
+  <div id="q4-incorrect" class="feedback incorrect" style="display:none">Incorrect. <code>dispose()</code> libere les ressources GPU (VRAM) qui ne sont pas gerees par le garbage collector JavaScript, evitant les fuites memoire.</div>
+</div>
+
+<div class="question">
+  <h3>5. Quel est l'avantage d'utiliser un OffscreenCanvas avec un Web Worker ?</h3>
+  <div class="options">
+    <label><input type="radio" name="q5" value="a"> Il ameliore la qualite du rendu</label>
+    <label><input type="radio" name="q5" value="b"> Il deplace le rendu dans un thread separe, liberant le main thread pour l'UI et evitant le jank</label>
+    <label><input type="radio" name="q5" value="c"> Il permet de rendre sans canvas HTML</label>
+    <label><input type="radio" name="q5" value="d"> Il double la resolution du rendu</label>
+  </div>
+  <div id="q5-correct" class="feedback correct" style="display:none">Correct ! OffscreenCanvas dans un Worker permet de deplacer le rendu WebGL/WebGPU hors du main thread, evitant que les calculs de rendu ne bloquent les interactions utilisateur (scrolling, clicks).</div>
+  <div id="q5-incorrect" class="feedback incorrect" style="display:none">Incorrect. OffscreenCanvas + Worker deplace le rendu dans un thread separe pour ne pas bloquer le main thread et garder une UI fluide.</div>
+</div>
+
+</div>
+<button onclick="checkAnswers()">Verifier les reponses</button>
+<div id="score" class="score" style="display:none"></div>
+<script>
+const answers = {q1: 'b', q2: 'b', q3: 'b', q4: 'b', q5: 'b'};
+function checkAnswers() {
+  let score = 0;
+  for (const [q, correct] of Object.entries(answers)) {
+    const selected = document.querySelector(`input[name="${q}"]:checked`);
+    const feedbackCorrect = document.getElementById(`${q}-correct`);
+    const feedbackIncorrect = document.getElementById(`${q}-incorrect`);
+    if (selected && selected.value === correct) {
+      score++;
+      feedbackCorrect.style.display = 'block';
+      feedbackIncorrect.style.display = 'none';
+    } else {
+      feedbackCorrect.style.display = 'none';
+      feedbackIncorrect.style.display = 'block';
+    }
+  }
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.style.display = 'block';
+  scoreDiv.textContent = `Score : ${score} / ${Object.keys(answers).length}`;
+}
+</script>
+</body>
+</html>
