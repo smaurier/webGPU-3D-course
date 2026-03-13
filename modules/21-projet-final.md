@@ -1,4 +1,4 @@
-# Module 21 — Projet final
+# Module 21 — Projet intermediaire
 
 | Difficulte | Duree estimee | Lab | Quiz |
 |:----------:|:-------------:|:---:|:----:|
@@ -35,7 +35,7 @@ Au module 20, nous avons integre la physique avec Rapier.js :
 - **Character controller** : `KinematicCharacterController` avec detection sol, pentes, marches
 - **Fixed timestep** : `world.step(1/60)` avec accumulation et interpolation pour un rendu smooth
 
-Ce module final combine TOUT ce que nous avons appris pour creer une scene 3D interactive complete.
+Ce module intermediaire combine tout ce que nous avons appris dans les modules 00 a 20 pour creer une scene 3D interactive complete. Il s'agit d'un jalon de consolidation : un vrai projet final expert, integrant egalement les modules avances 22 a 28, est propose en fin de cursus (module 29).
 
 </details>
 

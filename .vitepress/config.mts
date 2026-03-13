@@ -73,7 +73,7 @@ export default defineConfig({
           { text: '18. Shadow mapping', link: '/modules/18-shadow-mapping' },
           { text: '19. Shaders créatifs et procedural', link: '/modules/19-shaders-creatifs' },
           { text: '20. Physique et interactions', link: '/modules/20-physique-interactions' },
-          { text: '21. Projet final', link: '/modules/21-projet-final' },
+          { text: '21. Projet intermédiaire', link: '/modules/21-projet-final' },
         ],
       },
       {
@@ -93,6 +93,7 @@ export default defineConfig({
           { text: '26. WebXR et animation procédurale', link: '/modules/26-webxr-animation-procedurale' },
           { text: '27. Audio 3D spatial', link: '/modules/27-audio-3d-spatial' },
           { text: '28. Virtual textures et streaming', link: '/modules/28-virtual-textures-streaming' },
+          { text: '29. Projet final expert', link: '/modules/29-projet-final-expert' },
         ],
       },
       {
@@ -128,6 +129,7 @@ export default defineConfig({
           { text: 'Lab 26 — WebXR et animation', link: '/labs/lab-26-webxr-animation-procedurale/' },
           { text: 'Lab 27 — Audio 3D', link: '/labs/lab-27-audio-3d/' },
           { text: 'Lab 28 — Virtual textures', link: '/labs/lab-28-virtual-textures/' },
+          { text: 'Lab 29 — Projet final expert', link: '/labs/lab-29-projet-final-expert/' },
         ],
       },
       {

@@ -34,3 +34,4 @@ Testez vos connaissances apres chaque module.
 | 26 | [WebXR et Animation](./quiz-26-webxr-animation.html) | Module 26 |
 | 27 | [Audio 3D](./quiz-27-audio-3d.html) | Module 27 |
 | 28 | [Virtual Textures](./quiz-28-virtual-textures.html) | Module 28 |
+| 29 | [Projet Final Expert](./quiz-29-projet-final-expert.html) | Module 29 |

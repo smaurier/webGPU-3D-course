@@ -646,6 +646,178 @@ Resultat : un triangle rouge sur fond bleu fonce, centre dans le canvas.
 
 ---
 
+## Ecran noir ? Checklist de debug
+
+L'ecran noir est le rite de passage de tout developpeur WebGL. Ne paniquez pas — voici les 10 causes les plus frequentes, dans l'ordre de probabilite.
+
+### 1. Erreur de compilation shader non lue
+
+WebGL ne lance pas d'exception quand un shader ne compile pas. Si vous ne lisez pas le log, vous ne saurez jamais pourquoi rien ne s'affiche.
+
+```typescript
+gl.compileShader(shader);
+if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+  console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+}
+```
+
+### 2. Erreur de link du program
+
+Meme si les deux shaders compilent individuellement, le linkage peut echouer (varying qui ne matchent pas, etc.).
+
+```typescript
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+  console.error('Program link error:', gl.getProgramInfoLog(program));
+}
+```
+
+### 3. `gl.viewport` pas configure (ou mauvaises dimensions)
+
+Sans viewport, WebGL ne sait pas comment mapper le clip space vers les pixels du canvas. Oubliez-le et rien ne s'affiche.
+
+```typescript
+// A appeler AVANT chaque draw, surtout apres un resize
+gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+```
+
+### 4. Depth test actif sans `gl.clear(gl.DEPTH_BUFFER_BIT)`
+
+Si vous activez `gl.enable(gl.DEPTH_TEST)` mais ne clearez que le color buffer, le depth buffer garde les anciennes valeurs (potentiellement 0.0), et tout nouveau fragment est rejete.
+
+```typescript
+// MAUVAIS — depth test actif mais depth buffer jamais clear
+gl.clear(gl.COLOR_BUFFER_BIT);
+
+// BON — toujours clear les deux ensemble
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+```
+
+### 5. Positions hors clip space (pas dans [-1, 1])
+
+Si vos coordonnees sont en pixels (ex: `vec2(400.0, 300.0)`), elles sont hors du clip space. WebGL ne dessine que ce qui est dans le cube `[-1, +1]` sur chaque axe.
+
+```glsl
+// MAUVAIS — coordonnees en pixels
+gl_Position = vec4(400.0, 300.0, 0.0, 1.0);
+
+// BON — coordonnees normalisees
+gl_Position = vec4(0.5, 0.3, 0.0, 1.0);
+```
+
+### 6. Draw count = 0 ou mauvais count
+
+Verifiez toujours le troisieme argument de `gl.drawArrays`. Un count a 0 ne dessine rien, et un count trop grand provoque un comportement indefini.
+
+```typescript
+// MAUVAIS — count est le nombre de SOMMETS, pas de triangles
+gl.drawArrays(gl.TRIANGLES, 0, 1); // 1 sommet ≠ 1 triangle
+
+// BON — 3 sommets pour 1 triangle
+gl.drawArrays(gl.TRIANGLES, 0, 3);
+```
+
+### 7. Buffer pas bind avant le draw (VAO oublie)
+
+Si vous avez cree un VAO mais ne le bindez pas avant le draw call, WebGL ne sait pas ou trouver les donnees.
+
+```typescript
+// MAUVAIS — VAO oublie
+gl.useProgram(program);
+gl.drawArrays(gl.TRIANGLES, 0, 3); // aucun attribut configure !
+
+// BON — binder le VAO avant de dessiner
+gl.useProgram(program);
+gl.bindVertexArray(vao);
+gl.drawArrays(gl.TRIANGLES, 0, 3);
+```
+
+### 8. Canvas CSS size vs drawing buffer size mismatch
+
+Le canvas HTML a deux tailles : la taille CSS (affichage) et la taille du drawing buffer (resolution reelle). Si le drawing buffer reste a 300x150 (defaut), l'image sera floue ou decalee.
+
+```typescript
+// A faire a l'initialisation et apres chaque resize
+canvas.width = canvas.clientWidth * window.devicePixelRatio;
+canvas.height = canvas.clientHeight * window.devicePixelRatio;
+
+// Puis mettre a jour le viewport
+gl.viewport(0, 0, canvas.width, canvas.height);
+```
+
+### 9. Backface culling actif et triangles dans le mauvais sens (winding order)
+
+Si `gl.enable(gl.CULL_FACE)` est actif et que vos triangles sont definis en sens horaire (CW) au lieu d'anti-horaire (CCW), toutes les faces sont eliminees.
+
+```typescript
+// Solution 1 : desactiver le culling pour tester
+gl.disable(gl.CULL_FACE);
+
+// Solution 2 : inverser la convention
+gl.frontFace(gl.CW); // si vos donnees sont en clockwise
+
+// Solution 3 (recommandee) : corriger l'ordre des sommets dans vos donnees
+// A → B → C doit etre en sens anti-horaire vu de face
+```
+
+### 10. WebGL context creation failed (GPU pas disponible, contexte deja pris)
+
+`canvas.getContext('webgl2')` retourne `null` si le GPU n'est pas disponible, si un autre contexte (ex: `'2d'`) a deja ete obtenu sur ce canvas, ou si le navigateur ne supporte pas WebGL 2.
+
+```typescript
+const gl = canvas.getContext('webgl2');
+if (!gl) {
+  // Verifier si un autre contexte existe deja
+  const ctx2d = canvas.getContext('2d');
+  if (ctx2d) {
+    console.error('Un contexte 2D existe deja sur ce canvas');
+  } else {
+    console.error('WebGL 2 non supporte ou GPU non disponible');
+  }
+}
+```
+
+### Helper function : `createShader` reutilisable
+
+Voici une fonction utilitaire qui englobe la compilation avec verification d'erreur. Elle leve une exception explicite en cas d'echec, ce qui evite de debugger un ecran noir silencieux.
+
+```typescript
+/**
+ * Compile un shader GLSL avec verification d'erreur integree.
+ * Leve une Error explicite si la compilation echoue.
+ */
+function createShader(
+  gl: WebGL2RenderingContext,
+  type: GLenum,
+  source: string,
+): WebGLShader {
+  const shader = gl.createShader(type);
+  if (!shader) {
+    throw new Error(`Echec creation shader (type: ${type})`);
+  }
+
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader) ?? 'Aucun log disponible';
+    const typeName = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
+    gl.deleteShader(shader);
+    throw new Error(
+      `Compilation ${typeName} shader echouee :\n${log}\n\nSource :\n${source}`
+    );
+  }
+
+  return shader;
+}
+```
+
+:::tip Astuce ESN
+Creez-vous une fonction `createShader(gl, type, source)` qui leve une erreur explicite. Vous la reutiliserez dans tous vos projets WebGL. Mettez-la dans un fichier `gl-utils.ts` et importez-la partout — c'est le premier reflexe a adopter avant meme de commencer a coder un shader.
+:::
+
+---
+
 ## 7. Configuration du pipeline
 
 ### 7.1 Viewport

@@ -36,6 +36,7 @@
     "lab:26": "npx tsx labs/lab-26-webxr-animation-procedurale/exercise.ts",
     "lab:27": "npx tsx labs/lab-27-audio-3d/exercise.ts",
     "lab:28": "npx tsx labs/lab-28-virtual-textures/exercise.ts",
+    "lab:29": "npx tsx labs/lab-29-projet-final-expert/exercise.ts",
     "solution:00": "npx tsx labs/lab-00-maths-prereq/solution.ts",
     "solution:01": "npx tsx labs/lab-01-algebre-lineaire/solution.ts",
     "solution:02": "npx tsx labs/lab-02-transformations/solution.ts",
@@ -64,7 +65,8 @@
     "solution:25": "npx tsx labs/lab-25-rendu-volumetrique/solution.ts",
     "solution:26": "npx tsx labs/lab-26-webxr-animation-procedurale/solution.ts",
     "solution:27": "npx tsx labs/lab-27-audio-3d/solution.ts",
-    "solution:28": "npx tsx labs/lab-28-virtual-textures/solution.ts"
+    "solution:28": "npx tsx labs/lab-28-virtual-textures/solution.ts",
+    "solution:29": "npx tsx labs/lab-29-projet-final-expert/solution.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

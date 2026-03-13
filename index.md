@@ -52,7 +52,7 @@ features:
 | 18 | Shadow mapping | Avance | Lab 18 |
 | 19 | Shaders creatifs et procedural | Avance | Lab 19 |
 | 20 | Physique et interactions | Avance | Lab 20 |
-| 21 | Projet final | Avance | Lab 21 |
+| 21 | Projet intermediaire | Avance | Lab 21 |
 | 22 | Modelisation 3D (annexe) | Annexe | Lab 22 |
 | 23 | Ray tracing et path tracing | Expert | Lab 23 |
 | 24 | Global illumination et screen-space | Expert | Lab 24 |
@@ -60,3 +60,4 @@ features:
 | 26 | WebXR et animation procedurale | Expert | Lab 26 |
 | 27 | Audio 3D spatial | Expert | Lab 27 |
 | 28 | Virtual textures et streaming | Expert | Lab 28 |
+| 29 | **Projet final expert** | Expert | Lab 29 |

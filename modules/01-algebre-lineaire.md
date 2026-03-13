@@ -2,7 +2,7 @@
 
 | Difficulte | Duree estimee | Lab | Quiz |
 |:----------:|:-------------:|:---:|:----:|
-| 2/5        | 90 min        | [Lab 01](../labs/lab-01-algebre-lineaire/) | [Quiz 01](../quizzes/quiz-01-algebre-lineaire.html) |
+| 2.5/5      | 90 min        | [Lab 01](../labs/lab-01-algebre-lineaire/) | [Quiz 01](../quizzes/quiz-01-algebre-lineaire.html) |
 
 ## Objectifs pedagogiques
 
@@ -46,6 +46,29 @@ En CSS, vous positionnez des elements avec `translate`, `rotate`, `scale` et `tr
 | `transform: translate() rotate() scale()` | Multiplication de matrices (dans l'ordre inverse !) |
 
 La difference : en CSS, le navigateur fait les maths pour vous. En 3D, c'est vous qui les implementez.
+:::
+
+---
+
+## Du prerequis a l'algebre lineaire
+
+Au module prerequis (Lab 00), vous avez decouvert les vecteurs de maniere intuitive :
+
+- Un **vecteur** est une fleche avec une direction et une longueur
+- Le **produit scalaire** (`dotProduct2D(a, b)`) mesure a quel point deux vecteurs "vont dans le meme sens"
+- Les **operations de base** (addition, soustraction, mise a l'echelle) se font composante par composante
+- Les **proportions** et l'interpolation lineaire permettent de melanger deux valeurs
+
+Tout cela, vous l'avez ecrit avec des tableaux simples (`number[]`) et des fonctions libres. C'etait parfait pour comprendre les concepts.
+
+Maintenant, on va **formaliser** ces idees dans du code TypeScript reutilisable. Au module prerequis vous avez ecrit `dotProduct2D(a, b)` avec des tableaux. Maintenant on va structurer ca proprement avec des classes `Vec3` et `Mat4` qui encapsulent les donnees et les operations. Cela nous donne :
+
+- La **securite du typage** : impossible de passer accidentellement un Vec2 la ou on attend un Vec3
+- Le **chainage** : `a.sub(b).normalize().dot(c)` se lit naturellement
+- La **3eme dimension** : on passe de `[x, y]` a `(x, y, z)` — et meme `(x, y, z, w)` pour les coordonnees homogenes
+
+:::tip Vous avez deja les bases
+Si vous avez reussi le Lab 00, vous avez deja toutes les bases necessaires. Ce module ajoute la rigueur mathematique et la 3eme dimension, mais les principes restent les memes. Le dot product en 3D, c'est juste un terme de plus : `a.x*b.x + a.y*b.y + a.z*b.z`.
 :::
 
 ---
