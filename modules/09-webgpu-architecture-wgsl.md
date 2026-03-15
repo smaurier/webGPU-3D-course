@@ -126,7 +126,7 @@ async function initWebGPU(): Promise<{ device: GPUDevice; context: GPUCanvasCont
   // Verifier que le navigateur supporte WebGPU
   if (!navigator.gpu) {
     throw new Error(
-      'WebGPU non supporte. Utilisez Chrome 113+, Firefox Nightly, ou Safari 18+.'
+      'WebGPU non supporte. Utilisez Chrome 113+, Firefox 141+, ou Safari 18+.'
     );
   }
 

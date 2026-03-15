@@ -40,7 +40,7 @@ Ces techniques offrent un controle total mais demandent beaucoup de code boilerp
 
 ### La couche d'abstraction
 
-Three.js est une bibliotheque JavaScript/TypeScript qui abstrait les API graphiques bas niveau (WebGL, et bientot WebGPU) derriere une API orientee objet intuitive.
+Three.js est une bibliotheque JavaScript/TypeScript qui abstrait les API graphiques bas niveau (WebGL et WebGPU (depuis r160+)) derriere une API orientee objet intuitive.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

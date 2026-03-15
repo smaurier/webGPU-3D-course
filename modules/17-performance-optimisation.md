@@ -809,11 +809,11 @@ transparentObjects.forEach((obj) => obj.layers.set(1));
 
 ### THREE.WebGPURenderer
 
-Three.js r160+ inclut un `WebGPURenderer` experimental qui utilise l'API WebGPU au lieu de WebGL quand le navigateur le supporte, avec fallback automatique vers WebGL :
+Three.js r160+ inclut un `WebGPURenderer` production-ready qui utilise l'API WebGPU au lieu de WebGL quand le navigateur le supporte, avec fallback automatique vers WebGL :
 
 ```typescript
 import * as THREE from 'three';
-import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+import WebGPURenderer from 'three/webgpu';
 
 // ─── Creer un WebGPURenderer ──────────────────────────────
 const renderer = new WebGPURenderer({ antialias: true });
@@ -917,18 +917,18 @@ const glslMaterial = new THREE.ShaderMaterial({
 
 | Critere | WebGLRenderer | WebGPURenderer |
 |---------|:-------------:|:--------------:|
-| Support navigateur | Tous | Chrome 113+, Edge, Firefox Nightly |
-| Maturite | Stable | Experimental |
+| Support navigateur | Tous | Chrome 113+, Edge, Firefox 141+, Safari 18+ |
+| Maturite | Stable | Production-ready (depuis r160+) |
 | Compute shaders | Non (GPGPU hack) | Oui (natif) |
 | Multi-draw | Non | Oui |
 | Performances theoriques | Bonnes | Meilleures (moins d'overhead CPU) |
 | Ecosysteme (post-processing, etc.) | Complet | En cours |
-| Production | Oui | Bientot |
+| Production | Oui | Oui (depuis r160+) |
 
 :::tip Strategie recommandee
 Utilisez `WebGPURenderer` avec fallback WebGL :
 ```typescript
-import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+import WebGPURenderer from 'three/webgpu';
 
 const renderer = new WebGPURenderer({ antialias: true });
 // Si WebGPU n'est pas disponible, il utilise automatiquement WebGL
@@ -1256,7 +1256,7 @@ animate();
 | GPU profiling | Chrome DevTools, Spector.js | Frame capture, draw call inspection |
 | Tri par materiau | Automatique + materiaux partages | Reduire les changements d'etat GPU |
 | Tri par distance | Automatique | Front-to-back opaque, back-to-front transparent |
-| WebGPU renderer | `WebGPURenderer` | Experimental, fallback WebGL automatique |
+| WebGPU renderer | `WebGPURenderer` | Production-ready, fallback WebGL automatique |
 | TSL | `MeshStandardNodeMaterial` | Shading en TypeScript, genere GLSL ou WGSL |
 
 ---

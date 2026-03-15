@@ -71,7 +71,7 @@ class TypedBuffer<T extends Float32Array | Uint16Array> {
 - **Node.js** >= 20.0.0
 - **pnpm** (gestionnaire de paquets)
 - **VS Code** avec les extensions : WGSL (WebGPU Shading Language), glsl-literal
-- **Navigateur** : Chrome 113+ (WebGPU) ou Firefox Nightly
+- **Navigateur** : Chrome 113+ (WebGPU) ou Firefox 141+
 
 ---
 
@@ -140,7 +140,7 @@ EVOLUTION DES APIs 3D WEB
 │         → Compute shaders, pipeline explicite
 │         → Meilleure performance multi-thread
 │
-2024+ ─── Three.js WebGPURenderer (experimental)
+2024+ ─── Three.js WebGPURenderer (production-ready depuis r160+)
           → Three.js supporte WebGL ET WebGPU comme backend
 ```
 
