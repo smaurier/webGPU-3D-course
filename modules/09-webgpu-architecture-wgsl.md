@@ -1180,6 +1180,98 @@ async function detectCapabilities(): Promise<GPUCapabilities> {
 
 ---
 
+## Outils de debugging WebGPU
+
+### Chrome DevTools — WebGPU Inspector
+
+Chrome 121+ inclut un panneau **WebGPU** dans les DevTools :
+
+- **Adapter Info** : GPU detecte, limites, features supportees
+- **Buffer/Texture Inspector** : visualisation du contenu des buffers et textures
+- **Shader Editor** : edition live des shaders WGSL avec recompilation a chaud
+- **Command Timeline** : sequence des command buffers soumis au GPU
+
+> Activez `chrome://flags/#enable-webgpu-developer-features` pour des messages d'erreur plus detailles.
+
+### Validation layers
+
+WebGPU inclut des **validation layers** activees par defaut en developpement. Elles detectent :
+- Bindings manquants ou incompatibles
+- Depassement de limites (buffer size, texture dimensions)
+- Etats de pipeline invalides
+- Erreurs de synchronisation
+
+```typescript
+// Capturer les erreurs GPU de maniere programmatique
+device.pushErrorScope('validation');
+
+// ... operations GPU ...
+
+device.popErrorScope().then((error) => {
+  if (error) {
+    console.error('GPU Validation Error:', error.message);
+  }
+});
+
+// Erreur de type out-of-memory
+device.pushErrorScope('out-of-memory');
+const hugeBuffer = device.createBuffer({
+  size: Number.MAX_SAFE_INTEGER,
+  usage: GPUBufferUsage.STORAGE,
+});
+device.popErrorScope().then((error) => {
+  if (error) console.error('OOM:', error.message);
+});
+```
+
+### Outils tiers
+
+| Outil | Usage |
+|-------|-------|
+| **[webgpu-debugger](https://github.com/pissang/webgpu-devtools)** | Extension Chrome, capture de frames GPU |
+| **RenderDoc** | Capture de frames avancee (via Dawn/native) |
+| **Spector2** | Successeur de Spector.js, support WebGPU experimental |
+| **Tint (Dawn)** | Compilateur WGSL → SPIR-V/MSL/HLSL, utile pour diagnostiquer les erreurs shader |
+
+### Bonnes pratiques debug
+
+1. **Labels partout** : nommez vos ressources pour des messages d'erreur lisibles
+```typescript
+const buffer = device.createBuffer({
+  label: 'vertex-buffer-mesh-player',
+  size: vertices.byteLength,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+```
+
+2. **device.lost** : gerez la perte du device GPU
+```typescript
+device.lost.then((info) => {
+  console.error(`GPU device lost: ${info.reason}`, info.message);
+  if (info.reason !== 'destroyed') {
+    // Tenter de recreer le device
+    initWebGPU();
+  }
+});
+```
+
+3. **Performance timestamps** : mesurez le temps GPU
+```typescript
+// Verifiez que le feature est supporte
+if (adapter.features.has('timestamp-query')) {
+  const device = await adapter.requestDevice({
+    requiredFeatures: ['timestamp-query'],
+  });
+  const querySet = device.createQuerySet({
+    type: 'timestamp',
+    count: 2,
+  });
+  // Utilisez dans un render/compute pass
+}
+```
+
+---
+
 ## Exercice pratique
 
 Creez un programme WebGPU qui :
