@@ -8,12 +8,12 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Expliquer la difference fondamentale entre rasterization et ray tracing
+- Expliquer la différence fondamentale entre rasterization et ray tracing
 - Implementer les intersections rayon-sphere, rayon-triangle et rayon-AABB
 - Construire une BVH (Bounding Volume Hierarchy) avec la Surface Area Heuristic
 - Traverser une BVH avec un algorithme stack-based front-to-back
 - Implementer le Whitted ray tracing (reflexion, refraction, ombres)
-- Comprendre le path tracing par integration de Monte Carlo
+- Comprendre le path tracing par intégration de Monte Carlo
 - Appliquer l'echantillonnage cosine-weighted et l'importance sampling
 - Utiliser la Russian roulette pour terminer les chemins probabilistiquement
 - Implementer un ray tracer basique en compute shader WebGPU (WGSL)
@@ -23,9 +23,9 @@ A la fin de ce module, vous serez capable de :
 ---
 
 <details>
-<summary>Rappel du cours precedent — Modelisation 3D (Module 22)</summary>
+<summary>Rappel du cours précédent — Modelisation 3D (Module 22)</summary>
 
-Au module 22, nous avons couvert la creation d'assets 3D :
+Au module 22, nous avons couvert la création d'assets 3D :
 
 - **Blender** : navigation (MMB orbit, scroll zoom, Shift+MMB pan), modes Object/Edit, raccourcis G/R/S
 - **Modelisation polygonale** : vertices, edges, faces, quads vs tris, modifiers (Subdivision Surface, Mirror, Boolean)
@@ -35,9 +35,9 @@ Au module 22, nous avons couvert la creation d'assets 3D :
 - **Rigging** : armature (squelette de bones), weight painting, pose
 - **Animation** : keyframes, interpolation, F-curves, NLA editor
 - **Export glTF** : format standard 3D web, structure JSON + binaire, extensions Draco/Meshopt
-- **Pipeline** : modelisation → UV → texturing → rigging → animation → export → integration Three.js
+- **Pipeline** : modelisation → UV → texturing → rigging → animation → export → intégration Three.js
 
-Nous allons maintenant explorer comment la lumiere interagit reellement avec la geometrie — en simulant le trajet de chaque rayon lumineux.
+Nous allons maintenant explorer comment la lumiere interagit réellement avec la geometrie — en simulant le trajet de chaque rayon lumineux.
 
 </details>
 
@@ -46,7 +46,7 @@ Nous allons maintenant explorer comment la lumiere interagit reellement avec la 
 ## Rasterization vs Ray tracing
 
 :::tip Analogie
-La rasterization, c'est comme peindre un tableau en projetant chaque objet sur la toile un par un, sans se soucier de ce que les autres objets refletent. Le ray tracing, c'est comme regarder la scene a travers chaque pixel de la toile et suivre le rayon de lumiere en arriere — de ton oeil jusqu'a la source lumineuse — pour savoir exactement quelle couleur tu vois. C'est plus lent, mais ca capture naturellement les reflexions, les refractions et les ombres douces.
+La rasterization, c'est comme peindre un tableau en projetant chaque objet sur la toile un par un, sans se soucier de ce que les autres objets refletent. Le ray tracing, c'est comme regarder la scene a travers chaque pixel de la toile et suivre le rayon de lumiere en arriere — de ton oeil jusqu'à la source lumineuse — pour savoir exactement quelle couleur tu vois. C'est plus lent, mais ça capture naturellement les reflexions, les refractions et les ombres douces.
 :::
 
 ### Les deux philosophies
@@ -84,7 +84,7 @@ Pour chaque pixel :
 
 | Critere | Rasterization | Ray tracing |
 |---------|:------------:|:-----------:|
-| **Performance** | Temps reel (60+ FPS) | Offline ou hybride |
+| **Performance** | Temps réel (60+ FPS) | Offline ou hybride |
 | **Reflexions** | Approximation (SSR, cubemaps) | Exactes |
 | **Refractions** | Approximation (screen-space) | Exactes (loi de Snell) |
 | **Ombres** | Shadow maps (artefacts possibles) | Naturellement douces |
@@ -97,7 +97,7 @@ Pour chaque pixel :
 
 ### Le rayon
 
-Un rayon est defini par une origine et une direction :
+Un rayon est défini par une origine et une direction :
 
 ```
 R(t) = O + t × D      ou  t > 0
@@ -122,9 +122,9 @@ t = parametre (distance le long du rayon)
       ━━━━━━━━━━━━━━━━ Surface
 ```
 
-### Generer les rayons primaires
+### Générer les rayons primaires
 
-Pour chaque pixel (x, y) de l'ecran, on genere un rayon :
+Pour chaque pixel (x, y) de l'ecran, on généré un rayon :
 
 ```typescript
 interface Ray {
@@ -171,7 +171,7 @@ function generatePrimaryRay(
 
 ### L'equation quadratique
 
-L'intersection rayon-sphere se reduit a une equation du second degre.
+L'intersection rayon-sphere se reduit à une equation du second degre.
 
 ```
 Sphere : |P - C|² = r²        (centre C, rayon r)
@@ -420,7 +420,7 @@ fn intersect_triangle(
 
 ### Principe
 
-On decoupe l'AABB en 3 paires de plans paralleles (slabs). Pour chaque paire, on calcule l'intervalle [tmin, tmax] ou le rayon est entre les deux plans. L'intersection finale est l'intersection des 3 intervalles.
+On découpé l'AABB en 3 paires de plans paralleles (slabs). Pour chaque paire, on calcule l'intervalle [tmin, tmax] ou le rayon est entre les deux plans. L'intersection finale est l'intersection des 3 intervalles.
 
 ```
 Vue de dessus (2D simplifie) :
@@ -499,7 +499,7 @@ fn intersect_aabb_t(ray: Ray, aabb: AABB) -> f32 {
 
 ### Pourquoi une structure d'acceleration
 
-Tester chaque rayon contre chaque triangle est O(n). Pour une scene de 1M de triangles a 1920×1080 pixels, ca fait ~2 trillions de tests d'intersection. Inacceptable.
+Tester chaque rayon contre chaque triangle est O(n). Pour une scene de 1M de triangles a 1920×1080 pixels, ça fait ~2 trillions de tests d'intersection. Inacceptable.
 
 ```
 Sans BVH : O(n) par rayon              Avec BVH : O(log n) par rayon
@@ -713,9 +713,9 @@ fn traverse_bvh(ray: Ray) -> HitRecord {
 
 ## Whitted ray tracing : reflexion, refraction, ombres
 
-### Le modele de Whitted (1980)
+### Le modèle de Whitted (1980)
 
-Turner Whitted a propose le premier ray tracing recursif : a chaque intersection, lancer des rayons supplementaires pour les reflexions, les refractions et les ombres.
+Turner Whitted a propose le premier ray tracing récursif : à chaque intersection, lancer des rayons supplementaires pour les reflexions, les refractions et les ombres.
 
 ```
                 Camera
@@ -869,11 +869,11 @@ function whittedTrace(
 
 ---
 
-## Path tracing : Monte Carlo integration
+## Path tracing : Monte Carlo intégration
 
-### Le probleme
+### Le problème
 
-Whitted ray tracing ne capture que les reflexions et refractions speculaires. L'illumination indirecte (lumiere qui rebondit sur des surfaces diffuses) est ignoree. Le path tracing resout ce probleme en integrant la **rendering equation** de Kajiya (1986).
+Whitted ray tracing ne capture que les reflexions et refractions speculaires. L'illumination indirecte (lumiere qui rebondit sur des surfaces diffuses) est ignoree. Le path tracing resout ce problème en integrant la **rendering equation** de Kajiya (1986).
 
 ```
 Rendering equation :
@@ -892,7 +892,7 @@ Le probleme : l'integrale est sur un hemisphere continu
 → Solution : Monte Carlo (echantillonner aleatoirement)
 ```
 
-### Integration de Monte Carlo
+### Intégration de Monte Carlo
 
 ```
 Estimateur de Monte Carlo :
@@ -961,7 +961,7 @@ fn sample_hemisphere(normal: vec3f, r1: f32, r2: f32) -> vec3f {
 
 ### Russian roulette
 
-Pour eviter une profondeur de recursion infinie, on utilise la Russian roulette : a chaque rebond, on a une probabilite d'arreter le chemin. Si on continue, on compense par la probabilite de survie.
+Pour éviter une profondeur de récursion infinie, on utilise la Russian roulette : à chaque rebond, on à une probabilite d'arreter le chemin. Si on continue, on compense par la probabilite de survie.
 
 ```wgsl
 fn path_trace(initial_ray: Ray, seed: ptr<function, u32>) -> vec3f {
@@ -1168,7 +1168,7 @@ fn bilateral_filter(
 
 ### AI denoiser (concept)
 
-Les denoisers bases sur le deep learning (Intel Open Image Denoise, NVIDIA OptiX) peuvent produire une image propre a partir de 1-4 SPP. Ils utilisent des reseaux de neurones entraines sur des paires "image bruitee → image propre".
+Les denoisers bases sur le deep learning (Intel Open Image Denoise, NVIDIA OptiX) peuvent produire une image propre à partir de 1-4 SPP. Ils utilisent des réseaux de neurones entraines sur des paires "image bruitee → image propre".
 
 ```
 Inputs du denoiser :
@@ -1467,7 +1467,7 @@ setInterval(() => {
 
 ### Le meilleur des deux mondes
 
-Les jeux modernes utilisent une approche hybride : rasterization pour les passes primaires (geometrie, G-buffer), ray tracing pour les effets specifiques.
+Les jeux modernes utilisent une approche hybride : rasterization pour les passes primaires (geometrie, G-buffer), ray tracing pour les effets spécifiques.
 
 ```
 Pipeline hybride :
@@ -1528,7 +1528,7 @@ Implementer un ray tracer CPU qui rend une scene avec :
 - Reflexion recursive (profondeur max 5)
 - Ombres dures (shadow rays)
 
-Rendre le resultat dans un `<canvas>` pixel par pixel.
+Rendre le résultat dans un `<canvas>` pixel par pixel.
 
 ```typescript
 // TODO: Definir les interfaces Ray, Sphere, Plane, HitRecord, Material
@@ -1746,7 +1746,7 @@ console.log('Rendu termine !');
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | Complexite |
 |---------|-------------|:----------:|
@@ -1761,26 +1761,32 @@ console.log('Rendu termine !');
 | **Russian roulette** | Terminer les chemins probabilistiquement | Pas de biais, pas de profondeur fixe |
 | **Accumulation temporelle** | Moyenne progressive sur plusieurs frames | 1 SPP/frame → converge |
 | **Filtre bilateral** | Lisse le bruit en preservant les aretes | Denoising geometrique |
-| **AI denoiser** | Reseau de neurones (OIDN, OptiX) sur color+normal+albedo | 1-4 SPP suffit |
+| **AI denoiser** | Réseau de neurones (OIDN, OptiX) sur color+normal+albedo | 1-4 SPP suffit |
 | **Approche hybride** | Rasterization (G-buffer) + RT (ombres, reflexions) | Meilleur compromis |
 
 | Technique | SPP minimum | Temps (1080p, GPU mid) | Qualite |
 |-----------|:-----------:|:----------------------:|:-------:|
 | Whitted (spheres) | 1 | ~5ms | Reflexions speculaires uniquement |
-| Path tracing 1 SPP | 1 | ~20ms | Tres bruite |
+| Path tracing 1 SPP | 1 | ~20ms | Très bruite |
 | Path tracing 64 SPP | 64 | ~1.3s | Bruite mais lisible |
 | Path tracing 1024 SPP | 1024 | ~20s | Propre |
 | Path tracing 1 SPP + denoiser | 1 | ~25ms | Bon (denoiser simple) |
-| Hybride (raster + RT) | 1-4 | ~16ms | Excellent (temps reel) |
+| Hybride (raster + RT) | 1-4 | ~16ms | Excellent (temps réel) |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [22 - Modelisation 3D](./22-modelisation-3d.md) | [24 - Global illumination et screen-space](./24-global-illumination-screen-space.md) |
 
-**Ressources associees :**
-- [Lab 23 — Ray tracing](../labs/lab-23-ray-tracing/)
-- [Quiz 23 — Ray tracing](../quizzes/quiz-23-ray-tracing.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 23 ray tracing](../screencasts/screencast-23-ray-tracing.md)
+2. **Lab** : [lab-23-ray-tracing](../labs/lab-23-ray-tracing/README)
+3. **Quiz** : [quiz 23 ray tracing](../quizzes/quiz-23-ray-tracing.html)
+:::

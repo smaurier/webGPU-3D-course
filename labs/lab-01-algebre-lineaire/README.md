@@ -2,10 +2,10 @@
 
 ## Objectif
 
-Implementer les operations fondamentales d'algebre lineaire utilisees en 3D temps reel :
+Implementer les operations fondamentales d'algebre lineaire utilisees en 3D temps réel :
 vecteurs 3D, produit scalaire, produit vectoriel, matrices 4x4 et coordonnees homogenes.
 
-## Concepts cles
+## Concepts clés
 
 ### Vecteurs 3D (Vec3)
 
@@ -16,7 +16,7 @@ Operations de base : addition, soustraction, mise a l'echelle, longueur, normali
 
 `a . b = ax*bx + ay*by + az*bz`
 
-Retourne un scalaire. Si les deux vecteurs sont normalises, le resultat est le cosinus
+Retourne un scalaire. Si les deux vecteurs sont normalises, le résultat est le cosinus
 de l'angle entre eux. Utile pour le calcul d'eclairage (Lambert) et les projections.
 
 ### Produit vectoriel (cross product)
@@ -27,7 +27,7 @@ Essentiel pour calculer les normales de surface.
 ### Matrices 4x4 (Mat4)
 
 Representees en **column-major order** (comme OpenGL/WebGL/WebGPU) :
-les 4 premiers elements sont la premiere colonne.
+les 4 premiers éléments sont la première colonne.
 
 ```
 | m0  m4  m8   m12 |
@@ -49,7 +49,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

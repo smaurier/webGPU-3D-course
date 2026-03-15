@@ -8,23 +8,23 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Architecturer une application 3D open-world modulaire integrant tous les systemes du cours (modules 00-28)
-- Implementer une machine a etats pour gerer plusieurs modes applicatifs (exploration, construction, inspection)
-- Combiner rasterisation et ray tracing hybride dans un meme pipeline de rendu
-- Integrer terrain procedural, eau, atmosphere, brouillard volumetrique et nuages dans une scene coherente
-- Gerer un pipeline d'assets complet : glTF, virtual textures, compression KTX2/Draco
-- Connecter physique, audio 3D, animation procedurale et post-processing dans une boucle temps reel
+- Architecturer une application 3D open-world modulaire integrant tous les systèmes du cours (modules 00-28)
+- Implementer une machine a états pour gérer plusieurs modes applicatifs (exploration, construction, inspection)
+- Combiner rasterisation et ray tracing hybride dans un même pipeline de rendu
+- Intégrer terrain procedural, eau, atmosphere, brouillard volumetrique et nuages dans une scene coherente
+- Gérer un pipeline d'assets complet : glTF, virtual textures, compression KTX2/Draco
+- Connecter physique, audio 3D, animation procedurale et post-processing dans une boucle temps réel
 - Maintenir 60 FPS stables via LOD, instancing, frustum culling et budget VRAM
 - (Bonus) Ajouter un mode VR via WebXR avec rendu stereo et interaction controllers
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Virtual textures et streaming (Module 28)</summary>
+<summary>Rappel du cours précédent — Virtual textures et streaming (Module 28)</summary>
 
-Au module 28, nous avons resolu le probleme des scenes massives :
+Au module 28, nous avons resolu le problème des scenes massives :
 
-- **Virtual texturing** : page table + page cache + feedback buffer pour charger a la demande
+- **Virtual texturing** : page table + page cache + feedback buffer pour charger à la demandé
 - **Formats GPU-native** : BC7, ASTC, ETC2 — decompression hardware sans cout CPU
 - **Basis Universal / KTX2** : format universel transcodable vers tout format GPU
 - **Atlas dynamique** : gestion du padding, LRU eviction, resident ratio monitoring
@@ -40,7 +40,7 @@ Ce projet final expert combine TOUT ce que nous avons appris — des fondamentau
 ## Vue d'ensemble du projet
 
 :::tip Analogie
-Le module 21 etait comme construire une maison : fondations, murs, toit, electricite. Ce projet final expert, c'est construire une ville entiere. Tu as besoin d'urbanisme (architecture modulaire), de reseaux (systemes interconnectes), de services publics (audio, physique, streaming), et d'un maire qui coordonne tout (la boucle principale). Chaque batiment fonctionne seul, mais la ville ne vit que quand tout est connecte.
+Le module 21 etait comme construire une maison : fondations, murs, toit, electricite. Ce projet final expert, c'est construire une ville entière. Tu as besoin d'urbanisme (architecture modulaire), de réseaux (systèmes interconnectes), de services publics (audio, physique, streaming), et d'un maire qui coordonne tout (la boucle principale). Chaque batiment fonctionne seul, mais la ville ne vit que quand tout est connecte.
 :::
 
 ```
@@ -90,9 +90,9 @@ Projet final expert — Carte des systemes
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Difference avec le module 21
+### Différence avec le module 21
 
-| Aspect | Module 21 (intermediaire) | Module 29 (expert) |
+| Aspect | Module 21 (intermédiaire) | Module 29 (expert) |
 |--------|--------------------------|-------------------|
 | **Scope** | Modules 00-20 | Modules 00-28 (tout le cours) |
 | **Rendu** | Rasterisation classique | Hybride raster + ray tracing |
@@ -108,9 +108,9 @@ Projet final expert — Carte des systemes
 
 ## 1 — Architecture modulaire
 
-### Machine a etats applicative
+### Machine a états applicative
 
-L'application supporte trois modes. Chaque mode controle quels systemes sont actifs et comment l'input est interprete.
+L'application supporte trois modes. Chaque mode controle quels systèmes sont actifs et comment l'input est interprete.
 
 ```
 Machine a etats — Modes applicatifs
@@ -188,7 +188,7 @@ class AppStateMachine {
 
 ### Scene Manager
 
-Le scene manager centralise tous les sous-systemes et orchestre leur mise a jour.
+Le scene manager centralise tous les sous-systèmes et orchestre leur mise a jour.
 
 ```typescript
 // src/core/SceneManager.ts
@@ -963,7 +963,7 @@ Metallic-Roughness workflow
 
 ## 6 — Physique et interactions
 
-### Integration Rapier.js (Module 20)
+### Intégration Rapier.js (Module 20)
 
 ```typescript
 // src/interaction/PhysicsSystem.ts
@@ -1275,7 +1275,7 @@ class IKSystem {
 
 ## 8 — Audio 3D spatial
 
-### Systeme audio positionnel (Module 27)
+### Système audio positionnel (Module 27)
 
 ```
 Audio 3D dans la scene
@@ -1994,14 +1994,14 @@ class App {
 
 ---
 
-## 12 — Checklist d'integration
+## 12 — Checklist d'intégration
 
 La table suivante relie chaque fonctionnalite a son module source. Utilisez-la pour suivre votre progression.
 
-| # | Fonctionnalite | Module(s) source | Systeme | Statut |
+| # | Fonctionnalite | Module(s) source | Système | Statut |
 |---|----------------|-----------------|---------|--------|
 | 1 | Initialisation WebGPU, device, swapchain | 00, 01 | `main.ts` | ☐ |
-| 2 | Scene graph hierarchique | 03, 04 | `SceneGraph.ts` | ☐ |
+| 2 | Scene graph hiérarchique | 03, 04 | `SceneGraph.ts` | ☐ |
 | 3 | Camera orbit + FPS + transitions | 07 | `Camera.ts` | ☐ |
 | 4 | Materiaux PBR (albedo, normal, metal, rough) | 05, 14 | `PBRMaterial.ts` | ☐ |
 | 5 | Terrain procedural (heightmap compute shader) | 19 | `TerrainSystem.ts` | ☐ |
@@ -2033,7 +2033,7 @@ La table suivante relie chaque fonctionnalite a son module source. Utilisez-la p
 | 31 | Stats overlay | — | `StatsOverlay.ts` | ☐ |
 | 32 | VRAM budget monitoring + LRU eviction | 28 | `AssetPipeline.ts` | ☐ |
 | 33 | Frame budget tracking (60 FPS target) | — | `FrameBudget.ts` | ☐ |
-| 34 | Machine a etats (explore/build/inspect) | — | `StateMachine.ts` | ☐ |
+| 34 | Machine a états (explore/build/inspect) | — | `StateMachine.ts` | ☐ |
 | 35 | (Bonus) WebXR stereo rendering | 26 | `WebXRSession.ts` | ☐ |
 | 36 | (Bonus) VR controller interaction | 26 | `VRControllerInput.ts` | ☐ |
 
@@ -2041,63 +2041,63 @@ La table suivante relie chaque fonctionnalite a son module source. Utilisez-la p
 
 ## Pratique
 
-### Plan de construction en 15 etapes
+### Plan de construction en 15 étapes
 
-:::tip Strategie
-Ne construisez pas tout d'un coup. Chaque etape produit un resultat visible et testable. Validez chaque etape avant de passer a la suivante. Le stats overlay (etape 2) vous accompagne tout au long pour verifier que vous restez dans le budget de performance.
+:::tip Stratégie
+Ne construisez pas tout d'un coup. Chaque étape produit un résultat visible et testable. Validez chaque étape avant de passer à la suivante. Le stats overlay (étape 2) vous accompagne tout au long pour vérifier que vous restez dans le budget de performance.
 :::
 
-**Etape 1 — Scaffold et boucle principale**
-Creer `main.ts`, `App.ts`, `SceneManager.ts`, `StateMachine.ts`, `Clock.ts`. Verifier que `requestAnimationFrame` tourne et que le delta time est correct. Afficher un triangle de test pour valider le pipeline WebGPU.
+**Étape 1 — Scaffold et boucle principale**
+Créer `main.ts`, `App.ts`, `SceneManager.ts`, `StateMachine.ts`, `Clock.ts`. Vérifier que `requestAnimationFrame` tourne et que le delta time est correct. Afficher un triangle de test pour valider le pipeline WebGPU.
 
-**Etape 2 — Stats overlay et frame budget**
+**Étape 2 — Stats overlay et frame budget**
 Implementer `StatsOverlay.ts` et `FrameBudget.ts`. Afficher FPS, frame time, draw calls. Ce sera votre tableau de bord pour toute la suite.
 
-**Etape 3 — Terrain procedural**
-Implementer `TerrainSystem.ts` avec le compute shader de heightmap. Commencer avec un plan 256x256, puis monter a 1024x1024. Verifier la performance avec le stats overlay.
+**Étape 3 — Terrain procedural**
+Implementer `TerrainSystem.ts` avec le compute shader de heightmap. Commencer avec un plan 256x256, puis monter a 1024x1024. Vérifier la performance avec le stats overlay.
 
-**Etape 4 — Camera et character controller**
-Implementer la camera FPS + orbit. Integrer Rapier.js, creer le `CharacterController` et le collider terrain. Se deplacer sur le terrain.
+**Étape 4 — Camera et character controller**
+Implementer la camera FPS + orbit. Intégrer Rapier.js, créer le `CharacterController` et le collider terrain. Se deplacer sur le terrain.
 
-**Etape 5 — PBR et eclairage de base**
+**Étape 5 — PBR et eclairage de base**
 Implementer le GBuffer pass et le deferred lighting. Appliquer des materiaux PBR au terrain (splat map : herbe, roche, sable). Ajouter une lumiere directionnelle (soleil).
 
-**Etape 6 — Shadows (CSM)**
-Implementer les 4 cascades de shadow maps. Verifier les transitions entre cascades. Le terrain doit projeter et recevoir des ombres.
+**Étape 6 — Shadows (CSM)**
+Implementer les 4 cascades de shadow maps. Vérifier les transitions entre cascades. Le terrain doit projeter et recevoir des ombres.
 
-**Etape 7 — Eau et environnement**
+**Étape 7 — Eau et environnement**
 Ajouter le plan d'eau avec Gerstner waves et Fresnel. Implementer l'atmospheric scattering pour le ciel. La scene doit avoir un horizon credible.
 
-**Etape 8 — Volumetriques**
+**Étape 8 — Volumetriques**
 Ajouter le brouillard volumetrique (ray march), les god rays, et la couche de nuages Perlin-Worley. Attention au budget frame — ces passes sont couteuses.
 
-**Etape 9 — Assets et modeles**
-Integrer le `GLTFLoader` avec Draco. Charger des modeles (arbres, rochers, batiments, NPC). Mettre en place le `InstanceManager` pour la vegetation.
+**Étape 9 — Assets et modèles**
+Intégrer le `GLTFLoader` avec Draco. Charger des modèles (arbres, rochers, batiments, NPC). Mettre en place le `InstanceManager` pour la vegetation.
 
-**Etape 10 — Animation et IK**
+**Étape 10 — Animation et IK**
 Implementer le `SkeletalAnimator` pour les NPC. Ajouter l'IK look-at. Les NPC doivent jouer une animation idle et tourner la tete quand le joueur approche.
 
-**Etape 11 — Post-processing complet**
+**Étape 11 — Post-processing complet**
 Chainer SSAO/GTAO → SSR → TAA → Bloom → Tone mapping → Color grading. Chaque pass est independante — activez-les une par une pour mesurer leur impact.
 
-**Etape 12 — Ray tracing hybride**
-Implementer le `RayTracePass` sur les surfaces metalliques. Construire le BVH. Comparer le resultat avec le SSR seul. Prevoir un fallback si le GPU est trop lent.
+**Étape 12 — Ray tracing hybride**
+Implementer le `RayTracePass` sur les surfaces metalliques. Construire le BVH. Comparer le résultat avec le SSR seul. Prevoir un fallback si le GPU est trop lent.
 
-**Etape 13 — Audio spatial**
-Integrer l'`AudioSystem`, placer des sources dans la scene. Implementer le `FootstepManager` avec detection de surface. Verifier la spatialisation avec un casque.
+**Étape 13 — Audio spatial**
+Intégrer l'`AudioSystem`, placer des sources dans la scene. Implementer le `FootstepManager` avec detection de surface. Vérifier la spatialisation avec un casque.
 
-**Etape 14 — Virtual textures et optimisation**
-Integrer le `VirtualTextureManager` pour le terrain. Activer le LOD, le frustum culling, la compression KTX2. Objectif : 60 FPS stables avec le VRAM budget respecte.
+**Étape 14 — Virtual textures et optimisation**
+Intégrer le `VirtualTextureManager` pour le terrain. Activer le LOD, le frustum culling, la compression KTX2. Objectif : 60 FPS stables avec le VRAM budget respecte.
 
-**Etape 15 — Modes applicatifs et polish**
-Brancher la machine a etats (explore/build/inspect). Ajouter les transitions entre modes. Tester le parcours complet. (Bonus) Ajouter le mode WebXR.
+**Étape 15 — Modes applicatifs et polish**
+Brancher la machine a états (explore/build/inspect). Ajouter les transitions entre modes. Tester le parcours complet. (Bonus) Ajouter le mode WebXR.
 
 ---
 
-### Solution — Architecture d'integration
+### Solution — Architecture d'intégration
 
 :::warning
-Le code complet de chaque systeme represente des milliers de lignes. La solution ci-dessous se concentre sur le code d'integration : comment les systemes se connectent dans la boucle principale. Referez-vous aux modules individuels pour l'implementation detaillee de chaque systeme.
+Le code complet de chaque système represente des milliers de lignes. La solution ci-dessous se concentre sur le code d'intégration : comment les systèmes se connectent dans la boucle principale. Referez-vous aux modules individuels pour l'implementation detaillee de chaque système.
 :::
 
 ```typescript
@@ -2522,19 +2522,19 @@ export class App {
 
 ---
 
-## Recapitulatif
+## Récapitulatif
 
 :::tip Ce qu'il faut retenir
-Ce projet final expert integre l'ensemble des 29 modules du cours dans une application open-world interactive. Les points cles :
+Ce projet final expert intégré l'ensemble des 29 modules du cours dans une application open-world interactive. Les points clés :
 
-1. **Architecture modulaire** : chaque systeme est un module ES independant, registre dans le `SceneManager`, orchestre par la boucle principale
-2. **Machine a etats** : separe clairement les modes applicatifs (explore, build, inspect) pour eviter le code spaghetti
+1. **Architecture modulaire** : chaque système est un module ES independant, registre dans le `SceneManager`, orchestre par la boucle principale
+2. **Machine a états** : separe clairement les modes applicatifs (explore, build, inspect) pour éviter le code spaghetti
 3. **Pipeline de rendu hybride** : 13 passes ordonnees, de la shadow map au composite final, avec ray tracing optionnel sur les surfaces reflechissantes
 4. **Asset pipeline intelligent** : virtual textures, KTX2, Draco, LRU eviction — le tout pilote par un budget VRAM
-5. **Frame budget** : chaque systeme est chronometre, le stats overlay donne une vision temps reel, objectif 60 FPS
-6. **Integration complete** : physique ↔ audio ↔ animation ↔ rendu — chaque systeme communique via des interfaces propres
+5. **Frame budget** : chaque système est chronometre, le stats overlay donne une vision temps réel, objectif 60 FPS
+6. **Intégration complete** : physique ↔ audio ↔ animation ↔ rendu — chaque système communique via des interfaces propres
 
-La difficulte n'est pas dans chaque systeme individuellement (vous les avez deja implementes dans les modules precedents), mais dans leur integration coherente. C'est la competence principale que ce projet developpe.
+La difficulte n'est pas dans chaque système individuellement (vous les avez déjà implementes dans les modules précédents), mais dans leur intégration coherente. C'est la compétence principale que ce projet développé.
 :::
 
 ```
@@ -2570,19 +2570,40 @@ TOTAL                ~12.9ms       Headroom ~3.7ms pour imprevus
 ## Exercice final
 
 :::note Consigne
-Construisez le projet en suivant les 15 etapes decrites dans la section Pratique. Chaque etape doit etre validee avant de passer a la suivante :
+Construisez le projet en suivant les 15 étapes decrites dans la section Pratique. Chaque étape doit etre validee avant de passer à la suivante :
 
 1. Le stats overlay confirme que le FPS reste au-dessus de 55
-2. Le frame budget ne depasse pas 16.67ms
+2. Le frame budget ne dépasse pas 16.67ms
 3. Le VRAM usage reste sous 90% du budget
 
-Livrable : un depot Git avec un commit par etape, un README avec une capture d'ecran de la scene finale et le rapport du stats overlay.
+Livrable : un depot Git avec un commit par étape, un README avec une capture d'ecran de la scene finale et le rapport du stats overlay.
 
-Criteres d'evaluation :
-- Architecture propre (separation des systemes, interfaces claires) — 20%
+Criteres d'évaluation :
+- Architecture propre (separation des systèmes, interfaces claires) — 20%
 - Qualite visuelle (terrain, eau, ciel, eclairage, post-processing) — 25%
 - Interactivite (physique, picking, modes, audio) — 20%
 - Performance (60 FPS, budget respecte, optimisations) — 20%
-- Integration (tous les systemes fonctionnent ensemble) — 15%
+- Intégration (tous les systèmes fonctionnent ensemble) — 15%
 - (Bonus +10%) WebXR avec interaction controllers
+:::
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 29 projet final expert](../screencasts/screencast-29-projet-final-expert.md)
+2. **Lab** : [lab-29-projet-final-expert](../labs/lab-29-projet-final-expert/README)
+3. **Quiz** : [quiz 29 projet final expert](../quizzes/quiz-29-projet-final-expert.html)
+:::
+
+---
+
+<!-- navigation-inter-cours -->
+
+::: info Cours suivant
+Bravo, tu as termine le cours **WebGPU & 3D** ! 
+Le prochain cours du curriculum est **IA pour Devs JS**.
+
+[Commencer IA pour Devs JS →](../../15-ia/modules/00-prerequis-et-paysage-ia.md)
 :::

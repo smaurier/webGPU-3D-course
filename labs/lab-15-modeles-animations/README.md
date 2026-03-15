@@ -3,20 +3,20 @@
 ## Objectif
 
 Implementer les algorithmes d'animation 3D : interpolation de keyframes, animation mixer,
-crossfade, hierarchie squelettique, skinning, morph targets, instanciation et LOD.
+crossfade, hiérarchie squelettique, skinning, morph targets, instanciation et LOD.
 
-## Concepts cles
+## Concepts clés
 
 ### Keyframes et interpolation
 
-Une animation est definie par des **keyframes** (cles) : des paires (temps, valeur).
-Pour obtenir la valeur a un instant `t`, on interpole lineairement entre les deux
+Une animation est definie par des **keyframes** (clés) : des paires (temps, valeur).
+Pour obtenir la valeur à un instant `t`, on interpole lineairement entre les deux
 keyframes qui encadrent `t`.
 
 ### Animation mixer
 
-Le mixer gere le temps courant d'une animation et retourne la valeur interpolee.
-Il avance avec `update(deltaTime)` et boucle si necessaire.
+Le mixer géré le temps courant d'une animation et retourne la valeur interpolee.
+Il avance avec `update(deltaTime)` et boucle si nécessaire.
 
 ### Crossfade
 
@@ -37,7 +37,7 @@ une ou plusieurs formes cibles, selon un poids [0,1].
 
 ### LOD (Level of Detail)
 
-Selection du niveau de detail en fonction de la distance a la camera.
+Selection du niveau de detail en fonction de la distance à la camera.
 
 ## Exercices
 
@@ -47,7 +47,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

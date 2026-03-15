@@ -3,17 +3,17 @@
 ## Objectif
 
 Implementer les structures de donnees et algorithmes fondamentaux d'un moteur 3D
-comme Three.js : scene graph, generation de geometries, bounding volumes et controles camera.
+comme Three.js : scene graph, génération de geometries, bounding volumes et controles camera.
 Tout est testable sans navigateur ni runtime WebGL.
 
-## Concepts cles
+## Concepts clés
 
 ### Scene Graph
 
-Un arbre hierarchique ou chaque noeud possede un nom, des enfants et un parent optionnel.
+Un arbre hiérarchique ou chaque noeud possede un nom, des enfants et un parent optionnel.
 Les operations `addChild`, `removeChild` et `findByName` permettent de manipuler l'arbre.
 
-### Generation de geometrie
+### Génération de geometrie
 
 Les geometries procedurales (box, sphere, plan) sont definies par leurs sommets (positions +
 normales + UVs) et leurs indices. Une box a 24 sommets uniques (4 par face, car chaque face
@@ -40,7 +40,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

@@ -10,25 +10,25 @@ A la fin de ce module, vous serez capable de :
 
 - Construire une boucle de rendu robuste avec `requestAnimationFrame` et delta time
 - Implementer une orbit camera avec coordonnees spheriques
-- Gerer plusieurs objets avec leur propre VAO, shader et model matrix
+- Gérer plusieurs objets avec leur propre VAO, shader et model matrix
 - Calculer la normal matrix pour transformer correctement les normales
 - Implementer un eclairage multi-sources dans le fragment shader
 - Afficher une skybox avec une cubemap texture
 - Utiliser l'instanced rendering pour dessiner des milliers d'objets
 - Configurer l'antialiasing MSAA et la transparence avec blending
-- Gerer le redimensionnement du canvas avec ResizeObserver
-- Organiser le code en classes reutilisables (Mesh, Material, Camera, Renderer)
+- Gérer le redimensionnement du canvas avec ResizeObserver
+- Organiser le code en classes réutilisables (Mesh, Material, Camera, Renderer)
 - Comprendre les limitations de WebGL et la transition vers WebGPU
 
 ---
 
 <details>
-<summary>Rappel du module precedent — Shaders, buffers et textures</summary>
+<summary>Rappel du module précédent — Shaders, buffers et textures</summary>
 
-Avant de continuer, verifie que tu maitrises ces points :
+Avant de continuer, vérifié que tu maitrises ces points :
 
-1. **Quelle est la difference entre VBO, VAO et EBO ?**
-   Le VBO stocke les donnees brutes sur le GPU, le VAO memorise la configuration de lecture des attributs (stride, offset, type), et l'EBO stocke les indices pour eviter la duplication de sommets.
+1. **Quelle est la différence entre VBO, VAO et EBO ?**
+   Le VBO stocke les donnees brutes sur le GPU, le VAO memorise la configuration de lecture des attributs (stride, offset, type), et l'EBO stocke les indices pour éviter la duplication de sommets.
 
 2. **Comment fonctionne `vertexAttribPointer` ?**
    Il decrit comment lire un attribut dans le VBO : index, nombre de composantes, type, normalisation, stride (distance entre 2 sommets) et offset (position dans un sommet).
@@ -37,7 +37,7 @@ Avant de continuer, verifie que tu maitrises ces points :
    Un uniform est une valeur constante pour tout un draw call. On le passe via `gl.uniform*` (scalaires, vecteurs) ou `gl.uniformMatrix*fv` (matrices).
 
 4. **Comment fonctionne l'interpolation des varyings ?**
-   Le vertex shader ecrit des `out` variables, le rasterizer les interpole de facon barycentrique entre les 3 sommets du triangle, et le fragment shader les recoit via des `in` variables.
+   Le vertex shader écrit des `out` variables, le rasterizer les interpole de façon barycentrique entre les 3 sommets du triangle, et le fragment shader les recoit via des `in` variables.
 
 5. **A quoi sert un Framebuffer Object (FBO) ?**
    Il permet de dessiner dans une texture au lieu de l'ecran. C'est la base du post-processing, des shadow maps et des reflexions.
@@ -80,8 +80,8 @@ Montage / post-production            Blending, MSAA, FBO
     correction couleur                    post-processing
 ```
 
-:::tip Analogie cle
-Le **render loop** est le realisateur : a chaque frame (25-60 fois par seconde), il re-donne toutes les instructions — repositionner la camera, regler les lumieres, placer les acteurs — puis crie "Action !" (`gl.drawElements`).
+:::tip Analogie clé
+Le **render loop** est le realisateur : à chaque frame (25-60 fois par seconde), il re-donne toutes les instructions — repositionner la camera, regler les lumieres, placer les acteurs — puis crie "Action !" (`gl.drawElements`).
 :::
 
 ---
@@ -499,7 +499,7 @@ const scene: SceneObject[] = [
 
 ## 5. Normal matrix — transformer les normales correctement
 
-### 5.1 Le probleme : un scale non-uniforme deforme les normales
+### 5.1 Le problème : un scale non-uniforme deforme les normales
 
 ```
 Scale uniforme (1, 1, 1) :          Scale non-uniforme (2, 1, 1) :
@@ -531,7 +531,7 @@ La position se transforme avec la model matrix M :
 P' = M * P
 ```
 
-Pour que l'eclairage soit correct, la normale N doit rester **perpendiculaire** a la surface transformee. On demontre que :
+Pour que l'eclairage soit correct, la normale N doit rester **perpendiculaire** à la surface transformee. On demontre que :
 
 ```
 N' = (M^-1)^T * N
@@ -718,7 +718,7 @@ void main() {
 ```
 
 :::warning Boucles et performance en GLSL
-Les boucles en GLSL doivent avoir une borne superieure constante (`MAX_LIGHTS`). Le `break` conditionnel permet de sauter les lumieres inutilisees, mais le compilateur peut quand meme derouler la boucle. Garder `MAX_LIGHTS` petit (4-8) est important pour la performance.
+Les boucles en GLSL doivent avoir une borne superieure constante (`MAX_LIGHTS`). Le `break` conditionnel permet de sauter les lumieres inutilisees, mais le compilateur peut quand même derouler la boucle. Garder `MAX_LIGHTS` petit (4-8) est important pour la performance.
 :::
 
 ---
@@ -880,14 +880,14 @@ function drawSkybox(
 ```
 
 :::tip Ordre de rendu de la skybox
-On dessine la skybox **apres** les objets opaques avec `gl.depthFunc(gl.LEQUAL)`. Grace au `gl_Position = pos.xyww` dans le vertex shader, la skybox a toujours une profondeur de 1.0. Elle n'apparait que la ou rien d'autre n'a ete dessine (early-z rejection), ce qui economise du fragment processing.
+On dessine la skybox **après** les objets opaques avec `gl.depthFunc(gl.LEQUAL)`. Grace au `gl_Position = pos.xyww` dans le vertex shader, la skybox a toujours une profondeur de 1.0. Elle n'apparait que la ou rien d'autre n'a ete dessine (early-z rejection), ce qui economise du fragment processing.
 :::
 
 ---
 
 ## 8. Instanced rendering
 
-### 8.1 Le probleme : dessiner 1000 cubes
+### 8.1 Le problème : dessiner 1000 cubes
 
 ```
 SANS instanced rendering :                AVEC instanced rendering :
@@ -1082,7 +1082,7 @@ gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 //   result = (1,0,0) * 0.5 + (0,0,1) * 0.5 = (0.5, 0, 0.5) → violet
 ```
 
-### 10.2 Le probleme de l'ordre de rendu
+### 10.2 Le problème de l'ordre de rendu
 
 ```
 MAUVAIS : ordre quelconque         BON : back-to-front (painter's algorithm)
@@ -1096,7 +1096,7 @@ le mur derriere le verre.          Le blending fonctionne correctement.
   a travers le verre
 ```
 
-### 10.3 Strategie de rendu avec transparence
+### 10.3 Stratégie de rendu avec transparence
 
 ```typescript
 function renderWithTransparency(
@@ -1137,14 +1137,14 @@ function renderWithTransparency(
 ```
 
 :::warning depthMask(false) pour les transparents
-Il faut desactiver l'ecriture dans le depth buffer pour les objets transparents (`gl.depthMask(false)`). Sinon, un objet transparent proche empecherait de dessiner un objet transparent plus loin, meme si on devrait voir a travers.
+Il faut désactiver l'écriture dans le depth buffer pour les objets transparents (`gl.depthMask(false)`). Sinon, un objet transparent proche empecherait de dessiner un objet transparent plus loin, même si on devrait voir a travers.
 :::
 
 ---
 
 ## 11. Gestion du resize — ResizeObserver
 
-### 11.1 Le probleme
+### 11.1 Le problème
 
 ```
 Si le canvas fait 800x600 pixels CSS mais que le buffer interne
@@ -1423,7 +1423,7 @@ class Renderer {
 | State machine globale | Bugs subtils, difficile a debugger | Objets immutables (pipeline, bind groups) |
 | Pas de compute shaders | Pas de GPGPU natif (simulation, tri GPU) | `GPUComputePipeline` avec compute shaders |
 | API verbeuse | Beaucoup de boilerplate pour chaque objet | API plus declarative, moins d'appels |
-| Validation au draw call | Erreurs tardives, parfois silencieuses | Validation a la creation (fail-fast) |
+| Validation au draw call | Erreurs tardives, parfois silencieuses | Validation à la création (fail-fast) |
 | Single thread | Encodage des commandes sur le thread principal | `CommandEncoder` + `CommandBuffer` (preparable hors thread) |
 | Extensions optionnelles | Fonctionnalites inconsistantes entre navigateurs | Core features unifiees |
 | Pas de multi-pass efficace | Deferred rendering complexe et lent | Render passes explicites, MRT natif |
@@ -1442,7 +1442,7 @@ Rester en WebGL si :                      Migrer vers WebGPU si :
   (Three.js gere l'abstraction)           - Cible navigateurs modernes uniquement
 ```
 
-:::tip Strategie recommandee
+:::tip Stratégie recommandee
 Pour un nouveau projet en 2025+, commencez avec **Three.js** qui abstrait WebGL et WebGPU. Si vous avez besoin de controle bas niveau ou de compute shaders, passez directement a **WebGPU natif**. Le WebGL brut n'est pertinent que pour comprendre les fondamentaux (ce cours) ou maintenir du code existant.
 :::
 
@@ -1452,13 +1452,13 @@ Pour un nouveau projet en 2025+, commencez avec **Three.js** qui abstrait WebGL 
 
 ### Enonce
 
-Creez une **scene WebGL complete** avec les elements suivants :
+Creez une **scene WebGL complete** avec les éléments suivants :
 
-1. **3 cubes** a des positions differentes, chacun avec sa propre vitesse de rotation
+1. **3 cubes** a des positions différentes, chacun avec sa propre vitesse de rotation
 2. **Eclairage multi-sources** : une lumiere blanche fixe et une lumiere coloree qui orbite
 3. **Orbit camera** : clic gauche pour tourner, molette pour zoomer
 4. **Delta time** : les animations doivent etre independantes du framerate
-5. **Resize** : la scene doit s'adapter quand on redimensionne la fenetre
+5. **Resize** : la scene doit s'adapter quand on redimensionne la fenêtre
 
 **Bonus :**
 - Ajouter un cube semi-transparent avec blending
@@ -1804,20 +1804,20 @@ function frame(now: number): void {
 requestAnimationFrame(frame);
 ```
 
-**Points cles :**
+**Points clés :**
 - Le delta time (`dt`) assure que les rotations sont independantes du framerate
 - Les cubes opaques sont dessines en premier, les transparents ensuite (avec `depthMask(false)`)
-- La lumiere orbitante cree un eclairage dynamique interessant
+- La lumiere orbitante créé un eclairage dynamique interessant
 - Le `ResizeObserver` maintient le rapport d'aspect correct en permanence
-- Le compteur FPS aide a detecter les problemes de performance
+- Le compteur FPS aide a détecter les problèmes de performance
 
 </details>
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | Role | API/Syntaxe cle |
+| Concept | Role | API/Syntaxe clé |
 |---------|------|-----------------|
 | `requestAnimationFrame` | Synchronise le rendu avec l'ecran | `requestAnimationFrame(callback)` |
 | Delta time | Animation independante du framerate | `const dt = (now - last) / 1000` |
@@ -1839,6 +1839,17 @@ requestAnimationFrame(frame);
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [07 — Shaders, buffers et textures](./07-shaders-buffers-textures.md) | [09 — WebGPU architecture et WGSL](./09-webgpu-architecture-wgsl.md) |
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 08 scene webgl](../screencasts/screencast-08-scene-webgl.md)
+2. **Lab** : [lab-08-scene-webgl](../labs/lab-08-scene-webgl/README)
+3. **Visualisation** : [Scene Graph](../visualizations/scene-graph.html)
+4. **Quiz** : [quiz 08 scene webgl](../quizzes/quiz-08-scene-webgl.html)
+:::

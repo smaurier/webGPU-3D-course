@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projections : Perspective vs Orthographique</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .main { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1200px; }
+  .panel { flex: 1; min-width: 340px; }
+  .panel h2 { color: #00d4ff; font-size: 1.1rem; text-align: center; margin-bottom: 0.5rem; }
+  canvas { background: #0d1117; border-radius: 12px; border: 2px solid #0f3460; width: 100%; }
+  .controls { background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1.5rem; margin-top: 1rem; width: 100%; max-width: 700px; }
+  .control-row { display: flex; gap: 2rem; flex-wrap: wrap; }
+  .control-group { margin-bottom: 1rem; flex: 1; min-width: 200px; }
+  .control-group label { display: block; color: #00d4ff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .control-group input[type="range"] { width: 100%; accent-color: #00d4ff; }
+  .control-group .value { text-align: right; font-size: 0.8rem; color: #888; font-family: monospace; }
+  .frustum-view { margin-top: 1.5rem; }
+  .frustum-view h3 { color: #00d4ff; font-size: 1rem; text-align: center; margin-bottom: 0.5rem; }
+</style>
+</head>
+<body>
+
+<h1>Projections</h1>
+<p class="subtitle">Comparez perspective et orthographique. Ajustez le FOV, near et far.</p>
+
+<div class="main">
+  <div class="panel">
+    <h2>Perspective</h2>
+    <canvas id="perspCanvas" width="400" height="350"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Orthographique</h2>
+    <canvas id="orthoCanvas" width="400" height="350"></canvas>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="control-row">
+    <div class="control-group">
+      <label>FOV (degres) : <span class="value" id="fovVal">60</span></label>
+      <input type="range" id="fov" min="20" max="120" value="60">
+    </div>
+    <div class="control-group">
+      <label>Near : <span class="value" id="nearVal">50</span></label>
+      <input type="range" id="near" min="10" max="150" value="50">
+    </div>
+    <div class="control-group">
+      <label>Far : <span class="value" id="far" min="100" max="400" value="300">300</span></label>
+      <input type="range" id="farSlider" min="100" max="400" value="300">
+    </div>
+  </div>
+</div>
+
+<div class="frustum-view">
+  <h3>Vue de dessus du frustum</h3>
+  <canvas id="frustumCanvas" width="700" height="250" style="background:#0d1117;border-radius:12px;border:2px solid #0f3460;max-width:100%;"></canvas>
+</div>
+
+<script>
+const fovSlider = document.getElementById('fov');
+const nearSlider = document.getElementById('near');
+const farSlider = document.getElementById('farSlider');
+
+const perspCanvas = document.getElementById('perspCanvas');
+const orthoCanvas = document.getElementById('orthoCanvas');
+const frustumCanvas = document.getElementById('frustumCanvas');
+
+const pCtx = perspCanvas.getContext('2d');
+const oCtx = orthoCanvas.getContext('2d');
+const fCtx = frustumCanvas.getContext('2d');
+
+[fovSlider, nearSlider, farSlider].forEach(s => s.addEventListener('input', draw));
+
+// Objects at different depths
+const objects = [
+  { z: 80, size: 40, color: '#ff7b72', label: 'Cube A' },
+  { z: 160, size: 40, color: '#7ee787', label: 'Cube B' },
+  { z: 260, size: 40, color: '#d2a8ff', label: 'Cube C' },
+  { z: 340, size: 40, color: '#ffa657', label: 'Cube D' }
+];
+
+function draw() {
+  const fov = parseFloat(fovSlider.value);
+  const near = parseFloat(nearSlider.value);
+  const far = parseFloat(farSlider.value);
+
+  document.getElementById('fovVal').textContent = fov;
+  document.getElementById('nearVal').textContent = near;
+  document.getElementById('far').textContent = far;
+
+  drawPerspective(fov, near, far);
+  drawOrthographic(near, far);
+  drawFrustum(fov, near, far);
+}
+
+function drawPerspective(fov, near, far) {
+  const w = perspCanvas.width;
+  const h = perspCanvas.height;
+  pCtx.clearRect(0, 0, w, h);
+
+  const fovRad = fov * Math.PI / 180;
+  const cx = w / 2;
+
+  objects.forEach(obj => {
+    if (obj.z < near || obj.z > far) return;
+    // Perspective: size decreases with distance
+    const projectedSize = obj.size * (near / obj.z) * (90 / fov);
+    const y = h - 40 - (obj.z - near) / (far - near) * (h - 100);
+
+    pCtx.fillStyle = obj.color + '33';
+    pCtx.strokeStyle = obj.color;
+    pCtx.lineWidth = 2;
+    pCtx.fillRect(cx - projectedSize / 2, y - projectedSize / 2, projectedSize, projectedSize);
+    pCtx.strokeRect(cx - projectedSize / 2, y - projectedSize / 2, projectedSize, projectedSize);
+
+    pCtx.fillStyle = obj.color;
+    pCtx.font = '11px sans-serif';
+    pCtx.fillText(`${obj.label} (z=${obj.z})`, cx + projectedSize / 2 + 5, y + 4);
+  });
+
+  // Label
+  pCtx.fillStyle = '#555';
+  pCtx.font = '11px sans-serif';
+  pCtx.fillText('Objets proches = grands', 10, h - 10);
+}
+
+function drawOrthographic(near, far) {
+  const w = orthoCanvas.width;
+  const h = orthoCanvas.height;
+  oCtx.clearRect(0, 0, w, h);
+
+  const cx = w / 2;
+  const fixedSize = 40;
+
+  objects.forEach(obj => {
+    if (obj.z < near || obj.z > far) return;
+    const y = h - 40 - (obj.z - near) / (far - near) * (h - 100);
+
+    oCtx.fillStyle = obj.color + '33';
+    oCtx.strokeStyle = obj.color;
+    oCtx.lineWidth = 2;
+    oCtx.fillRect(cx - fixedSize / 2, y - fixedSize / 2, fixedSize, fixedSize);
+    oCtx.strokeRect(cx - fixedSize / 2, y - fixedSize / 2, fixedSize, fixedSize);
+
+    oCtx.fillStyle = obj.color;
+    oCtx.font = '11px sans-serif';
+    oCtx.fillText(`${obj.label} (z=${obj.z})`, cx + fixedSize / 2 + 5, y + 4);
+  });
+
+  oCtx.fillStyle = '#555';
+  oCtx.font = '11px sans-serif';
+  oCtx.fillText('Taille constante quelle que soit la distance', 10, h - 10);
+}
+
+function drawFrustum(fov, near, far) {
+  const w = frustumCanvas.width;
+  const h = frustumCanvas.height;
+  fCtx.clearRect(0, 0, w, h);
+
+  const cy = h / 2;
+  const startX = 60;
+  const endX = w - 40;
+  const fovRad = fov * Math.PI / 180;
+
+  const scale = (endX - startX) / far;
+  const nearX = startX + near * scale;
+  const farX = startX + far * scale;
+
+  const nearHalf = Math.tan(fovRad / 2) * near * scale * 0.3;
+  const farHalf = Math.tan(fovRad / 2) * far * scale * 0.3;
+
+  // Frustum shape
+  fCtx.fillStyle = 'rgba(0, 212, 255, 0.08)';
+  fCtx.strokeStyle = '#00d4ff';
+  fCtx.lineWidth = 2;
+  fCtx.beginPath();
+  fCtx.moveTo(startX, cy);
+  fCtx.lineTo(nearX, cy - nearHalf);
+  fCtx.lineTo(farX, cy - farHalf);
+  fCtx.lineTo(farX, cy + farHalf);
+  fCtx.lineTo(nearX, cy + nearHalf);
+  fCtx.closePath();
+  fCtx.fill();
+  fCtx.stroke();
+
+  // Near/far lines
+  fCtx.strokeStyle = '#7ee787';
+  fCtx.setLineDash([4, 4]);
+  fCtx.beginPath(); fCtx.moveTo(nearX, cy - nearHalf - 15); fCtx.lineTo(nearX, cy + nearHalf + 15); fCtx.stroke();
+  fCtx.strokeStyle = '#ff7b72';
+  fCtx.beginPath(); fCtx.moveTo(farX, cy - farHalf - 15); fCtx.lineTo(farX, cy + farHalf + 15); fCtx.stroke();
+  fCtx.setLineDash([]);
+
+  // Labels
+  fCtx.fillStyle = '#7ee787';
+  fCtx.font = '12px sans-serif';
+  fCtx.fillText('Near', nearX - 15, cy + nearHalf + 30);
+  fCtx.fillStyle = '#ff7b72';
+  fCtx.fillText('Far', farX - 10, cy + farHalf + 30);
+
+  // Camera
+  fCtx.fillStyle = '#ffa657';
+  fCtx.beginPath();
+  fCtx.arc(startX, cy, 6, 0, Math.PI * 2);
+  fCtx.fill();
+  fCtx.fillStyle = '#ffa657';
+  fCtx.font = '12px sans-serif';
+  fCtx.fillText('Camera', startX - 18, cy + 22);
+
+  // Objects in frustum
+  objects.forEach(obj => {
+    const ox = startX + obj.z * scale;
+    if (ox < nearX - 5 || ox > farX + 5) {
+      fCtx.globalAlpha = 0.3;
+    }
+    fCtx.fillStyle = obj.color;
+    fCtx.beginPath();
+    fCtx.arc(ox, cy, 6, 0, Math.PI * 2);
+    fCtx.fill();
+    fCtx.font = '10px sans-serif';
+    fCtx.fillText(obj.label, ox - 15, cy - 12);
+    fCtx.globalAlpha = 1;
+  });
+}
+
+draw();
+</script>
+</body>
+</html>

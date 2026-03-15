@@ -6,13 +6,13 @@ Implementer les algorithmes de traitement de maillages 3D : parsing de structure
 validation de topologie, calcul de bounding box, surface area, normales par vertex,
 detection d'aretes non-manifold, ilots UV et quantification de positions.
 
-## Concepts cles
+## Concepts clés
 
 ### Format glTF
 
 Le format glTF (GL Transmission Format) est un standard ouvert pour les scenes 3D.
 La structure JSON decrit des meshes, materiaux, animations, etc.
-Les donnees geometriques sont stockees dans des accessors references par des buffer views.
+Les donnees geometriques sont stockees dans des accessors références par des buffer views.
 
 ### Topologie de maillage
 
@@ -27,7 +27,7 @@ des normales des faces adjacentes. Cela produit un rendu lisse (smooth shading).
 ### Ilots UV (UV Islands)
 
 Les UV d'un maillage forment des composantes connexes dans l'espace UV.
-Deux triangles sont dans le meme ilot s'ils partagent une arete UV.
+Deux triangles sont dans le même ilot s'ils partagent une arete UV.
 
 ### Quantification (Draco-like)
 
@@ -43,7 +43,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

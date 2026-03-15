@@ -17,13 +17,13 @@
 | 8:00-9:30 | Texture maps combinee : albedo + normal + roughness + AO | VS Code + navigateur |
 | 9:30-11:00 | Ombres : renderer.shadowMap, light.castShadow, mesh.receiveShadow | VS Code + navigateur |
 | 11:00-12:30 | Types de shadow map : Basic, PCF, PCFSoft, VSM | VS Code + navigateur comparaison |
-| 12:30-14:00 | Optimisation des ombres : shadow camera, bias, resolution | VS Code + navigateur |
-| 14:00-14:30 | Recapitulatif | Slides |
+| 12:30-14:00 | Optimisation des ombres : shadow camera, bias, résolution | VS Code + navigateur |
+| 14:00-14:30 | Récapitulatif | Slides |
 
-## Points cles a montrer
-- L'environment map transforme completement le realisme d'une scene
-- PMREMGenerator pre-filtre la HDR pour les differents niveaux de roughness
-- Les ombres sont couteuses : limiter la resolution et le nombre de lumieres avec ombres
+## Points clés a montrer
+- L'environment map transforme complètement le realisme d'une scene
+- PMREMGenerator pre-filtre la HDR pour les différents niveaux de roughness
+- Les ombres sont couteuses : limiter la résolution et le nombre de lumieres avec ombres
 - Le shadow bias evite le shadow acne (artefacts de surface)
 
 ## Ressources

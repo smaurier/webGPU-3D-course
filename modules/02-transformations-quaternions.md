@@ -10,7 +10,7 @@ A la fin de ce module, vous serez capable de :
 
 - Construire des matrices de translation, rotation et echelle en 4x4
 - Expliquer l'ordre SRT (Scale → Rotate → Translate) et pourquoi il est critique
-- Identifier le probleme du gimbal lock avec les angles d'Euler
+- Identifier le problème du gimbal lock avec les angles d'Euler
 - Representer une rotation avec un quaternion
 - Implementer les operations sur les quaternions (multiplication, slerp, conversion)
 - Construire la Model matrix, la View matrix et la Projection matrix
@@ -34,8 +34,8 @@ A la fin de ce module, vous serez capable de :
 
 ## Analogie : les transformations CSS en 3D
 
-:::tip Analogie pour developpeurs Vue.js
-Vous connaissez deja les transformations CSS :
+:::tip Analogie pour développeurs Vue.js
+Vous connaissez déjà les transformations CSS :
 
 ```css
 /* CSS : applique de DROITE A GAUCHE dans la chaine de transformations */
@@ -53,7 +53,7 @@ const model = translation.multiply(rotation).multiply(scale);
 // Ordre d'application : scale → rotation → translation (SRT)
 ```
 
-L'astuce : en CSS comme en 3D, les transformations se lisent de **droite a gauche** (derniere ecrite = premiere appliquee).
+L'astuce : en CSS comme en 3D, les transformations se lisent de **droite a gauche** (dernière ecrite = première appliquee).
 :::
 
 ---
@@ -303,7 +303,7 @@ console.log('R*T applied to (1,0,0):', pRT.toString()); // Vec3(-0.000, 6.000, 0
 ```
 
 :::warning Piege classique
-L'erreur la plus frequente des debutants en 3D : multiplier les matrices dans le mauvais ordre. `A * B ≠ B * A`. Souvenez-vous du SRT : **S**cale, **R**otate, **T**ranslate — et la matrice se construit en sens inverse : `T * R * S`.
+L'erreur la plus frequente des débutants en 3D : multiplier les matrices dans le mauvais ordre. `A * B ≠ B * A`. Souvenez-vous du SRT : **S**cale, **R**otate, **T**ranslate — et la matrice se construit en sens inverse : `T * R * S`.
 :::
 
 ---
@@ -338,7 +338,7 @@ Roll (rotation autour de Z) = "pencher la tete"
      └──────► X
 ```
 
-### Le probleme du Gimbal Lock
+### Le problème du Gimbal Lock
 
 ```
 GIMBAL LOCK
@@ -394,7 +394,7 @@ function demonstrateGimbalLock(): void {
 ```
 
 :::warning Pourquoi c'est grave ?
-En animation 3D, le gimbal lock provoque des "sauts" brusques et des rotations imprevisibles. C'est pourquoi les moteurs 3D modernes (Unity, Unreal, Three.js) utilisent des **quaternions** en interne, meme si l'interface expose des angles d'Euler.
+En animation 3D, le gimbal lock provoque des "sauts" brusques et des rotations imprevisibles. C'est pourquoi les moteurs 3D modernes (Unity, Unreal, Three.js) utilisent des **quaternions** en interne, même si l'interface expose des angles d'Euler.
 :::
 
 ---
@@ -858,7 +858,7 @@ function transformVertex(
 ### Enonce
 
 1. Implementez une classe `Transform` avec position, rotation (Quat) et scale
-2. Ajoutez une methode `lookAt(target: Vec3)` qui oriente le transform vers un point
+2. Ajoutez une méthode `lookAt(target: Vec3)` qui oriente le transform vers un point
 3. Demonstrez que l'interpolation slerp entre deux orientations est plus fluide que le lerp d'Euler
 
 <details>
@@ -968,7 +968,7 @@ compareInterpolations();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Explication |
 |---------|-------------|
@@ -993,3 +993,14 @@ compareInterpolations();
 - [Understanding Quaternions (Wolfram)](https://mathworld.wolfram.com/Quaternion.html)
 - [Gimbal Lock explained (YouTube)](https://www.youtube.com/watch?v=zc8b2Jo7mno)
 - [Rotation Formalisms (Wikipedia)](https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 02 transformations](../screencasts/screencast-02-transformations.md)
+2. **Lab** : [lab-02-transformations](../labs/lab-02-transformations/README)
+3. **Visualisation** : [Transformations](../visualizations/transformations.html)
+4. **Quiz** : [quiz 02 transformations](../quizzes/quiz-02-transformations.html)
+:::

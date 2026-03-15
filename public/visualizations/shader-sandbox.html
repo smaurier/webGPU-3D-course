@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shader Sandbox</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .layout { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; max-width: 1100px; width: 100%; }
+  .editor-panel { flex: 1; min-width: 350px; }
+  .canvas-panel { flex: 1; min-width: 350px; text-align: center; }
+  canvas { background: #000; border-radius: 12px; border: 2px solid #0f3460; }
+  textarea { width: 100%; height: 120px; background: #0d1117; color: #7ee787; border: 2px solid #0f3460; border-radius: 8px; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.9rem; resize: vertical; outline: none; }
+  textarea:focus { border-color: #00d4ff; }
+  .controls { background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1.5rem; margin-top: 1rem; }
+  .control-group { margin-bottom: 1rem; }
+  .control-group label { display: block; color: #00d4ff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .control-group input[type="range"] { width: 100%; accent-color: #00d4ff; }
+  .control-group .value { text-align: right; font-size: 0.8rem; color: #888; font-family: monospace; }
+  .presets { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .presets button { background: #16213e; color: #00d4ff; border: 1px solid #0f3460; border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+  .presets button:hover { background: #1a2a4e; border-color: #00d4ff; }
+  .presets button.active { background: #00d4ff; color: #1a1a2e; }
+  .error { color: #ff7b72; font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2rem; }
+  .help { background: #0d1117; border-radius: 8px; padding: 1rem; margin-top: 1rem; font-size: 0.8rem; line-height: 1.6; color: #888; }
+  .help code { color: #7ee787; background: #1a2a4e; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  .btn-play { background: #00d4ff; color: #1a1a2e; border: none; border-radius: 8px; padding: 0.5rem 1.5rem; font-weight: 600; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem; }
+  .btn-play:hover { background: #00b8d9; }
+  .fps { color: #888; font-size: 0.8rem; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+
+<h1>Shader Sandbox</h1>
+<p class="subtitle">Ecrivez une expression mathematique et visualisez-la en temps reel</p>
+
+<div class="layout">
+  <div class="editor-panel">
+    <div class="presets" id="presets"></div>
+    <textarea id="expr" spellcheck="false">sin(x * 10.0 + time) * 0.5 + 0.5</textarea>
+    <div class="error" id="error"></div>
+    <button class="btn-play" id="playBtn">▶ Lancer</button>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>Vitesse du temps : <span class="value" id="speedVal">1.0</span></label>
+        <input type="range" id="speed" min="0" max="500" value="100">
+      </div>
+      <div class="control-group">
+        <label>Parametre A : <span class="value" id="paramAVal">5.0</span></label>
+        <input type="range" id="paramA" min="0" max="200" value="50">
+      </div>
+      <div class="control-group">
+        <label>Parametre B : <span class="value" id="paramBVal">3.0</span></label>
+        <input type="range" id="paramB" min="0" max="200" value="30">
+      </div>
+    </div>
+
+    <div class="help">
+      <strong style="color:#00d4ff;">Variables disponibles :</strong><br>
+      <code>x</code>, <code>y</code> — coordonnees normalisees (0 a 1)<br>
+      <code>time</code> — temps en secondes<br>
+      <code>A</code>, <code>B</code> — parametres ajustables<br>
+      <code>dist</code> — distance au centre<br><br>
+      <strong style="color:#00d4ff;">Fonctions :</strong><br>
+      <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>abs</code>, <code>sqrt</code>,
+      <code>floor</code>, <code>ceil</code>, <code>fract</code>, <code>mix</code>,
+      <code>step</code>, <code>smoothstep</code>, <code>mod</code>
+    </div>
+  </div>
+
+  <div class="canvas-panel">
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <div class="fps" id="fpsDisplay">0 FPS</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const exprInput = document.getElementById('expr');
+const errorEl = document.getElementById('error');
+const playBtn = document.getElementById('playBtn');
+const speedSlider = document.getElementById('speed');
+const paramASlider = document.getElementById('paramA');
+const paramBSlider = document.getElementById('paramB');
+
+const presetData = [
+  { name: 'Ondes', expr: 'sin(x * 10.0 + time) * 0.5 + 0.5' },
+  { name: 'Cercles', expr: 'sin(dist * 20.0 - time * 3.0) * 0.5 + 0.5' },
+  { name: 'Damier', expr: 'mod(floor(x * A) + floor(y * A), 2.0)' },
+  { name: 'Plasma', expr: 'sin(x*A+time) * sin(y*B+time) * 0.5 + 0.5' },
+  { name: 'Spirale', expr: 'fract(atan2(y-0.5, x-0.5) / 6.28 + dist * A - time)' },
+  { name: 'Bruit', expr: 'fract(sin(x*127.1+y*311.7+floor(time))*43758.5) * smoothstep(0.0, 0.5, dist)' },
+  { name: 'Gradient', expr: 'smoothstep(0.0, 1.0, x) * smoothstep(0.0, 1.0, y)' }
+];
+
+const presetsEl = document.getElementById('presets');
+presetData.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = p.name;
+  btn.addEventListener('click', () => {
+    exprInput.value = p.expr;
+    presetsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+  presetsEl.appendChild(btn);
+});
+
+let running = false;
+let animId = null;
+let startTime = 0;
+let frameCount = 0;
+let lastFpsTime = 0;
+
+// Math helpers
+const fract = v => v - Math.floor(v);
+const mix = (a, b, t) => a * (1 - t) + b * t;
+const step = (edge, x) => x < edge ? 0 : 1;
+const smoothstep = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+const mod = (a, b) => ((a % b) + b) % b;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const atan2 = Math.atan2;
+
+function buildFunction(expr) {
+  const code = `return function(x, y, time, A, B, dist) {
+    const {sin, cos, tan, abs, sqrt, floor, ceil, pow, PI, min, max, log} = Math;
+    try { return ${expr}; } catch(e) { return 0; }
+  }`;
+  return new Function(code)();
+}
+
+function renderFrame(timestamp) {
+  if (!running) return;
+  const time = (timestamp - startTime) / 1000 * (parseFloat(speedSlider.value) / 100);
+  const A = parseFloat(paramASlider.value) / 10;
+  const B = parseFloat(paramBSlider.value) / 10;
+
+  document.getElementById('speedVal').textContent = (parseFloat(speedSlider.value) / 100).toFixed(1);
+  document.getElementById('paramAVal').textContent = A.toFixed(1);
+  document.getElementById('paramBVal').textContent = B.toFixed(1);
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+
+  let fn;
+  try {
+    fn = buildFunction(exprInput.value);
+    errorEl.textContent = '';
+  } catch (e) {
+    errorEl.textContent = 'Erreur de syntaxe : ' + e.message;
+    animId = requestAnimationFrame(renderFrame);
+    return;
+  }
+
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const x = px / w;
+      const y = py / h;
+      const dist = Math.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2);
+      let val;
+      try {
+        val = fn(x, y, time, A, B, dist);
+      } catch (e) {
+        val = 0;
+      }
+      if (typeof val !== 'number' || isNaN(val)) val = 0;
+      val = Math.max(0, Math.min(1, val));
+
+      const i = (py * w + px) * 4;
+      // Map value to a color gradient: dark blue -> cyan -> white
+      if (val < 0.5) {
+        const t = val * 2;
+        data[i] = Math.floor(mix(26, 0, t));
+        data[i + 1] = Math.floor(mix(26, 212, t));
+        data[i + 2] = Math.floor(mix(46, 255, t));
+      } else {
+        const t = (val - 0.5) * 2;
+        data[i] = Math.floor(mix(0, 255, t));
+        data[i + 1] = Math.floor(mix(212, 255, t));
+        data[i + 2] = 255;
+      }
+      data[i + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+
+  // FPS counter
+  frameCount++;
+  if (timestamp - lastFpsTime > 1000) {
+    document.getElementById('fpsDisplay').textContent = frameCount + ' FPS';
+    frameCount = 0;
+    lastFpsTime = timestamp;
+  }
+
+  animId = requestAnimationFrame(renderFrame);
+}
+
+playBtn.addEventListener('click', () => {
+  if (running) {
+    running = false;
+    cancelAnimationFrame(animId);
+    playBtn.textContent = '▶ Lancer';
+  } else {
+    running = true;
+    startTime = performance.now();
+    lastFpsTime = startTime;
+    frameCount = 0;
+    playBtn.textContent = '⏸ Pause';
+    animId = requestAnimationFrame(renderFrame);
+  }
+});
+
+// Render one static frame on load
+function renderStatic() {
+  let fn;
+  try { fn = buildFunction(exprInput.value); } catch(e) { return; }
+  const w = canvas.width, h = canvas.height;
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const x = px / w, y = py / h;
+      const dist = Math.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2);
+      let val = fn(x, y, 0, 5, 3, dist);
+      if (typeof val !== 'number' || isNaN(val)) val = 0;
+      val = Math.max(0, Math.min(1, val));
+      const i = (py * w + px) * 4;
+      if (val < 0.5) {
+        const t = val * 2;
+        data[i] = Math.floor(mix(26, 0, t));
+        data[i + 1] = Math.floor(mix(26, 212, t));
+        data[i + 2] = Math.floor(mix(46, 255, t));
+      } else {
+        const t = (val - 0.5) * 2;
+        data[i] = Math.floor(mix(0, 255, t));
+        data[i + 1] = Math.floor(mix(212, 255, t));
+        data[i + 2] = 255;
+      }
+      data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+renderStatic();
+</script>
+</body>
+</html>

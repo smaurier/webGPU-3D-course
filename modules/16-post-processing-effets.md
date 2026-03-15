@@ -10,26 +10,26 @@ A la fin de ce module, vous serez capable de :
 
 - Mettre en place un pipeline de post-processing avec EffectComposer
 - Utiliser les passes standard : bloom, SSAO, depth of field, antialiasing
-- Ecrire des shaders de post-processing personnalises (vignette, color grading, film grain)
+- Écrire des shaders de post-processing personnalises (vignette, color grading, film grain)
 - Combiner plusieurs passes de rendu (multi-pass rendering)
-- Creer et animer des systemes de particules avec Points et BufferGeometry
+- Créer et animer des systèmes de particules avec Points et BufferGeometry
 - Utiliser GPUComputationRenderer pour des simulations de particules sur GPU
-- Integrer des overlays HTML avec CSS2DRenderer et CSS3DRenderer
+- Intégrer des overlays HTML avec CSS2DRenderer et CSS3DRenderer
 - Implementer le raycasting pour l'interaction souris/touch avec la scene 3D
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Modeles et animations (Module 15)</summary>
+<summary>Rappel du cours précédent — Modeles et animations (Module 15)</summary>
 
-Au module 15, nous avons appris a travailler avec des modeles 3D et leurs animations :
+Au module 15, nous avons appris a travailler avec des modèles 3D et leurs animations :
 
 - **glTF 2.0** : le format standard du web 3D, avec `.glb` (binaire) et `.gltf` (JSON + fichiers)
 - **GLTFLoader** : chargement asynchrone, structure `{ scene, animations, cameras, asset }`
 - **DRACOLoader** : compression de geometrie (60-90% de reduction)
 - **KTX2Loader** : textures GPU compressees (Basis Universal)
-- **traverse() / getObjectByName()** : navigation dans la hierarchie de scene
-- **AnimationMixer** : systeme d'animation avec `mixer.update(delta)` dans le render loop
+- **traverse() / getObjectByName()** : navigation dans la hiérarchie de scene
+- **AnimationMixer** : système d'animation avec `mixer.update(delta)` dans le render loop
 - **AnimationAction** : play, stop, crossFadeTo, timeScale, weight
 - **SkinnedMesh + Bones** : animations squelettiques
 - **Morph targets** : deformations pour expressions faciales
@@ -45,7 +45,7 @@ Nous allons maintenant ajouter des effets visuels spectaculaires a nos scenes �
 
 ### Analogie : les filtres photo
 
-Le post-processing en 3D fonctionne exactement comme les filtres Instagram ou Photoshop, mais en temps reel, chaque frame :
+Le post-processing en 3D fonctionne exactement comme les filtres Instagram ou Photoshop, mais en temps réel, chaque frame :
 
 ```
 Scene 3D rendue → Framebuffer (image 2D)
@@ -112,8 +112,8 @@ function animate(): void {
 └──────────────────────────────────────────────────────────────┘
 ```
 
-:::warning Antialias desactive
-Quand on utilise EffectComposer, on desactive `antialias: true` sur le renderer car le rendu passe par des framebuffers intermediaires. L'antialiasing est gere par une passe dediee (SMAA ou FXAA).
+:::warning Antialias désactivé
+Quand on utilise EffectComposer, on désactivé `antialias: true` sur le renderer car le rendu passe par des framebuffers intermédiaires. L'antialiasing est géré par une passe dediee (SMAA ou FXAA).
 :::
 
 ---
@@ -143,7 +143,7 @@ composer.addPass(bloomPass);
 ```
 
 :::tip Bloom selectif
-Pour que seuls certains objets brillent, utilisez la propriete `emissive` sur leurs materiaux :
+Pour que seuls certains objets brillent, utilisez la propriété `emissive` sur leurs materiaux :
 ```typescript
 // Cet objet va briller a travers le bloom
 const neonMaterial = new THREE.MeshStandardMaterial({
@@ -156,7 +156,7 @@ const neonMaterial = new THREE.MeshStandardMaterial({
 
 ### SSAOPass : ambient occlusion en screen-space
 
-L'SSAO ajoute des ombres subtiles dans les creux et les coins, donnant plus de profondeur a la scene :
+L'SSAO ajoute des ombres subtiles dans les creux et les coins, donnant plus de profondeur à la scene :
 
 ```typescript
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
@@ -219,10 +219,10 @@ fxaaPass.material.uniforms['resolution'].value.set(
 // composer.addPass(fxaaPass); // utiliser l'un ou l'autre
 ```
 
-| Methode | Qualite | Performance | Notes |
+| Méthode | Qualite | Performance | Notes |
 |---------|---------|------------|-------|
 | MSAA (WebGL natif) | Bonne | Moyen | Incompatible avec EffectComposer |
-| **SMAA** | Tres bonne | Moyen | Recommande avec post-processing |
+| **SMAA** | Très bonne | Moyen | Recommande avec post-processing |
 | **FXAA** | Correcte | Rapide | Peut flouter le texte/les aretes |
 | TAA | Excellente | Lourd | Necessite accumulation multi-frames |
 
@@ -232,7 +232,7 @@ fxaaPass.material.uniforms['resolution'].value.set(
 
 ### Architecture d'un shader de post-processing
 
-Un shader de post-processing est un fragment shader qui recoit l'image de la passe precedente en tant que texture :
+Un shader de post-processing est un fragment shader qui recoit l'image de la passe précédente en tant que texture :
 
 ```typescript
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -464,7 +464,7 @@ composer.addPass(chromaticPass);
 
 ### Le concept
 
-Un `WebGLRenderTarget` est un framebuffer — on peut rendre une scene dedans au lieu de l'ecran, puis utiliser le resultat comme texture :
+Un `WebGLRenderTarget` est un framebuffer — on peut rendre une scene dedans au lieu de l'ecran, puis utiliser le résultat comme texture :
 
 ```typescript
 // ─── Creer un render target ───────────────────────────────
@@ -519,13 +519,13 @@ const depthTarget = new THREE.WebGLRenderTarget(
 
 ### Multi-pass rendering
 
-Le principe : rendre differentes "couches" (scene principale, outlines, effets) dans des render targets separes, puis les combiner avec un ShaderPass de composition. Par exemple, rendre les objets a outliner avec un materiau de couleur unie dans un target, puis combiner avec la scene principale via un shader de detection de contour.
+Le principe : rendre différentes "couches" (scene principale, outlines, effets) dans des render targets separes, puis les combiner avec un ShaderPass de composition. Par exemple, rendre les objets a outliner avec un materiau de couleur unie dans un target, puis combiner avec la scene principale via un shader de detection de contour.
 
 ---
 
 ## Particules
 
-### Points + BufferGeometry : systeme de particules basique
+### Points + BufferGeometry : système de particules basique
 
 ```typescript
 // ─── Creer 10 000 particules ──────────────────────────────
@@ -607,7 +607,7 @@ function animateParticles(time: number): void {
 
 ### Particules avec textures
 
-Pour des particules plus jolies, utilisez une texture avec un gradient radial (blanc au centre, transparent aux bords). Creez-la proceduralement avec `CanvasTexture` ou chargez une image PNG. Ajoutez-la au `PointsMaterial` via la propriete `map`.
+Pour des particules plus jolies, utilisez une texture avec un gradient radial (blanc au centre, transparent aux bords). Creez-la proceduralement avec `CanvasTexture` ou chargez une image PNG. Ajoutez-la au `PointsMaterial` via la propriété `map`.
 
 ---
 
@@ -615,7 +615,7 @@ Pour des particules plus jolies, utilisez une texture avec un gradient radial (b
 
 ### Le concept
 
-Pour des millions de particules, le CPU est trop lent. `GPUComputationRenderer` execute la simulation **entierement sur le GPU** via des fragment shaders qui ecrivent dans des textures :
+Pour des millions de particules, le CPU est trop lent. `GPUComputationRenderer` exécuté la simulation **entièrement sur le GPU** via des fragment shaders qui ecrivent dans des textures :
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -669,9 +669,9 @@ function animate(): void {
 
 ## Sprites et billboards
 
-### Sprite : toujours face a la camera
+### Sprite : toujours face à la camera
 
-Un `Sprite` est un plan qui fait toujours face a la camera — ideal pour les labels, les icones, les effets :
+Un `Sprite` est un plan qui fait toujours face à la camera — ideal pour les labels, les icones, les effets :
 
 ```typescript
 // ─── Sprite avec une texture ──────────────────────────────
@@ -760,9 +760,9 @@ function animate(): void {
 }
 ```
 
-### CSS3DRenderer : elements HTML en 3D
+### CSS3DRenderer : éléments HTML en 3D
 
-`CSS3DRenderer` fonctionne de maniere similaire, mais les elements HTML sont transformes dans l'espace 3D (rotation, perspective). Creez un `CSS3DObject` a partir d'un element DOM, positionnez-le avec `.position`/`.rotation`, et ajoutez-le a la scene. N'oubliez pas `scale.setScalar(0.01)` pour adapter l'echelle des pixels CSS aux unites 3D.
+`CSS3DRenderer` fonctionne de manière similaire, mais les éléments HTML sont transformes dans l'espace 3D (rotation, perspective). Creez un `CSS3DObject` à partir d'un élément DOM, positionnez-le avec `.position`/`.rotation`, et ajoutez-le à la scene. N'oubliez pas `scale.setScalar(0.01)` pour adapter l'echelle des pixels CSS aux unites 3D.
 
 ---
 
@@ -770,7 +770,7 @@ function animate(): void {
 
 ### Le concept
 
-Le Raycaster trace un rayon invisible depuis la camera a travers un pixel de l'ecran et detecte les objets qu'il intersecte :
+Le Raycaster trace un rayon invisible depuis la camera a travers un pixel de l'ecran et détecté les objets qu'il intersecte :
 
 ```
               Camera
@@ -868,7 +868,7 @@ window.addEventListener('click', () => {
 Trois techniques pour optimiser le raycaster :
 - **Limiter la distance** : `raycaster.far = 50` pour ignorer les objets lointains
 - **Utiliser les layers** : `raycaster.layers.set(1)` pour ne tester que les objets interactables
-- **Throttle** : ne pas raycaster a chaque frame mais toutes les 50ms (suffisant pour le hover)
+- **Throttle** : ne pas raycaster à chaque frame mais toutes les 50ms (suffisant pour le hover)
 
 ---
 
@@ -977,9 +977,9 @@ Creez une scene "neon city" avec :
 6. Raycaster : quand on clique sur un objet, son emissiveIntensity augmente pendant 1 seconde
 
 **Indices** :
-- Le bloom avec `threshold: 0.8` ne fera briller que les objets tres emissifs
-- Pour le sol reflechissant, `metalness: 0.95, roughness: 0.05` donne un bon resultat
-- Utilisez `THREE.Clock` pour gerer le retour a l'emissiveIntensity normale
+- Le bloom avec `threshold: 0.8` ne fera briller que les objets très emissifs
+- Pour le sol reflechissant, `metalness: 0.95, roughness: 0.05` donne un bon résultat
+- Utilisez `THREE.Clock` pour gérer le retour a l'emissiveIntensity normale
 
 <details>
 <summary>Solution</summary>
@@ -1265,12 +1265,12 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | API Three.js | Details cles |
+| Concept | API Three.js | Details clés |
 |---------|-------------|-------------|
 | Pipeline post-process | `EffectComposer` | Chaine de passes, remplace `renderer.render()` |
-| Rendu de base | `RenderPass` | Rend la scene dans un framebuffer intermediaire |
+| Rendu de base | `RenderPass` | Rend la scene dans un framebuffer intermédiaire |
 | Bloom (lueur) | `UnrealBloomPass` | strength, radius, threshold — combine avec emissive |
 | Ambient occlusion | `SSAOPass` | Ombres fines dans les creux, kernelRadius |
 | Profondeur de champ | `BokehPass` | focus distance, aperture, maxblur |
@@ -1282,7 +1282,7 @@ animate();
 | Particules GPU | `GPUComputationRenderer` | Simulation en fragment shader, millions de particules |
 | Sprites | `Sprite` + `SpriteMaterial` | Toujours face camera, ideal pour glows/icones |
 | Labels HTML 2D | `CSS2DRenderer` + `CSS2DObject` | Overlay HTML positionne dans l'espace 3D |
-| Panneaux HTML 3D | `CSS3DRenderer` + `CSS3DObject` | Elements HTML transformes en 3D |
+| Panneaux HTML 3D | `CSS3DRenderer` + `CSS3DObject` | Éléments HTML transformes en 3D |
 | Picking objets | `Raycaster` | `setFromCamera()`, `intersectObjects()` |
 
 ---
@@ -1295,3 +1295,13 @@ animate();
 - [Bloom + Selective Bloom Tutorial](https://threejs.org/examples/?q=bloom)
 - [CSS2DRenderer Documentation](https://threejs.org/docs/#examples/en/renderers/CSS2DRenderer)
 - [The Book of Shaders](https://thebookofshaders.com/) — pour approfondir les effets shader
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 16 post processing](../screencasts/screencast-16-post-processing.md)
+2. **Lab** : [lab-16-post-processing](../labs/lab-16-post-processing/README)
+3. **Quiz** : [quiz 16 post processing](../quizzes/quiz-16-post-processing.html)
+:::

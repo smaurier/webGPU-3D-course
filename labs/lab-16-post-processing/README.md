@@ -6,17 +6,17 @@ Implementer les algorithmes de post-processing utilises dans les moteurs 3D :
 chaine de rendu, bloom, flou gaussien, vignette, tone mapping, color grading,
 aberration chromatique, profondeur de champ, raycasting et projection ecran.
 
-## Concepts cles
+## Concepts clés
 
 ### Chaine de rendu (Render Target Chain)
 
 Les effets de post-processing s'enchainent : l'image de sortie d'un pass devient
-l'entree du suivant. Chaque pass est identifie et connecte au precedent.
+l'entree du suivant. Chaque pass est identifie et connecte au précédent.
 
 ### Bloom
 
-1. **Threshold** : les pixels dont la luminance depasse un seuil sont conserves, les autres deviennent noirs.
-2. **Blur** : le resultat est floute (noyau gaussien).
+1. **Threshold** : les pixels dont la luminance dépasse un seuil sont conserves, les autres deviennent noirs.
+2. **Blur** : le résultat est floute (noyau gaussien).
 3. **Combine** : l'image floutee est ajoutee a l'image originale.
 
 ### Tone mapping
@@ -45,7 +45,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

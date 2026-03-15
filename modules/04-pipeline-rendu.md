@@ -8,9 +8,9 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Decrire les 5 etapes du pipeline de rendu GPU (Application, Geometry, Rasterization, Fragment, Output Merger)
+- Decrire les 5 étapes du pipeline de rendu GPU (Application, Geometry, Rasterization, Fragment, Output Merger)
 - Expliquer le role des vertex buffers, index buffers et la topologie des primitives
-- Ecrire un vertex shader conceptuel qui transforme des sommets via MVP
+- Écrire un vertex shader conceptuel qui transforme des sommets via MVP
 - Comprendre la rasterisation et l'interpolation barycentrique
 - Expliquer le role du fragment shader (calcul de couleur par pixel)
 - Decrire les tests de sortie : depth test, stencil test, alpha blending
@@ -22,11 +22,11 @@ A la fin de ce module, vous serez capable de :
 <summary>Rappel du module precedent</summary>
 
 - **Espaces de coordonnees** : Objet → Monde (M) → Camera (V) → Clip (P) → NDC (/w) → Ecran
-- **lookAt** : construit la view matrix a partir de eye, target, up
+- **lookAt** : construit la view matrix à partir de eye, target, up
 - **Projection perspective** : simule la vision humaine, objets lointains retrecissent (`f / tan(fov/2)`)
 - **Projection orthographique** : taille constante, pas de perspective divide
 - **Frustum culling** : eliminer les objets hors du volume visible avant le rendu
-- **Depth buffer** : precision non-lineaire, concentree pres du near plane
+- **Depth buffer** : précision non-lineaire, concentree pres du near plane
 - **NDC** : x,y ∈ [-1,1], z ∈ [0,1] (WebGPU) ou z ∈ [-1,1] (WebGL)
 
 </details>
@@ -35,14 +35,14 @@ A la fin de ce module, vous serez capable de :
 
 ## Analogie : le pipeline de rendu c'est une chaine d'assemblage
 
-:::tip Analogie pour developpeurs Vue.js
-Vue.js a un pipeline de rendu pour transformer votre code en DOM :
+:::tip Analogie pour développeurs Vue.js
+Vue.js à un pipeline de rendu pour transformer votre code en DOM :
 
 ```
 Template → Compile → VNode → Patch → DOM → Pixels
 ```
 
-Le GPU a un pipeline similaire pour transformer vos donnees 3D en pixels :
+Le GPU à un pipeline similaire pour transformer vos donnees 3D en pixels :
 
 ```
 Vertices → Vertex Shader → Primitives → Rasterizer → Fragment Shader → Pixels
@@ -56,7 +56,7 @@ Vertices → Vertex Shader → Primitives → Rasterizer → Fragment Shader →
 | Patch (mise a jour DOM) | Fragment Shader (calcul couleur) |
 | Navigateur (composite + paint) | Output Merger (depth test, blending) |
 
-La difference majeure : le pipeline GPU est **massivement parallele**. Chaque vertex et chaque fragment sont traites independamment, par des milliers de cores en meme temps.
+La différence majeure : le pipeline GPU est **massivement parallele**. Chaque vertex et chaque fragment sont traites independamment, par des milliers de cores en même temps.
 :::
 
 ---
@@ -126,7 +126,7 @@ PIPELINE DE RENDU GPU
 
 ---
 
-## Etape 1 : Input Assembly
+## Étape 1 : Input Assembly
 
 ### Vertex Buffers
 
@@ -191,7 +191,7 @@ function interleaveVertices(vertices: Vertex[]): Float32Array {
 
 ### Index Buffers
 
-Un index buffer permet de reutiliser les sommets sans les dupliquer.
+Un index buffer permet de réutiliser les sommets sans les dupliquer.
 
 ```
 INDEX BUFFER
@@ -289,9 +289,9 @@ Point list :
 
 ---
 
-## Etape 2 : Vertex Shader
+## Étape 2 : Vertex Shader
 
-Le vertex shader est execute **une fois par sommet**. Son role principal : transformer la position du sommet de l'espace objet vers le clip space.
+Le vertex shader est exécuté **une fois par sommet**. Son role principal : transformer la position du sommet de l'espace objet vers le clip space.
 
 ```typescript
 // ── vertex-shader-concept.ts ──────────────────────────
@@ -363,7 +363,7 @@ Si un objet est etire (ex: `scale(2, 1, 1)`), ses normales sont deformees. Il fa
 
 ---
 
-## Etape 3 : Primitive Assembly et Clipping
+## Étape 3 : Primitive Assembly et Clipping
 
 ```
 CLIPPING
@@ -400,9 +400,9 @@ contre chaque plan du frustum, un plan a la fois.
 
 ---
 
-## Etape 4 : Rasterisation
+## Étape 4 : Rasterisation
 
-La rasterisation est l'etape qui convertit un triangle (3 sommets continus) en un ensemble de **fragments** (pixels candidats).
+La rasterisation est l'étape qui convertit un triangle (3 sommets continus) en un ensemble de **fragments** (pixels candidats).
 
 ```
 RASTERISATION
@@ -555,9 +555,9 @@ function interpolateVec3(
 
 ---
 
-## Etape 5 : Fragment Shader
+## Étape 5 : Fragment Shader
 
-Le fragment shader est execute **une fois par fragment** (pixel candidat). Il calcule la couleur finale du pixel.
+Le fragment shader est exécuté **une fois par fragment** (pixel candidat). Il calcule la couleur finale du pixel.
 
 ```typescript
 // ── fragment-shader-concept.ts ────────────────────────
@@ -623,7 +623,7 @@ function fragmentShaderLit(
 
 ---
 
-## Etape 6 : Output Merger (tests de sortie)
+## Étape 6 : Output Merger (tests de sortie)
 
 ### Depth Test
 
@@ -853,7 +853,7 @@ DEFERRED RENDERING :
 
 ## Software Rasterizer simplifie
 
-Implementons un rasteriseur logiciel complet en TypeScript pour comprendre chaque etape du pipeline.
+Implementons un rasteriseur logiciel complet en TypeScript pour comprendre chaque étape du pipeline.
 
 ```typescript
 // ── software-rasterizer.ts ────────────────────────────
@@ -997,7 +997,7 @@ function softwareRenderDemo(): void {
 softwareRenderDemo();
 ```
 
-Le pipeline complet enchaine ces etapes : transformer tous les vertices via MVP (vertex shader), puis pour chaque triangle appliquer le backface culling, le clipping simplifie, et enfin `rasterizeTriangle()` avec depth test.
+Le pipeline complet enchaine ces étapes : transformer tous les vertices via MVP (vertex shader), puis pour chaque triangle appliquer le backface culling, le clipping simplifie, et enfin `rasterizeTriangle()` avec depth test.
 
 ---
 
@@ -1130,7 +1130,7 @@ console.log(`Depth at overlap: ${overlapDepth.toFixed(2)}`);
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Explication |
 |---------|-------------|
@@ -1139,7 +1139,7 @@ console.log(`Depth at overlap: ${overlapDepth.toFixed(2)}`);
 | Index Buffer | Indices de reutilisation des sommets (evite la duplication) |
 | Topologie | Triangle list, triangle strip, line list, point list |
 | Vertex Shader | Programmable — transforme chaque sommet via MVP (parallele) |
-| Normal Matrix | `transpose(inverse(model))` — corrige les normales apres echelle non-uniforme |
+| Normal Matrix | `transpose(inverse(model))` — corrige les normales après echelle non-uniforme |
 | Clipping | Decoupe des triangles contre les 6 plans du frustum |
 | Rasterisation | Conversion triangle → fragments via edge functions |
 | Coordonnees barycentriques | Poids (w0, w1, w2) pour interpoler les attributs dans le triangle |
@@ -1160,3 +1160,14 @@ console.log(`Depth at overlap: ${overlapDepth.toFixed(2)}`);
 - [Learn OpenGL — Hello Triangle](https://learnopengl.com/Getting-started/Hello-Triangle)
 - [WebGPU Render Pipeline](https://gpuweb.github.io/gpuweb/#render-pipeline)
 - [Tiny Renderer (ssloy)](https://github.com/ssloy/tinyrenderer/wiki)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 04 pipeline](../screencasts/screencast-04-pipeline.md)
+2. **Lab** : [lab-04-pipeline-rendu](../labs/lab-04-pipeline-rendu/README)
+3. **Visualisation** : [Pipeline de rendu](../visualizations/rendering-pipeline.html)
+4. **Quiz** : [quiz 04 pipeline](../quizzes/quiz-04-pipeline.html)
+:::

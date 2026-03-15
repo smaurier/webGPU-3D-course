@@ -8,7 +8,7 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Expliquer la difference entre eclairage direct et illumination globale (indirect lighting)
+- Expliquer la différence entre eclairage direct et illumination globale (indirect lighting)
 - Comprendre les light probes et reflection probes (baked vs runtime)
 - Decomposer l'irradiance en harmoniques spheriques (bandes 0, 1 et 2)
 - Convoluer une cubemap pour obtenir une irradiance map
@@ -19,12 +19,12 @@ A la fin de ce module, vous serez capable de :
 - Comprendre les principes du SSGI (Screen-Space Global Illumination)
 - Implementer le TAA (Temporal Anti-Aliasing) avec jitter, reprojection et neighborhood clamping
 - Distinguer SSAO, HBAO+ et GTAO et choisir la technique adaptee
-- Integrer ces techniques dans un pipeline WebGPU compute + Three.js post-processing
+- Intégrer ces techniques dans un pipeline WebGPU compute + Three.js post-processing
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Ray tracing et path tracing (Module 23)</summary>
+<summary>Rappel du cours précédent — Ray tracing et path tracing (Module 23)</summary>
 
 Au module 23, nous avons explore la simulation physique de la lumiere :
 
@@ -32,14 +32,14 @@ Au module 23, nous avons explore la simulation physique de la lumiere :
 - **Intersections** : rayon-sphere (quadratique), rayon-triangle (Moller-Trumbore), rayon-AABB (slab method)
 - **BVH** : Bounding Volume Hierarchy, construction top-down avec Surface Area Heuristic, traversee stack-based
 - **Whitted ray tracing** : reflexion, refraction (loi de Snell), ombres dures recursives
-- **Path tracing** : integration de Monte Carlo sur l'hemisphere, echantillonnage cosine-weighted
+- **Path tracing** : intégration de Monte Carlo sur l'hemisphere, echantillonnage cosine-weighted
 - **Importance sampling** : echantillonner selon le BRDF (GGX) pour converger plus vite
 - **Russian roulette** : terminer les chemins probabilistiquement sans biais
 - **Denoising** : accumulation temporelle, filtre bilateral (poids spatial + couleur + normale + profondeur)
-- **AI denoiser** : reseaux de neurones (OIDN) sur color + normal + albedo, 1-4 SPP suffisent
+- **AI denoiser** : réseaux de neurones (OIDN) sur color + normal + albedo, 1-4 SPP suffisent
 - **Approche hybride** : rasterization pour le G-buffer + ray tracing cible (ombres, reflexions, AO)
 
-Nous allons maintenant explorer les techniques d'illumination globale en temps reel et les effets screen-space qui ne necessitent pas de ray tracing hardware.
+Nous allons maintenant explorer les techniques d'illumination globale en temps réel et les effets screen-space qui ne necessitent pas de ray tracing hardware.
 
 </details>
 
@@ -48,7 +48,7 @@ Nous allons maintenant explorer les techniques d'illumination globale en temps r
 ## L'illumination globale : pourquoi c'est si important
 
 :::tip Analogie
-Imagine une piece avec une seule fenetre. L'eclairage direct, c'est le rayon de soleil qui entre par la fenetre et eclaire le sol. Mais toute la piece est visible, pas seulement la tache de lumiere au sol. Pourquoi ? Parce que la lumiere rebondit sur le sol, puis sur les murs, puis sur le plafond... C'est l'illumination globale. Sans elle, une scene 3D ressemble a un decor de theatre avec un seul projecteur — les zones non eclairees directement sont completement noires.
+Imagine une piece avec une seule fenêtre. L'eclairage direct, c'est le rayon de soleil qui entre par la fenêtre et eclaire le sol. Mais toute la piece est visible, pas seulement la tache de lumiere au sol. Pourquoi ? Parce que la lumiere rebondit sur le sol, puis sur les murs, puis sur le plafond... C'est l'illumination globale. Sans elle, une scene 3D ressemble à un decor de theatre avec un seul projecteur — les zones non eclairees directement sont complètement noires.
 :::
 
 ### Eclairage direct vs indirect
@@ -92,16 +92,16 @@ Caustics :
   → Tres couteux a calculer en temps reel
 ```
 
-### Approches de GI en temps reel
+### Approches de GI en temps réel
 
 | Technique | Precision | Performance | Dynamique | Cas d'usage |
 |-----------|:---------:|:-----------:|:---------:|-------------|
-| **Light probes (baked)** | Moyenne | Tres rapide | Non | Scenes statiques |
+| **Light probes (baked)** | Moyenne | Très rapide | Non | Scenes statiques |
 | **Reflection probes** | Bonne (reflexions) | Rapide | Partiel | Interieurs, objets brillants |
-| **Spherical Harmonics** | Basse frequence | Tres rapide | Oui | Irradiance diffuse |
+| **Spherical Harmonics** | Basse frequence | Très rapide | Oui | Irradiance diffuse |
 | **VXGI** | Bonne | Couteuse | Oui | Scenes moyennes |
 | **SSGI** | Limitee (screen-space) | Moyenne | Oui | Post-processing |
-| **Path tracing** | Exacte | Tres couteuse | Oui | Offline / hybride |
+| **Path tracing** | Exacte | Très couteuse | Oui | Offline / hybride |
 
 ---
 
@@ -109,7 +109,7 @@ Caustics :
 
 ### Light probes : capturer l'eclairage ambiant
 
-Un light probe est un point dans l'espace ou l'on capture l'irradiance arrivant de toutes les directions. En pratique, on rend une cubemap depuis ce point, puis on la convolue pour obtenir l'eclairage diffus.
+Un light probe est un point dans l'espace où l'on capture l'irradiance arrivant de toutes les directions. En pratique, on rend une cubemap depuis ce point, puis on la convolue pour obtenir l'eclairage diffus.
 
 ```
 Light probe placement :
@@ -155,7 +155,7 @@ interface RuntimeReflectionProbe {
 
 ### Reflection probe : box projection
 
-La box projection corrige les reflexions pour qu'elles correspondent a la geometrie de la piece plutot qu'a une sphere infinie.
+La box projection corrige les reflexions pour qu'elles correspondent à la geometrie de la piece plutot qu'à une sphere infinie.
 
 ```wgsl
 // Sans box projection : reflexion vers l'infini
@@ -185,7 +185,7 @@ fn box_project_reflection(
 
 ---
 
-## Spherical Harmonics (SH) : representer l'irradiance de maniere compacte
+## Spherical Harmonics (SH) : representer l'irradiance de manière compacte
 
 ### L'idee
 
@@ -774,7 +774,7 @@ SSGI : generaliser le SSR a toutes les directions
 
 ## Temporal Anti-Aliasing (TAA)
 
-### Le probleme de l'aliasing temporel
+### Le problème de l'aliasing temporel
 
 ```
 Sans TAA :                      Avec TAA :
@@ -1047,7 +1047,7 @@ fn hbao(@builtin(global_invocation_id) gid: vec3u) {
 
 ### GTAO (Ground Truth Ambient Occlusion)
 
-GTAO est une evolution de HBAO qui integre exactement la visibilite sur l'hemisphere, sans approximation par directions discretes.
+GTAO est une evolution de HBAO qui intégré exactement la visibilite sur l'hemisphere, sans approximation par directions discretes.
 
 ```
 GTAO vs HBAO :
@@ -1078,7 +1078,7 @@ Performance :
 
 ---
 
-## Three.js post-processing : integrer les effets screen-space
+## Three.js post-processing : intégrer les effets screen-space
 
 ```typescript
 import * as THREE from 'three';
@@ -1195,11 +1195,11 @@ scene.add(lightProbe);
 
 ### Exercice GI.1 — SSAO custom en post-processing Three.js
 
-Creer un ShaderPass custom qui implemente un SSAO basique :
-1. Generer un G-buffer (depth + normals) via `MeshNormalMaterial`
-2. Ecrire un fragment shader qui echantillonne 16 points dans une sphere
+Créer un ShaderPass custom qui implemente un SSAO basique :
+1. Générer un G-buffer (depth + normals) via `MeshNormalMaterial`
+2. Écrire un fragment shader qui echantillonne 16 points dans une sphere
 3. Comparer la profondeur de chaque sample avec le depth buffer
-4. Appliquer un blur bilateral pour lisser le resultat
+4. Appliquer un blur bilateral pour lisser le résultat
 5. Multiplier la couleur de la scene par le facteur AO
 
 ```typescript
@@ -1404,29 +1404,29 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | Cout GPU (1080p) |
 |---------|-------------|:----------------:|
 | **Light probes (SH)** | 9 coefficients SH par probe, interpolation trilineaire entre probes | ~0.1ms |
 | **Reflection probes** | Cubemap par probe, box projection pour les interieurs | ~0.3ms |
-| **Spherical Harmonics** | Fonctions de base sur la sphere, bandes 0/1/2 = 9 coeffs RGB | Evaluation : negligeable |
-| **Cubemap convolution** | Integrer l'hemisphere pour obtenir l'irradiance diffuse | ~2ms (offline/compute) |
+| **Spherical Harmonics** | Fonctions de base sur la sphere, bandes 0/1/2 = 9 coeffs RGB | Évaluation : negligeable |
+| **Cubemap convolution** | Intégrer l'hemisphere pour obtenir l'irradiance diffuse | ~2ms (offline/compute) |
 | **VXGI** | Voxeliser la scene, cone tracing dans la texture 3D avec mipmaps | ~3-5ms |
 | **SSR** | Ray march dans le depth buffer, hit = lire la couleur | ~1-2ms |
 | **Hi-Z tracing** | Pyramide de depth pour sauter les zones vides (O(log n)) | ~0.8ms |
 | **SSGI** | SSR generalise a toutes les directions pour l'indirect diffus | ~2-4ms |
 | **TAA** | Jitter projection, reprojection temporelle, neighborhood clamping | ~0.3ms |
-| **Velocity buffer** | Motion vectors = difference de position NDC entre frames | ~0.2ms |
+| **Velocity buffer** | Motion vectors = différence de position NDC entre frames | ~0.2ms |
 | **SSAO** | Echantillons aleatoires dans une sphere, comparer les profondeurs | ~0.5ms |
 | **HBAO+** | Angle d'horizon par direction, marche dans le depth buffer | ~0.8ms |
-| **GTAO** | Integration analytique par slice, cos-weighted, multi-bounce | ~0.6ms |
+| **GTAO** | Intégration analytique par slice, cos-weighted, multi-bounce | ~0.6ms |
 | **RT AO** | Rayons d'occlusion lances depuis le fragment (hardware RT) | ~3-5ms |
 
 | Technique AO | Qualite | Performance | Artefacts typiques |
 |--------------|:-------:|:-----------:|-------------------|
 | **SSAO** | Bonne | Rapide | Banding, halo autour des objets |
-| **HBAO+** | Tres bonne | Moyenne | Bruit directionnel |
+| **HBAO+** | Très bonne | Moyenne | Bruit directionnel |
 | **GTAO** | Excellente | Bonne | Legers artefacts aux discontinuites |
 | **RT AO** | Parfaite | Lente | Bruit (resolu par denoising) |
 
@@ -1434,10 +1434,16 @@ animate();
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [23 - Ray tracing](./23-ray-tracing.md) | [25 - Rendu volumetrique](./25-rendu-volumetrique.md) |
 
-**Ressources associees :**
-- [Lab 24 — Global illumination](../labs/lab-24-global-illumination/)
-- [Quiz 24 — Global illumination](../quizzes/quiz-24-global-illumination.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 24 global illumination](../screencasts/screencast-24-global-illumination.md)
+2. **Lab** : [lab-24-global-illumination](../labs/lab-24-global-illumination/README)
+3. **Quiz** : [quiz 24 global illumination](../quizzes/quiz-24-global-illumination.html)
+:::

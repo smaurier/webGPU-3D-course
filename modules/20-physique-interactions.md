@@ -8,35 +8,35 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Expliquer pourquoi un moteur physique est necessaire et quelles alternatives existent
-- Integrer Rapier.js (WASM) avec Three.js et synchroniser les transforms
-- Creer des rigid bodies dynamiques, kinematiques et fixes
+- Expliquer pourquoi un moteur physique est nécessaire et quelles alternatives existent
+- Intégrer Rapier.js (WASM) avec Three.js et synchroniser les transforms
+- Créer des rigid bodies dynamiques, kinematiques et fixes
 - Choisir et configurer le bon type de collider pour chaque objet
 - Appliquer des forces, impulses et velocites aux rigid bodies
-- Gerer les collisions avec l'EventQueue et les sensor triggers
+- Gérer les collisions avec l'EventQueue et les sensor triggers
 - Implementer un raycasting physique pour le picking d'objets
 - Configurer des joints pour contraindre les mouvements entre bodies
-- Creer un character controller avec detection du sol et gestion des pentes
+- Créer un character controller avec detection du sol et gestion des pentes
 - Debugger visuellement les colliders avec un wireframe overlay
-- Gerer le fixed timestep avec interpolation pour un rendu smooth
+- Gérer le fixed timestep avec interpolation pour un rendu smooth
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Shaders creatifs et procedural (Module 19)</summary>
+<summary>Rappel du cours précédent — Shaders creatifs et procedural (Module 19)</summary>
 
 Au module 19, nous avons explore les shaders proceduraux :
 
 - **Noise functions** : Perlin (gradients interpoles), Simplex (simplexes, O(n²)), Worley (cellulaire)
 - **FBM** : empiler des octaves de noise avec lacunarity (freq x2) et gain (amp /2) pour du detail multi-echelle
-- **Terrain generation** : vertex displacement avec FBM dans le vertex shader, normales par differences finies
-- **Water shader** : Gerstner waves (deplacement horizontal+vertical), Fresnel pour le mix refraction/reflexion
+- **Terrain génération** : vertex displacement avec FBM dans le vertex shader, normales par différences finies
+- **Water shader** : Gerstner waves (déplacement horizontal+vertical), Fresnel pour le mix refraction/reflexion
 - **Procedural textures** : marble (sinusoide deformee), wood (anneaux + noise), fire (noise anime montant)
 - **SDFs** : signed distance functions pour sphere, box, torus + operations booleennes (union, intersection, smooth blend)
-- **Ray marching** : avancer le long du rayon par la distance SDF a chaque pas, rendu volumetrique complet
+- **Ray marching** : avancer le long du rayon par la distance SDF à chaque pas, rendu volumetrique complet
 - **Effets stylises** : toon shading (step), outline (Sobel / extrusion), dissolution (discard + edge glow)
 
-Nous allons maintenant ajouter de la physique a nos scenes 3D pour que les objets reagissent de maniere realiste.
+Nous allons maintenant ajouter de la physique a nos scenes 3D pour que les objets reagissent de manière realiste.
 
 </details>
 
@@ -45,10 +45,10 @@ Nous allons maintenant ajouter de la physique a nos scenes 3D pour que les objet
 ## Pourquoi un moteur physique ?
 
 :::tip Analogie
-Imagine que tu construis un jeu de billard en 3D. Tu pourrais calculer toi-meme la trajectoire de chaque boule, les angles de rebond, la friction, le spin... Mais ca revient a reinventer la mecanique newtonienne. Un moteur physique c'est comme engager un physicien qui gere toutes ces equations pour toi — tu lui decris les objets (forme, masse, friction), tu appliques des forces, et il s'occupe du reste 60 fois par seconde.
+Imagine que tu construis un jeu de billard en 3D. Tu pourrais calculer toi-même la trajectoire de chaque boule, les angles de rebond, la friction, le spin... Mais ça revient a reinventer la mecanique newtonienne. Un moteur physique c'est comme engager un physicien qui géré toutes ces equations pour toi — tu lui decris les objets (forme, masse, friction), tu appliques des forces, et il s'occupe du reste 60 fois par seconde.
 :::
 
-### Ce qu'un moteur physique gere
+### Ce qu'un moteur physique géré
 
 ```
 Sans moteur physique               Avec moteur physique
@@ -95,7 +95,7 @@ async function initPhysics(): Promise<RAPIER.World> {
 }
 ```
 
-### Architecture d'integration Three.js + Rapier
+### Architecture d'intégration Three.js + Rapier
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -316,7 +316,7 @@ world.createCollider(headCollider, characterBody);
 
 ## Forces, impulses et velocity
 
-### La difference force vs impulse
+### La différence force vs impulse
 
 ```
 Force (continue)                    Impulse (instantanee)
@@ -1335,7 +1335,7 @@ main();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | API Rapier | Description |
 |---------|-----------|-------------|
@@ -1369,10 +1369,16 @@ main();
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [19 - Shaders creatifs](./19-shaders-creatifs.md) | [21 - Projet final](./21-projet-final.md) |
 
-**Ressources associees :**
-- [Lab 20 — Physique et interactions](../labs/lab-20-physique-interactions/)
-- [Quiz 20 — Physique et interactions](../quizzes/quiz-20-physique-interactions.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 20 physique](../screencasts/screencast-20-physique.md)
+2. **Lab** : [lab-20-physique](../labs/lab-20-physique/README)
+3. **Quiz** : [quiz 20 physique](../quizzes/quiz-20-physique.html)
+:::

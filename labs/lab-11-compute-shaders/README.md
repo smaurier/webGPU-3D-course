@@ -3,24 +3,24 @@
 ## Objectif
 
 Comprendre les patterns fondamentaux des compute shaders : dispatch de workgroups,
-prefix sum, systeme de particules, simulation de grille 2D, histogramme,
+prefix sum, système de particules, simulation de grille 2D, histogramme,
 reduction parallele, multiplication matrice-vecteur et calcul de bounding box.
 
-## Concepts cles
+## Concepts clés
 
 ### Dispatch de workgroups
 
 Le nombre de workgroups a dispatcher est `ceil(totalItems / workgroupSize)`.
-Chaque workgroup execute `workgroupSize` threads en parallele.
+Chaque workgroup exécuté `workgroupSize` threads en parallele.
 
 ### Prefix sum (scan)
 
 Le prefix sum exclusif d'un tableau `[a, b, c, d]` est `[0, a, a+b, a+b+c]`.
 C'est un algorithme fondamental pour le tri, la compaction et l'allocation parallele.
 
-### Systeme de particules
+### Système de particules
 
-Chaque particule a une position et une velocite. A chaque pas :
+Chaque particule à une position et une velocite. A chaque pas :
 `position += velocity * dt`, `velocity += gravity * dt`.
 
 ### Simulation de grille (Game of Life)
@@ -37,12 +37,12 @@ En GPU, on utilise `atomicAdd` pour incrementer les compteurs.
 
 ### Reduction parallele
 
-Reduire un tableau a une seule valeur (somme, min, max) par etapes
+Reduire un tableau à une seule valeur (somme, min, max) par étapes
 successives de reduction par moitie.
 
 ### Multiplication matrice-vecteur
 
-Chaque thread calcule un element du vecteur resultat :
+Chaque thread calcule un élément du vecteur résultat :
 `result[i] = sum(matrix[i][j] * vector[j])`.
 
 ### Bounding box
@@ -57,7 +57,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

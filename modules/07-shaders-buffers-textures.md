@@ -8,13 +8,13 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Creer et utiliser des Vertex Buffer Objects (VBO) et Vertex Array Objects (VAO)
+- Créer et utiliser des Vertex Buffer Objects (VBO) et Vertex Array Objects (VAO)
 - Configurer `vertexAttribPointer` avec stride et offset pour des donnees entrelacees
-- Utiliser des index buffers (EBO) pour eviter la duplication de sommets
+- Utiliser des index buffers (EBO) pour éviter la duplication de sommets
 - Passer des uniforms au shader (matrices, vecteurs, scalaires)
 - Comprendre les varyings et l'interpolation automatique
 - Charger et configurer des textures 2D
-- Gerer le filtrage (NEAREST, LINEAR, mipmaps) et le wrapping
+- Gérer le filtrage (NEAREST, LINEAR, mipmaps) et le wrapping
 - Utiliser plusieurs textures simultanement (texture units)
 - Effectuer du render-to-texture avec les Framebuffer Objects (FBO)
 - Implementer un eclairage Phong complet en GLSL
@@ -22,24 +22,24 @@ A la fin de ce module, vous serez capable de :
 ---
 
 <details>
-<summary>Rappel du module precedent — WebGL fondamentaux et GLSL</summary>
+<summary>Rappel du module précédent — WebGL fondamentaux et GLSL</summary>
 
-Avant de continuer, verifie que tu maitrises ces points :
+Avant de continuer, vérifié que tu maitrises ces points :
 
 1. **Comment obtient-on un contexte WebGL 2 ?**
    `canvas.getContext('webgl2')` — retourne `null` si non supporte.
 
-2. **Quelles sont les 2 etapes programmables du pipeline ?**
+2. **Quelles sont les 2 étapes programmables du pipeline ?**
    Le Vertex Shader (transforme les sommets) et le Fragment Shader (calcule la couleur de chaque pixel).
 
-3. **Quel est le systeme de coordonnees de sortie du vertex shader ?**
+3. **Quel est le système de coordonnees de sortie du vertex shader ?**
    Le clip space : x, y, z dans [-1, +1]. Les positions sont ecrites dans `gl_Position`.
 
 4. **Comment compiler un shader ?**
-   `gl.createShader()` → `gl.shaderSource()` → `gl.compileShader()` → verifier avec `gl.getShaderParameter(shader, gl.COMPILE_STATUS)`.
+   `gl.createShader()` → `gl.shaderSource()` → `gl.compileShader()` → vérifier avec `gl.getShaderParameter(shader, gl.COMPILE_STATUS)`.
 
 5. **Pourquoi faut-il `precision highp float;` dans le fragment shader ?**
-   Parce que GLSL ES 3.00 n'a pas de precision par defaut pour les floats dans le fragment shader (contrairement au vertex shader ou `highp` est le defaut).
+   Parce que GLSL ES 3.00 n'a pas de précision par defaut pour les floats dans le fragment shader (contrairement au vertex shader ou `highp` est le defaut).
 
 </details>
 
@@ -47,7 +47,7 @@ Avant de continuer, verifie que tu maitrises ces points :
 
 ## 1. Analogie — VBO, VAO et EBO comme un tableur
 
-Si tu connais Excel ou Google Sheets, les buffers WebGL fonctionnent de maniere similaire :
+Si tu connais Excel ou Google Sheets, les buffers WebGL fonctionnent de manière similaire :
 
 ```
 TABLEUR (Excel)                        WEBGL
@@ -71,17 +71,17 @@ Mise en forme conditionnelle           Uniforms
     a toute la selection                   d'un draw call
 ```
 
-:::tip Analogie cle
-Le **VAO** est comme un "profil de lecture" sauvegarde. Au lieu de reconfigurer les colonnes a chaque fois qu'on ouvre le fichier, le VAO memorise "la colonne A contient des positions vec3, la colonne B des couleurs vec4, etc."
+:::tip Analogie clé
+Le **VAO** est comme un "profil de lecture" sauvegarde. Au lieu de reconfigurer les colonnes à chaque fois qu'on ouvre le fichier, le VAO memorise "la colonne A contient des positions vec3, la colonne B des couleurs vec4, etc."
 :::
 
 ---
 
 ## 2. Vertex Buffer Objects (VBO)
 
-Un VBO est un bloc de memoire sur le GPU qui contient les donnees des sommets.
+Un VBO est un bloc de mémoire sur le GPU qui contient les donnees des sommets.
 
-### 2.1 Creer et remplir un VBO
+### 2.1 Créer et remplir un VBO
 
 ```typescript
 // Donnees d'un carre (4 sommets, chacun avec position XYZ et couleur RGB)
@@ -136,9 +136,9 @@ gl.bufferSubData(
 
 ## 3. Vertex Array Objects (VAO)
 
-Le VAO est un conteneur qui **enregistre** la configuration des attributs de sommets. Sans VAO, il faudrait reconfigurer `vertexAttribPointer` a chaque frame pour chaque objet.
+Le VAO est un conteneur qui **enregistre** la configuration des attributs de sommets. Sans VAO, il faudrait reconfigurer `vertexAttribPointer` à chaque frame pour chaque objet.
 
-### 3.1 Creer et configurer un VAO
+### 3.1 Créer et configurer un VAO
 
 ```typescript
 // Creer le VAO
@@ -227,7 +227,7 @@ gl.bindVertexArray(null);
 
 ## 4. Index Buffers (EBO)
 
-### 4.1 Le probleme : sommets dupliques
+### 4.1 Le problème : sommets dupliques
 
 Un carre est compose de 2 triangles. Sans index buffer, il faut 6 sommets (2 sont dupliques) :
 
@@ -302,7 +302,7 @@ L'EBO binde avec `gl.ELEMENT_ARRAY_BUFFER` est enregistre dans le VAO. Ne le deb
 
 ## 5. Uniforms
 
-Les uniforms sont des valeurs constantes pour l'ensemble d'un draw call. Ils servent a passer les matrices de transformation, les parametres d'eclairage, les couleurs, etc.
+Les uniforms sont des valeurs constantes pour l'ensemble d'un draw call. Ils servent a passer les matrices de transformation, les paramètres d'eclairage, les couleurs, etc.
 
 ### 5.1 Types et fonctions
 
@@ -332,7 +332,7 @@ gl.uniformMatrix4fv(mvpLoc, false, mvpMatrix);            // mat4
 gl.uniform3fv(lightPosLoc, new Float32Array([10, 20, 30])); // vec3 depuis array
 ```
 
-### 5.2 Tableau recapitulatif
+### 5.2 Tableau récapitulatif
 
 | GLSL type | Fonction JS | Exemple |
 |-----------|------------|---------|
@@ -546,7 +546,7 @@ Tuile infinie          Pas de repetition       Pas de couture visible
 
 ## 8. Multiple textures — texture units
 
-Le GPU possede plusieurs "slots" appeles texture units. On peut en utiliser plusieurs simultanement dans un meme shader.
+Le GPU possede plusieurs "slots" appeles texture units. On peut en utiliser plusieurs simultanement dans un même shader.
 
 ```typescript
 // Charger 2 textures
@@ -735,7 +735,7 @@ void main() {
 ```
 
 :::warning Uniforms de struct
-Pour envoyer un struct array depuis JavaScript, il faut acceder a chaque membre individuellement :
+Pour envoyer un struct array depuis JavaScript, il faut acceder à chaque membre individuellement :
 `gl.getUniformLocation(program, 'u_lights[0].position')`
 `gl.getUniformLocation(program, 'u_lights[1].color')`
 :::
@@ -907,13 +907,13 @@ Creez un **carre texture** avec eclairage Phong. Le carre doit :
 
 1. Utiliser un **index buffer** (4 sommets, 6 indices)
 2. Avoir des **coordonnees de texture UV** en attribut
-3. Charger une texture depuis une URL (ou utiliser un pattern procedural)
+3. Charger une texture depuis une URL (où utiliser un pattern procedural)
 4. Appliquer un eclairage **Phong** avec une lumiere ponctuelle
 5. Faire tourner le carre lentement avec `requestAnimationFrame`
 
 **Structure des attributs :**
 - `a_position` : vec3
-- `a_normal` : vec3 (tous les sommets ont la meme normale : (0, 0, 1))
+- `a_normal` : vec3 (tous les sommets ont la même normale : (0, 0, 1))
 - `a_texCoord` : vec2
 
 **Indices :**
@@ -1038,24 +1038,24 @@ function frame(now: number): void {
 requestAnimationFrame(frame);
 ```
 
-**Points cles :**
+**Points clés :**
 - Le stride de 32 bytes (8 floats) permet au GPU de sauter d'un sommet au suivant
-- La normal matrix n'est pas necessaire ici car il n'y a pas de scale non-uniforme
-- La texture procedurale evite de dependre d'un fichier image externe
+- La normal matrix n'est pas nécessaire ici car il n'y a pas de scale non-uniforme
+- La texture procedurale evite de dépendre d'un fichier image externe
 - `requestAnimationFrame` synchronise le rendu avec le taux de rafraichissement de l'ecran
 
 </details>
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | Role | API/Syntaxe cle |
+| Concept | Role | API/Syntaxe clé |
 |---------|------|-----------------|
 | VBO | Stocke les donnees de sommets sur le GPU | `gl.createBuffer`, `gl.bufferData` |
 | VAO | Memorise la configuration des attributs | `gl.createVertexArray`, `gl.bindVertexArray` |
 | vertexAttribPointer | Decrit le format d'un attribut | `gl.vertexAttribPointer(loc, size, type, norm, stride, offset)` |
-| EBO / Index Buffer | Reference les sommets par index | `gl.ELEMENT_ARRAY_BUFFER`, `gl.drawElements` |
+| EBO / Index Buffer | Référence les sommets par index | `gl.ELEMENT_ARRAY_BUFFER`, `gl.drawElements` |
 | Uniforms | Valeurs constantes par draw call | `gl.uniform*`, `gl.uniformMatrix*fv` |
 | Varyings | Interpolation vertex → fragment | `out` (vertex) / `in` (fragment) |
 | Textures 2D | Image mappee sur la geometrie | `gl.texImage2D`, `texture()` en GLSL |
@@ -1072,6 +1072,17 @@ requestAnimationFrame(frame);
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [06 — WebGL fondamentaux et GLSL](./06-webgl-fondamentaux.md) | [08 — Scene WebGL complete](./08-scene-webgl-complete.md) |
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 07 shaders](../screencasts/screencast-07-shaders.md)
+2. **Lab** : [lab-07-shaders-glsl](../labs/lab-07-shaders-glsl/README)
+3. **Visualisation** : [Shader Sandbox](../visualizations/shader-sandbox.html)
+4. **Quiz** : [quiz 07 shaders](../quizzes/quiz-07-shaders.html)
+:::

@@ -4,9 +4,9 @@
 
 Implementer les concepts fondamentaux de la realite virtuelle/augmentee (XR) et de
 l'animation procedurale : configuration stereo, cinematique inverse (IK), cycles de
-marche proceduraux, ressorts amortis, machines a etats d'animation et rendu foveate.
+marche proceduraux, ressorts amortis, machines a états d'animation et rendu foveate.
 
-## Concepts cles
+## Concepts clés
 
 ### Camera stereo
 
@@ -29,10 +29,10 @@ L'IK calcule les angles des articulations pour qu'un effecteur terminal atteigne
 - **Ressort amorti** : simule un mouvement elastique qui converge vers une position cible.
   `acceleration = -stiffness * (pos - target) - damping * velocity`
 
-### Machine a etats d'animation
+### Machine a états d'animation
 
-Transitions entre etats (idle, walk, run) basees sur des conditions (vitesse, input).
-Chaque etat a une animation associee, les transitions peuvent avoir des conditions de garde.
+Transitions entre états (idle, walk, run) basees sur des conditions (vitesse, input).
+Chaque état à une animation associee, les transitions peuvent avoir des conditions de garde.
 
 ### Look-at constraint
 
@@ -40,11 +40,11 @@ Calcule les angles yaw (lacet) et pitch (tangage) pour orienter un objet vers un
 
 ### Blend de poses
 
-Interpolation lineaire (lerp) entre deux poses pour creer des transitions fluides.
+Interpolation lineaire (lerp) entre deux poses pour créer des transitions fluides.
 
 ### Rendu foveate
 
-En VR, on rend le centre du regard en haute resolution et la peripherie en basse resolution.
+En VR, on rend le centre du regard en haute résolution et la peripherie en basse résolution.
 Classification des pixels en zones : inner (haute res), middle (moyenne res), outer (basse res).
 
 ### Matrice de vue XR
@@ -59,7 +59,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

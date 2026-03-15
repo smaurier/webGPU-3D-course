@@ -3,9 +3,9 @@
 ## Objectif
 
 Implementer les matrices de vue (lookAt) et de projection (perspective, orthographique),
-ainsi que les transformations entre les differents espaces de coordonnees.
+ainsi que les transformations entre les différents espaces de coordonnees.
 
-## Concepts cles
+## Concepts clés
 
 ### Matrice lookAt
 
@@ -29,7 +29,7 @@ Pas de deformation par la distance — utile pour les editeurs 2D, les vues tech
 
 ### NDC (Normalized Device Coordinates)
 
-Apres la perspective divide (division par w), les coordonnees sont dans [-1, 1].
+Après la perspective divide (division par w), les coordonnees sont dans [-1, 1].
 WebGL utilise NDC avec Z dans [-1, 1], WebGPU utilise Z dans [0, 1].
 Ce lab utilise la convention OpenGL/WebGL (Z dans [-1, 1]).
 

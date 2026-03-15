@@ -30,13 +30,13 @@ features:
 
 | # | Module | Phase | Lab |
 |---|--------|-------|-----|
-| — | Maths pour la 3D (depuis zero) | Prerequis | Lab 00 |
-| 00 | Prerequis et introduction | Prerequis | — |
-| 01 | Algebre lineaire pour la 3D | Theorie 3D | Lab 01 |
-| 02 | Transformations et quaternions | Theorie 3D | Lab 02 |
-| 03 | Cameras et projections | Theorie 3D | Lab 03 |
-| 04 | Pipeline de rendu | Theorie 3D | Lab 04 |
-| 05 | Lumiere, materiaux et PBR | Theorie 3D | Lab 05 |
+| — | Maths pour la 3D (depuis zero) | Prérequis | Lab 00 |
+| 00 | Prérequis et introduction | Prérequis | — |
+| 01 | Algebre lineaire pour la 3D | Théorie 3D | Lab 01 |
+| 02 | Transformations et quaternions | Théorie 3D | Lab 02 |
+| 03 | Cameras et projections | Théorie 3D | Lab 03 |
+| 04 | Pipeline de rendu | Théorie 3D | Lab 04 |
+| 05 | Lumiere, materiaux et PBR | Théorie 3D | Lab 05 |
 | 06 | WebGL fondamentaux et GLSL | WebGL | Lab 06 |
 | 07 | Shaders, buffers et textures | WebGL | Lab 07 |
 | 08 | Scene WebGL complete | WebGL | Lab 08 |
@@ -52,7 +52,7 @@ features:
 | 18 | Shadow mapping | Avance | Lab 18 |
 | 19 | Shaders creatifs et procedural | Avance | Lab 19 |
 | 20 | Physique et interactions | Avance | Lab 20 |
-| 21 | Projet intermediaire | Avance | Lab 21 |
+| 21 | Projet intermédiaire | Avance | Lab 21 |
 | 22 | Modelisation 3D (annexe) | Annexe | Lab 22 |
 | 23 | Ray tracing et path tracing | Expert | Lab 23 |
 | 24 | Global illumination et screen-space | Expert | Lab 24 |

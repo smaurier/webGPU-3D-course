@@ -10,28 +10,28 @@ A la fin de ce module, vous serez capable de :
 
 - Obtenir un contexte WebGL 2 depuis un canvas HTML
 - Decrire le pipeline WebGL : vertex shader → rasterizer → fragment shader
-- Ecrire des shaders minimaux en GLSL ES 3.00
+- Écrire des shaders minimaux en GLSL ES 3.00
 - Compiler et linker un shader program en TypeScript
 - Dessiner un premier triangle en clip space
 - Configurer viewport, clear color, depth test et face culling
-- Utiliser le systeme d'extensions WebGL
+- Utiliser le système d'extensions WebGL
 - Debugger les erreurs WebGL avec `gl.getError()` et les info logs
 
 ---
 
 <details>
-<summary>Rappel du module precedent — Lumiere, materiaux et PBR</summary>
+<summary>Rappel du module précédent — Lumiere, materiaux et PBR</summary>
 
-Avant de plonger dans WebGL, verifie que tu maitrises ces concepts :
+Avant de plonger dans WebGL, vérifié que tu maitrises ces concepts :
 
-1. **Quels sont les 3 composants du modele Phong ?**
+1. **Quels sont les 3 composants du modèle Phong ?**
    Ambient + Diffuse (Lambert : `max(dot(N, L), 0)`) + Speculaire (`pow(max(dot(R, V), 0), shininess)`)
 
 2. **Qu'est-ce que le PBR ?**
-   Physically Based Rendering — un modele d'eclairage base sur la physique reelle (metalness, roughness, conservation d'energie).
+   Physically Based Rendering — un modèle d'eclairage base sur la physique réelle (metalness, roughness, conservation d'energie).
 
 3. **Pourquoi normalise-t-on les vecteurs avant un dot product ?**
-   Parce que `dot(A, B) = |A| * |B| * cos(theta)`. Si les vecteurs ne sont pas unitaires, le resultat n'est pas le cosinus pur de l'angle.
+   Parce que `dot(A, B) = |A| * |B| * cos(theta)`. Si les vecteurs ne sont pas unitaires, le résultat n'est pas le cosinus pur de l'angle.
 
 </details>
 
@@ -39,7 +39,7 @@ Avant de plonger dans WebGL, verifie que tu maitrises ces concepts :
 
 ## 1. Analogie — WebGL comme une chaine de montage
 
-Si tu connais le developpement web avec Vue ou React, pense a WebGL comme une **chaine de montage industrielle** :
+Si tu connais le développement web avec Vue ou React, pense a WebGL comme une **chaine de montage industrielle** :
 
 ```
 DEVELOPPEMENT WEB (Vue/React)           WEBGL
@@ -57,9 +57,9 @@ CSS + computed styles                   Fragment Shader
 DOM final affiche                       Framebuffer final affiche
 ```
 
-En web classique, le navigateur gere tout le pipeline de rendu. En WebGL, **tu programmes chaque etape toi-meme** : comment transformer les sommets, comment colorer chaque pixel.
+En web classique, le navigateur géré tout le pipeline de rendu. En WebGL, **tu programmes chaque étape toi-même** : comment transformer les sommets, comment colorer chaque pixel.
 
-:::tip Analogie cle
+:::tip Analogie clé
 Le **Vertex Shader** est comme une fonction `map()` sur un tableau : il transforme chaque sommet individuellement. Le **Fragment Shader** est comme un filtre CSS applique pixel par pixel.
 :::
 
@@ -69,7 +69,7 @@ Le **Vertex Shader** est comme une fonction `map()` sur un tableau : il transfor
 
 ### 2.1 Le canvas HTML
 
-WebGL dessine dans un element `<canvas>`. Le canvas est juste un rectangle de pixels — c'est WebGL qui donne les instructions pour le remplir.
+WebGL dessine dans un élément `<canvas>`. Le canvas est juste un rectangle de pixels — c'est WebGL qui donne les instructions pour le remplir.
 
 ```html
 <!-- index.html -->
@@ -141,7 +141,7 @@ function initWebGL(): WebGL2RenderingContext {
 | Support navigateurs (2024) | ~97% | ~95% |
 
 :::warning Toujours WebGL 2
-En 2024+, il n'y a plus de raison d'utiliser WebGL 1 sauf si vous ciblez de tres vieux appareils. Ce cours utilise exclusivement WebGL 2.
+En 2024+, il n'y a plus de raison d'utiliser WebGL 1 sauf si vous ciblez de très vieux appareils. Ce cours utilise exclusivement WebGL 2.
 :::
 
 ---
@@ -208,13 +208,13 @@ normales, UV, couleurs)  ───────►│   VERTEX SHADER     │
                                  └─────────────────────┘
 ```
 
-Les deux etapes **programmables** sont le Vertex Shader et le Fragment Shader. Tout le reste est gere automatiquement par le GPU (etapes "fixes").
+Les deux étapes **programmables** sont le Vertex Shader et le Fragment Shader. Tout le reste est géré automatiquement par le GPU (étapes "fixes").
 
 ---
 
 ## 4. GLSL ES 3.00 — le langage des shaders
 
-GLSL (OpenGL Shading Language) est un langage de type C qui s'execute directement sur le GPU. Chaque invocation d'un shader traite **un seul sommet** (vertex shader) ou **un seul fragment** (fragment shader), mais le GPU en execute des millions en parallele.
+GLSL (OpenGL Shading Language) est un langage de type C qui s'exécuté directement sur le GPU. Chaque invocation d'un shader traite **un seul sommet** (vertex shader) ou **un seul fragment** (fragment shader), mais le GPU en exécuté des millions en parallele.
 
 ### 4.1 Types fondamentaux
 
@@ -254,7 +254,7 @@ sampler3D    tex3d;    // texture 3D (volume)
 
 ### 4.2 Precision qualifiers
 
-En GLSL ES, on doit declarer la precision par defaut pour les types flottants :
+En GLSL ES, on doit declarer la précision par defaut pour les types flottants :
 
 ```glsl
 #version 300 es
@@ -270,7 +270,7 @@ precision highp float;   // haute precision (32 bits)
 
 | Precision | Bits | Plage float | Usage typique |
 |-----------|------|-------------|---------------|
-| `highp`   | 32   | +-3.4e38    | Positions, matrices, calculs precis |
+| `highp`   | 32   | +-3.4e38    | Positions, matrices, calculs précis |
 | `mediump` | 16   | +-6.5e4     | UV, couleurs, mobile |
 | `lowp`    | 8-10 | +-2.0       | Booleens, flags |
 
@@ -330,7 +330,7 @@ void main() {
 
 ## 5. Compiler et linker un shader program
 
-### 5.1 Le processus en 3 etapes
+### 5.1 Le processus en 3 étapes
 
 ```
 Source GLSL (string)
@@ -522,7 +522,7 @@ void main() {
 
 ### 6.2 Le clip space
 
-Le clip space est le systeme de coordonnees dans lequel le vertex shader doit exprimer les positions :
+Le clip space est le système de coordonnees dans lequel le vertex shader doit exprimer les positions :
 
 ```
 Clip Space (Normalized Device Coordinates apres division par w) :
@@ -642,13 +642,13 @@ function main(): void {
 main();
 ```
 
-Resultat : un triangle rouge sur fond bleu fonce, centre dans le canvas.
+Résultat : un triangle rouge sur fond bleu fonce, centre dans le canvas.
 
 ---
 
 ## Ecran noir ? Checklist de debug
 
-L'ecran noir est le rite de passage de tout developpeur WebGL. Ne paniquez pas — voici les 10 causes les plus frequentes, dans l'ordre de probabilite.
+L'ecran noir est le rite de passage de tout développeur WebGL. Ne paniquez pas — voici les 10 causes les plus frequentes, dans l'ordre de probabilite.
 
 ### 1. Erreur de compilation shader non lue
 
@@ -663,7 +663,7 @@ if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
 
 ### 2. Erreur de link du program
 
-Meme si les deux shaders compilent individuellement, le linkage peut echouer (varying qui ne matchent pas, etc.).
+Même si les deux shaders compilent individuellement, le linkage peut echouer (varying qui ne matchent pas, etc.).
 
 ```typescript
 gl.linkProgram(program);
@@ -672,7 +672,7 @@ if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
 }
 ```
 
-### 3. `gl.viewport` pas configure (ou mauvaises dimensions)
+### 3. `gl.viewport` pas configure (où mauvaises dimensions)
 
 Sans viewport, WebGL ne sait pas comment mapper le clip space vers les pixels du canvas. Oubliez-le et rien ne s'affiche.
 
@@ -719,7 +719,7 @@ gl.drawArrays(gl.TRIANGLES, 0, 3);
 
 ### 7. Buffer pas bind avant le draw (VAO oublie)
 
-Si vous avez cree un VAO mais ne le bindez pas avant le draw call, WebGL ne sait pas ou trouver les donnees.
+Si vous avez créé un VAO mais ne le bindez pas avant le draw call, WebGL ne sait pas ou trouver les donnees.
 
 ```typescript
 // MAUVAIS — VAO oublie
@@ -734,7 +734,7 @@ gl.drawArrays(gl.TRIANGLES, 0, 3);
 
 ### 8. Canvas CSS size vs drawing buffer size mismatch
 
-Le canvas HTML a deux tailles : la taille CSS (affichage) et la taille du drawing buffer (resolution reelle). Si le drawing buffer reste a 300x150 (defaut), l'image sera floue ou decalee.
+Le canvas HTML a deux tailles : la taille CSS (affichage) et la taille du drawing buffer (résolution réelle). Si le drawing buffer reste a 300x150 (defaut), l'image sera floue ou decalee.
 
 ```typescript
 // A faire a l'initialisation et apres chaque resize
@@ -747,7 +747,7 @@ gl.viewport(0, 0, canvas.width, canvas.height);
 
 ### 9. Backface culling actif et triangles dans le mauvais sens (winding order)
 
-Si `gl.enable(gl.CULL_FACE)` est actif et que vos triangles sont definis en sens horaire (CW) au lieu d'anti-horaire (CCW), toutes les faces sont eliminees.
+Si `gl.enable(gl.CULL_FACE)` est actif et que vos triangles sont définis en sens horaire (CW) au lieu d'anti-horaire (CCW), toutes les faces sont eliminees.
 
 ```typescript
 // Solution 1 : desactiver le culling pour tester
@@ -760,9 +760,9 @@ gl.frontFace(gl.CW); // si vos donnees sont en clockwise
 // A → B → C doit etre en sens anti-horaire vu de face
 ```
 
-### 10. WebGL context creation failed (GPU pas disponible, contexte deja pris)
+### 10. WebGL context création failed (GPU pas disponible, contexte déjà pris)
 
-`canvas.getContext('webgl2')` retourne `null` si le GPU n'est pas disponible, si un autre contexte (ex: `'2d'`) a deja ete obtenu sur ce canvas, ou si le navigateur ne supporte pas WebGL 2.
+`canvas.getContext('webgl2')` retourne `null` si le GPU n'est pas disponible, si un autre contexte (ex: `'2d'`) a déjà ete obtenu sur ce canvas, ou si le navigateur ne supporte pas WebGL 2.
 
 ```typescript
 const gl = canvas.getContext('webgl2');
@@ -777,9 +777,9 @@ if (!gl) {
 }
 ```
 
-### Helper function : `createShader` reutilisable
+### Helper function : `createShader` réutilisable
 
-Voici une fonction utilitaire qui englobe la compilation avec verification d'erreur. Elle leve une exception explicite en cas d'echec, ce qui evite de debugger un ecran noir silencieux.
+Voici une fonction utilitaire qui englobe la compilation avec vérification d'erreur. Elle leve une exception explicite en cas d'echec, ce qui evite de debugger un ecran noir silencieux.
 
 ```typescript
 /**
@@ -813,7 +813,7 @@ function createShader(
 ```
 
 :::tip Astuce ESN
-Creez-vous une fonction `createShader(gl, type, source)` qui leve une erreur explicite. Vous la reutiliserez dans tous vos projets WebGL. Mettez-la dans un fichier `gl-utils.ts` et importez-la partout — c'est le premier reflexe a adopter avant meme de commencer a coder un shader.
+Creez-vous une fonction `createShader(gl, type, source)` qui leve une erreur explicite. Vous la reutiliserez dans tous vos projets WebGL. Mettez-la dans un fichier `gl-utils.ts` et importez-la partout — c'est le premier reflexe a adopter avant même de commencer a coder un shader.
 :::
 
 ---
@@ -898,7 +898,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 ---
 
-## 8. Systeme d'extensions WebGL
+## 8. Système d'extensions WebGL
 
 WebGL expose des fonctionnalites optionnelles via des extensions. Certaines sont quasi-universelles, d'autres dependant du GPU.
 
@@ -946,7 +946,7 @@ if (anisoExt) {
 
 ### 9.1 gl.getError()
 
-WebGL ne lance pas d'exceptions. Les erreurs sont silencieuses — on doit les verifier manuellement.
+WebGL ne lance pas d'exceptions. Les erreurs sont silencieuses — on doit les vérifier manuellement.
 
 ```typescript
 // Verifier les erreurs apres chaque appel WebGL (couteux, seulement en dev)
@@ -1010,11 +1010,11 @@ function createDebugContext(gl: WebGL2RenderingContext): WebGL2RenderingContext 
 
 | Symptome | Cause probable | Solution |
 |----------|---------------|----------|
-| Ecran noir, pas d'erreur | Positions hors clip space | Verifier que les coordonnees sont dans [-1, 1] |
+| Ecran noir, pas d'erreur | Positions hors clip space | Vérifier que les coordonnees sont dans [-1, 1] |
 | Ecran noir, erreur compile | Erreur GLSL | Lire `gl.getShaderInfoLog()` |
 | Triangle invisible | Face culling inverse | Inverser l'ordre des sommets ou `gl.cullFace(gl.FRONT)` |
 | Couleurs incorrectes | Precision manquante | Ajouter `precision highp float;` dans le fragment shader |
-| Contexte null | WebGL non supporte | Verifier le navigateur, mettre a jour les drivers |
+| Contexte null | WebGL non supporte | Vérifier le navigateur, mettre a jour les drivers |
 | Performances mauvaises | Debug context en prod | Desactiver le proxy de debug |
 
 ### 9.4 Les info logs
@@ -1046,7 +1046,7 @@ if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
 
 ### Enonce
 
-Creez une page qui affiche **deux triangles** cote a cote avec des couleurs differentes, en utilisant un **seul draw call**.
+Creez une page qui affiche **deux triangles** cote a cote avec des couleurs différentes, en utilisant un **seul draw call**.
 
 **Exigences :**
 1. Un triangle rouge a gauche (clip space x: -0.8 a 0.0)
@@ -1139,7 +1139,7 @@ function setup(gl: WebGL2RenderingContext): void {
 }
 ```
 
-**Points cles de la solution :**
+**Points clés de la solution :**
 
 - Le **stride** (20 bytes) indique l'espacement entre deux sommets consecutifs dans le buffer
 - L'**offset** (8 bytes pour la couleur) indique ou commence chaque attribut dans un sommet
@@ -1149,9 +1149,9 @@ function setup(gl: WebGL2RenderingContext): void {
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | Detail | API/Syntaxe cle |
+| Concept | Detail | API/Syntaxe clé |
 |---------|--------|-----------------|
 | Contexte WebGL 2 | Point d'entree pour toute l'API | `canvas.getContext('webgl2')` |
 | Pipeline | vertex shader → rasterizer → fragment shader | Etapes fixes + programmables |
@@ -1159,18 +1159,29 @@ function setup(gl: WebGL2RenderingContext): void {
 | Types GLSL | Scalaires, vecteurs, matrices | `float`, `vec2/3/4`, `mat4`, `sampler2D` |
 | Precision | Obligatoire dans fragment shader | `precision highp float;` |
 | Compilation shader | Source → compile → link → use | `compileShader`, `linkProgram`, `useProgram` |
-| Clip space | Systeme de coordonnees normalise | x, y, z dans [-1, +1] |
+| Clip space | Système de coordonnees normalise | x, y, z dans [-1, +1] |
 | Viewport | Mappe clip space vers pixels | `gl.viewport(x, y, w, h)` |
 | Depth test | Z-buffer pour l'occultation | `gl.enable(gl.DEPTH_TEST)` |
 | Face culling | Elimine les faces cachees | `gl.enable(gl.CULL_FACE)` |
 | Clear | Efface les buffers | `gl.clearColor(...)`, `gl.clear(...)` |
 | Extensions | Fonctionnalites optionnelles du GPU | `gl.getExtension('...')` |
-| Debug | Erreurs silencieuses a verifier | `gl.getError()`, `getShaderInfoLog` |
+| Debug | Erreurs silencieuses a vérifier | `gl.getError()`, `getShaderInfoLog` |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [05 — Lumiere, materiaux et PBR](./05-lumiere-materiaux-pbr.md) | [07 — Shaders, buffers et textures](./07-shaders-buffers-textures.md) |
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 06 webgl](../screencasts/screencast-06-webgl.md)
+2. **Lab** : [lab-06-webgl-fondamentaux](../labs/lab-06-webgl-fondamentaux/README)
+3. **Visualisation** : [GPU Pipeline](../visualizations/gpu-pipeline.html)
+4. **Quiz** : [quiz 06 webgl](../quizzes/quiz-06-webgl.html)
+:::

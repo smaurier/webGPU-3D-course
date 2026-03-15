@@ -1,4 +1,8 @@
-# 00 — Prerequis & Introduction a la 3D Web
+# 00 — Prérequis & Introduction à la 3D Web
+
+<!-- nav-cours-précédent -->
+> **Cours précédent** : [React Native](../../13-react-native/modules/27-projet-final.md). Si tu arrives ici sans avoir fait les cours précédents, consulte le [guide de démarrage](../../GUIDE-DEMARRAGE.md).
+
 
 | Difficulte | Duree estimee | Lab | Quiz |
 |:----------:|:-------------:|:---:|:----:|
@@ -10,14 +14,14 @@ A la fin de ce module, vous serez capable de :
 
 - Situer WebGL, WebGPU et Three.js dans l'ecosysteme 3D web
 - Expliquer pourquoi le GPU est utilise pour le rendu graphique (parallelisme massif)
-- Decrire l'architecture d'un GPU (cores, warps, memoire)
+- Decrire l'architecture d'un GPU (cores, warps, mémoire)
 - Comparer la philosophie CPU (latence) vs GPU (throughput)
 - Configurer un projet de base avec un canvas HTML et `requestAnimationFrame`
-- Gerer le device pixel ratio pour un rendu net sur ecrans HiDPI
+- Gérer le device pixel ratio pour un rendu net sur ecrans HiDPI
 
 ---
 
-## Prerequis techniques
+## Prérequis techniques
 
 ### TypeScript (bases)
 
@@ -84,13 +88,13 @@ git clone https://github.com/votre-org/webgpu-3d-course.git
 cd webgpu-3d-course
 ```
 
-### 2. Installer les dependances
+### 2. Installer les dépendances
 
 ```bash
 pnpm install
 ```
 
-### 3. Verifier l'installation
+### 3. Vérifier l'installation
 
 ```bash
 # Lancer la documentation interactive
@@ -148,11 +152,11 @@ EVOLUTION DES APIs 3D WEB
 
 ## Analogie : le restaurant 3D
 
-:::tip Analogie pour developpeurs Vue.js
+:::tip Analogie pour développeurs Vue.js
 Imaginez un **restaurant** :
 
-- **WebGL** = Vous etes le cuisinier, le serveur, et le plongeur. Vous gerez chaque etat manuellement (quel couteau est actif, quel plat est en cours). C'est comme coder en JavaScript pur sans framework.
-- **WebGPU** = Vous avez un systeme de tickets modernes. Vous decrivez ce que vous voulez (un pipeline), et le systeme optimise l'execution. C'est comme passer de jQuery a une approche declarative.
+- **WebGL** = Vous etes le cuisinier, le serveur, et le plongeur. Vous gerez chaque état manuellement (quel couteau est actif, quel plat est en cours). C'est comme coder en JavaScript pur sans framework.
+- **WebGPU** = Vous avez un système de tickets modernes. Vous decrivez ce que vous voulez (un pipeline), et le système optimise l'exécution. C'est comme passer de jQuery à une approche declarative.
 - **Three.js** = Vous etes le chef qui donne des ordres : "je veux une scene avec une lumiere et un cube rouge". Les details sont geres automatiquement. C'est comme Vue.js : vous decrivez le quoi, pas le comment.
 :::
 
@@ -224,15 +228,15 @@ function createWebGPUBuffer(device: GPUDevice, data: Float32Array): GPUBuffer {
 }
 ```
 
-:::warning Point cle
-En WebGL, l'ordre des appels `gl.bindXxx()` / `gl.bindXxx(null)` est critique. Un oubli peut corrompre le rendu de facon silencieuse. WebGPU elimine cette classe entiere de bugs.
+:::warning Point clé
+En WebGL, l'ordre des appels `gl.bindXxx()` / `gl.bindXxx(null)` est critique. Un oubli peut corrompre le rendu de façon silencieuse. WebGPU elimine cette classe entière de bugs.
 :::
 
 ### Tableau comparatif
 
 | Critere | WebGL 2.0 | WebGPU |
 |---------|-----------|--------|
-| API style | Etat global mutable | Descripteurs immutables |
+| API style | État global mutable | Descripteurs immutables |
 | Shader language | GLSL ES 3.0 | WGSL |
 | Compute shaders | Non | Oui |
 | Multi-thread | Non (un seul thread JS) | Oui (command buffers) |
@@ -308,7 +312,7 @@ animate();
 | Reactive data | Positions, rotations (mutables) |
 | `watch()` / `computed()` | `requestAnimationFrame` loop |
 | CSS styles | `THREE.Material` |
-| DOM elements | `THREE.Mesh`, `THREE.Light` |
+| DOM éléments | `THREE.Mesh`, `THREE.Light` |
 | `v-for` rendering | Instanced rendering |
 :::
 
@@ -316,7 +320,7 @@ animate();
 
 ## GPU vs CPU : pourquoi le GPU pour le rendu
 
-### Le probleme fondamental
+### Le problème fondamental
 
 Un ecran Full HD contient **1920 x 1080 = 2,073,600 pixels**. A 60 FPS, il faut calculer la couleur de chaque pixel **60 fois par seconde**, soit **~124 millions de calculs de couleur par seconde**.
 
@@ -388,16 +392,16 @@ function cpuProcessPixels(pixels: Float32Array, brightness: number): void {
 ```
 
 :::tip Analogie web
-C'est comme la difference entre :
-- **CPU** : un serveur Express qui traite les requetes une par une (meme avec de l'async, un seul thread JS)
-- **GPU** : un load balancer qui distribue les requetes sur 10,000 workers identiques en parallele
+C'est comme la différence entre :
+- **CPU** : un serveur Express qui traite les requêtes une par une (même avec de l'async, un seul thread JS)
+- **GPU** : un load balancer qui distribue les requêtes sur 10,000 workers identiques en parallele
 :::
 
 ---
 
 ## Architecture GPU en detail
 
-### Hierarchie de calcul
+### Hiérarchie de calcul
 
 ```
 HIERARCHIE D'EXECUTION GPU
@@ -422,7 +426,7 @@ Un fragment shader sur un ecran 1080p :
 - Le scheduler GPU alterne entre les warps pour masquer la latence memoire
 ```
 
-### Hierarchie memoire GPU
+### Hiérarchie mémoire GPU
 
 ```
 HIERARCHIE MEMOIRE GPU
@@ -498,7 +502,7 @@ class StaticMeshBuffer {
 ```
 
 :::warning Regle d'or
-Minimisez les transferts CPU → GPU par frame. Uploadez les donnees statiques (geometrie, textures) une seule fois. Seules les donnees dynamiques (matrices de transformation, uniforms) doivent etre mises a jour a chaque frame — et elles sont petites (quelques centaines d'octets).
+Minimisez les transferts CPU → GPU par frame. Uploadez les donnees statiques (geometrie, textures) une seule fois. Seules les donnees dynamiques (matrices de transformation, uniforms) doivent etre mises a jour à chaque frame — et elles sont petites (quelques centaines d'octets).
 :::
 
 ---
@@ -840,17 +844,17 @@ main().catch(console.error);
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Explication |
 |---------|-------------|
-| WebGL | API 3D web basee sur OpenGL ES, etat global mutable, mature |
+| WebGL | API 3D web basee sur OpenGL ES, état global mutable, mature |
 | WebGPU | API 3D web moderne, descripteurs immutables, compute shaders |
 | Three.js | Abstraction haut-niveau (scene graph) au-dessus de WebGL/WebGPU |
 | GPU cores | Des milliers de cores simples, optimises pour le parallelisme |
 | SIMD | Une instruction executee sur des milliers de donnees en parallele |
-| Warp/Wavefront | Groupe de 32 threads GPU executant la meme instruction |
-| VRAM | Memoire dediee du GPU, rapide mais limitee (8-24 GB) |
+| Warp/Wavefront | Groupe de 32 threads GPU exécutant la même instruction |
+| VRAM | Mémoire dediee du GPU, rapide mais limitee (8-24 GB) |
 | Bus PCIe | Goulot d'etranglement pour les transferts CPU ↔ GPU |
 | Latence vs Throughput | CPU optimise la latence, GPU optimise le throughput |
 | Device Pixel Ratio | Rapport pixels CSS / pixels physiques (Retina = 2) |
@@ -866,3 +870,13 @@ main().catch(console.error);
 - [Three.js Documentation](https://threejs.org/docs/)
 - [GPU Gems (NVIDIA)](https://developer.nvidia.com/gpugems/gpugems/contributors)
 - [Life of a triangle (Fabian Giesen)](https://fgiesen.wordpress.com/2011/07/09/a-trip-through-the-graphics-pipeline-2011-part-1/)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 00 prérequis](../screencasts/screencast-00-prerequis.md)
+2. **Lab** : [lab-00-maths-prereq](../labs/lab-00-maths-prereq/README)
+3. **Quiz** : [quiz 00 prérequis](../quizzes/quiz-00-prerequis.html)
+:::

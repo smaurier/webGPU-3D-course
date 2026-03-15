@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline de rendu 3D interactif</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .pipeline { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
+  .arrow { display: flex; align-items: center; font-size: 1.5rem; color: #00d4ff; padding-top: 1.5rem; }
+  .stage { cursor: pointer; background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1rem 1.2rem; text-align: center; min-width: 140px; transition: all 0.3s ease; }
+  .stage:hover { border-color: #00d4ff; transform: translateY(-4px); box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2); }
+  .stage.active { border-color: #00d4ff; background: #1a2a4e; box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+  .stage-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .stage-name { font-size: 0.85rem; font-weight: 600; color: #fff; }
+  .stage-type { font-size: 0.7rem; color: #00d4ff; margin-top: 0.25rem; }
+  .detail-panel { background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 2rem; max-width: 800px; width: 100%; }
+  .detail-panel h2 { color: #00d4ff; margin-bottom: 1rem; font-size: 1.3rem; }
+  .detail-panel p { line-height: 1.7; margin-bottom: 1rem; color: #ccc; }
+  .diagram { background: #0d1117; border-radius: 8px; padding: 1.5rem; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; color: #7ee787; margin: 1rem 0; white-space: pre; overflow-x: auto; }
+  .detail-label { color: #00d4ff; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .programmable { background: #1a3a1a; border-left: 3px solid #7ee787; padding: 0.5rem 1rem; border-radius: 0 8px 8px 0; margin: 0.5rem 0; font-size: 0.85rem; }
+  .fixed { background: #3a1a1a; border-left: 3px solid #ff7b72; padding: 0.5rem 1rem; border-radius: 0 8px 8px 0; margin: 0.5rem 0; font-size: 0.85rem; }
+  .legend { display: flex; gap: 2rem; margin-top: 1rem; font-size: 0.8rem; }
+  .legend span { display: flex; align-items: center; gap: 0.5rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .legend-dot.prog { background: #7ee787; }
+  .legend-dot.fix { background: #ff7b72; }
+</style>
+</head>
+<body>
+
+<h1>Pipeline de rendu 3D</h1>
+<p class="subtitle">Cliquez sur chaque etape pour voir les details et le schema</p>
+
+<div class="pipeline" id="pipeline"></div>
+
+<div class="detail-panel" id="detail">
+  <h2>Selectionnez une etape</h2>
+  <p>Cliquez sur une des etapes du pipeline ci-dessus pour afficher sa description, son role dans le rendu et un schema explicatif.</p>
+  <div class="legend">
+    <span><span class="legend-dot prog"></span> Etape programmable (shader)</span>
+    <span><span class="legend-dot fix"></span> Etape fixe (materiel)</span>
+  </div>
+</div>
+
+<script>
+const stages = [
+  {
+    icon: '📦', name: 'Input Assembly', type: 'Fixe',
+    desc: "L'Input Assembly lit les donnees de vertices depuis les buffers (positions, normales, UV, couleurs) et les indices depuis l'index buffer. Il assemble les vertices en primitives selon la topologie choisie (triangles, lignes, points).",
+    diagram: `Vertex Buffer          Index Buffer
+┌──────────────┐      ┌───────────┐
+│ v0: (0,1,0)  │      │ 0, 1, 2   │
+│ v1: (-1,-1,0)│      │ 2, 3, 0   │
+│ v2: (1,-1,0) │      │ ...       │
+│ v3: (1,1,0)  │      └───────────┘
+└──────────────┘
+        │                    │
+        └────────┬───────────┘
+                 ▼
+        Primitives assemblees
+        Triangle 0: v0, v1, v2
+        Triangle 1: v2, v3, v0`,
+    programmable: false
+  },
+  {
+    icon: '🔺', name: 'Vertex Shader', type: 'Programmable',
+    desc: "Le Vertex Shader s'execute une fois par vertex. Il transforme les positions de l'espace local (model space) vers l'espace clip (clip space) en appliquant la matrice MVP (Model-View-Projection). Il peut aussi calculer des donnees a passer au fragment shader (normales transformees, coordonnees UV, etc.).",
+    diagram: `Pour chaque vertex :
+┌─────────────────────────────────────┐
+│  position_local = vec3(x, y, z)     │
+│                                     │
+│  // Transformations                 │
+│  world_pos  = Model * position      │
+│  view_pos   = View  * world_pos     │
+│  clip_pos   = Proj  * view_pos      │
+│                                     │
+│  gl_Position = MVP * vec4(pos, 1.0) │
+│                                     │
+│  // Passage au fragment shader      │
+│  v_normal = mat3(Model) * normal    │
+│  v_uv     = uv                      │
+└─────────────────────────────────────┘`,
+    programmable: true
+  },
+  {
+    icon: '✂️', name: 'Clipping', type: 'Fixe',
+    desc: "Le clipping decoupe les primitives qui depassent du volume de vue (frustum). Un triangle partiellement visible est decoupe en un ou plusieurs triangles plus petits qui restent dans le volume. Les triangles completement en dehors sont elimines.",
+    diagram: `Volume de vue (clip space: -1 a +1)
+┌─────────────────────┐
+│         ╱╲          │
+│        ╱  ╲         │
+│  ─ ─ ─╱─ ─ ╲─ ─ ─  │  <-- Plan de clipping
+│      ╱╱     ╲╲      │
+│     ╱╱  VIS  ╲╲     │
+│    ╱╱         ╲╲    │
+└───╱╱───────────╲╲───┘
+   ╱╱  CLIP (hors)╲╲
+  ╱╱               ╲╲
+
+Triangle original → 1 ou 2 triangles clippes`,
+    programmable: false
+  },
+  {
+    icon: '🔲', name: 'Rasterization', type: 'Fixe',
+    desc: "La rasterization convertit les primitives vectorielles (triangles) en fragments (futurs pixels). Pour chaque pixel couvert par un triangle, un fragment est genere. Les attributs (couleur, UV, normale) sont interpoles lineairement grace aux coordonnees barycentriques.",
+    diagram: `Triangle en clip space     Grille de pixels
+      ╱╲                   ┌─┬─┬─┬─┬─┬─┐
+     ╱  ╲                  │ │ │█│ │ │ │
+    ╱    ╲                 ├─┼─┼─┼─┼─┼─┤
+   ╱      ╲         →     │ │█│█│█│ │ │
+  ╱        ╲               ├─┼─┼─┼─┼─┼─┤
+ ╱──────────╲              │█│█│█│█│█│ │
+                           └─┴─┴─┴─┴─┴─┘
+                           █ = fragment genere
+
+Interpolation barycentrique :
+  attr = w0*a0 + w1*a1 + w2*a2
+  (w0 + w1 + w2 = 1)`,
+    programmable: false
+  },
+  {
+    icon: '🎨', name: 'Fragment Shader', type: 'Programmable',
+    desc: "Le Fragment Shader s'execute une fois par fragment. Il calcule la couleur finale du pixel en combinant les textures, l'eclairage, les ombres et tout autre effet visuel. C'est ici que se fait l'essentiel du travail artistique du rendu.",
+    diagram: `Pour chaque fragment :
+┌─────────────────────────────────────┐
+│  // Entrees interpolees             │
+│  normal = normalize(v_normal)       │
+│  uv = v_uv                         │
+│                                     │
+│  // Texture sampling                │
+│  albedo = texture(diffuseMap, uv)   │
+│                                     │
+│  // Eclairage                       │
+│  NdotL = dot(normal, lightDir)      │
+│  diffuse = albedo * max(NdotL, 0.0) │
+│  specular = pow(NdotH, shininess)   │
+│                                     │
+│  fragColor = ambient + diffuse +    │
+│              specular               │
+└─────────────────────────────────────┘`,
+    programmable: true
+  },
+  {
+    icon: '🖼️', name: 'Output Merger', type: 'Fixe',
+    desc: "L'Output Merger combine le fragment avec le contenu actuel du framebuffer. Il effectue le depth test (test de profondeur), le stencil test, et le blending (melange de transparence). Seuls les fragments qui passent tous les tests sont ecrits dans le framebuffer.",
+    diagram: `Fragment entrant
+  couleur: rgba(0.8, 0.2, 0.1, 1.0)
+  profondeur: 0.45
+
+     │
+     ▼
+┌─ Depth Test ──────────────────┐
+│  fragment.z (0.45)            │
+│  vs                           │
+│  depthBuffer[x,y] (0.60)     │
+│  0.45 < 0.60 → PASSE ✓      │
+└───────────────────────────────┘
+     │
+     ▼
+┌─ Stencil Test ────────────────┐
+│  Optionnel, masquage          │
+└───────────────────────────────┘
+     │
+     ▼
+┌─ Blending ────────────────────┐
+│  Si alpha < 1.0 :             │
+│  final = src*alpha +          │
+│          dst*(1-alpha)        │
+│  Sinon : ecriture directe    │
+└───────────────────────────────┘
+     │
+     ▼
+  Framebuffer[x,y] mis a jour`,
+    programmable: false
+  }
+];
+
+const pipelineEl = document.getElementById('pipeline');
+const detailEl = document.getElementById('detail');
+
+stages.forEach((stage, i) => {
+  if (i > 0) {
+    const arrow = document.createElement('div');
+    arrow.className = 'arrow';
+    arrow.textContent = '→';
+    pipelineEl.appendChild(arrow);
+  }
+  const el = document.createElement('div');
+  el.className = 'stage';
+  el.dataset.index = i;
+  el.innerHTML = `
+    <div class="stage-icon">${stage.icon}</div>
+    <div class="stage-name">${stage.name}</div>
+    <div class="stage-type">${stage.type}</div>
+  `;
+  el.addEventListener('click', () => selectStage(i));
+  pipelineEl.appendChild(el);
+});
+
+function selectStage(index) {
+  document.querySelectorAll('.stage').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.stage')[index].classList.add('active');
+
+  const s = stages[index];
+  const typeClass = s.programmable ? 'programmable' : 'fixed';
+  const typeLabel = s.programmable ? '🟢 Etape programmable (shader)' : '🔴 Etape fixe (materiel)';
+
+  detailEl.innerHTML = `
+    <h2>${s.icon} ${s.name}</h2>
+    <div class="${typeClass}">${typeLabel}</div>
+    <p>${s.desc}</p>
+    <div class="detail-label">Schema :</div>
+    <div class="diagram">${s.diagram}</div>
+    <div class="legend">
+      <span><span class="legend-dot prog"></span> Etape programmable (shader)</span>
+      <span><span class="legend-dot fix"></span> Etape fixe (materiel)</span>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

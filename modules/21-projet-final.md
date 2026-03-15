@@ -1,4 +1,4 @@
-# Module 21 — Projet intermediaire
+# Module 21 — Projet intermédiaire
 
 | Difficulte | Duree estimee | Lab | Quiz |
 |:----------:|:-------------:|:---:|:----:|
@@ -10,32 +10,32 @@ A la fin de ce module, vous serez capable de :
 
 - Architecturer un projet 3D complet en modules ES avec un scene graph structure
 - Combiner terrain procedural, eclairage PBR, ombres, post-processing et physique
-- Charger et animer des modeles glTF dans une scene complexe
+- Charger et animer des modèles glTF dans une scene complexe
 - Configurer un pipeline de post-processing multi-passes (bloom, SSAO, tone mapping)
-- Integrer Rapier.js pour des interactions physiques en temps reel
-- Implementer un systeme de particules GPU via compute shader
-- Gerer une camera duale (orbit + first person) avec transition smooth
+- Intégrer Rapier.js pour des interactions physiques en temps réel
+- Implementer un système de particules GPU via compute shader
+- Gérer une camera duale (orbit + first person) avec transition smooth
 - Optimiser pour maintenir 60 FPS stables avec LOD, instancing et frustum culling
 - Appliquer une checklist qualite : 0 memory leaks, progressive loading, responsive
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Physique et interactions (Module 20)</summary>
+<summary>Rappel du cours précédent — Physique et interactions (Module 20)</summary>
 
-Au module 20, nous avons integre la physique avec Rapier.js :
+Au module 20, nous avons intégré la physique avec Rapier.js :
 
 - **Rapier.js** : moteur physique Rust compile en WASM, initialise avec `await RAPIER.init()`
 - **Rigid bodies** : `dynamic()` (forces/gravite), `kinematicPositionBased()` (controle direct), `fixed()` (immobile)
-- **Colliders** : `ball()`, `cuboid()`, `capsule()` (primitives rapides), `trimesh()`, `convexHull()` (precis mais couteux)
+- **Colliders** : `ball()`, `cuboid()`, `capsule()` (primitives rapides), `trimesh()`, `convexHull()` (précis mais couteux)
 - **Forces vs impulses** : `addForce()` (continue) vs `applyImpulse()` (ponctuelle)
 - **Collision events** : `EventQueue`, `drainCollisionEvents()`, sensors, collision groups
-- **Raycasting** : `world.castRay()` pour le picking precis d'objets
+- **Raycasting** : `world.castRay()` pour le picking précis d'objets
 - **Joints** : `RevoluteJoint` (charniere), `PrismaticJoint` (piston), `FixedJoint` (soude), `BallJoint` (rotule)
 - **Character controller** : `KinematicCharacterController` avec detection sol, pentes, marches
 - **Fixed timestep** : `world.step(1/60)` avec accumulation et interpolation pour un rendu smooth
 
-Ce module intermediaire combine tout ce que nous avons appris dans les modules 00 a 20 pour creer une scene 3D interactive complete. Il s'agit d'un jalon de consolidation : un vrai projet final expert, integrant egalement les modules avances 22 a 28, est propose en fin de cursus (module 29).
+Ce module intermédiaire combine tout ce que nous avons appris dans les modules 00 a 20 pour créer une scene 3D interactive complete. Il s'agit d'un jalon de consolidation : un vrai projet final expert, integrant egalement les modules avances 22 a 28, est propose en fin de cursus (module 29).
 
 </details>
 
@@ -44,7 +44,7 @@ Ce module intermediaire combine tout ce que nous avons appris dans les modules 0
 ## Architecture du projet
 
 :::tip Analogie
-Construire une scene 3D complete, c'est comme diriger un film. Tu as besoin d'un decor (terrain), d'un eclairage (lumieres + ombres), d'acteurs (modeles animes), d'effets speciaux (post-processing + particules), d'un cameraman (camera controls), et d'un coordinateur des cascades (physique). Chaque departement a son propre code, mais tous doivent travailler ensemble frame apres frame. L'architecture du projet est le script qui coordonne tout ca.
+Construire une scene 3D complete, c'est comme diriger un film. Tu as besoin d'un decor (terrain), d'un eclairage (lumieres + ombres), d'acteurs (modèles animes), d'effets speciaux (post-processing + particules), d'un cameraman (camera controls), et d'un coordinateur des cascades (physique). Chaque departement a son propre code, mais tous doivent travailler ensemble frame après frame. L'architecture du projet est le script qui coordonne tout ça.
 :::
 
 ### Structure des fichiers
@@ -885,7 +885,7 @@ export class PhysicsSystem {
 
 ---
 
-## Systeme de particules GPU (module 11)
+## Système de particules GPU (module 11)
 
 ```typescript
 import * as THREE from 'three';
@@ -1389,7 +1389,7 @@ Assemblez une scene combinant tous les modules du cours. Votre scene doit compor
 1. Terrain procedural avec coloration par altitude (module 19)
 2. Plan d'eau anime avec Fresnel (module 19)
 3. DirectionalLight avec ombres (modules 14, 18)
-4. Au moins un modele glTF (module 15)
+4. Au moins un modèle glTF (module 15)
 5. Post-processing : bloom + tone mapping (module 16)
 6. Physique : au moins 3 objets dynamiques interactifs (module 20)
 7. Camera orbit + possibilite de toggle en first person
@@ -1677,9 +1677,9 @@ main();
 
 ---
 
-## Resume
+## Résumé
 
-| Systeme | Module source | Role dans le projet | Classe |
+| Système | Module source | Role dans le projet | Classe |
 |---------|:------------:|---------------------|--------|
 | **Terrain procedural** | 19 | Decor, heightfield physique | `Terrain.ts` |
 | **Water shader** | 19 | Plan d'eau anime, Fresnel | `Water.ts` |
@@ -1693,22 +1693,29 @@ main();
 | **Camera duale** | — | Orbit + first person toggle | `CameraSystem.ts` |
 | **Performance** | 17 | LOD, instancing, frustum culling, dispose | Chaque classe |
 
-| Checklist qualite | Comment verifier |
+| Checklist qualite | Comment vérifier |
 |-------------------|-----------------|
 | **60 FPS stable** | stats.js panel, Chrome Performance tab |
 | **0 memory leaks** | `renderer.info.memory`, Chrome Memory heap snapshots |
 | **Progressive loading** | Ecran de chargement, loadAsync avec callback |
 | **Responsive** | ResizeObserver, pixel ratio adaptatif |
-| **Cleanup propre** | `dispose()` sur chaque systeme, `world.free()` |
+| **Cleanup propre** | `dispose()` sur chaque système, `world.free()` |
 | **Error handling** | try/catch sur l'init, message d'erreur si WebGL absent |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [20 - Physique et interactions](./20-physique-interactions.md) | [22 - Modelisation 3D (annexe)](./22-modelisation-3d.md) |
 
-**Ressources associees :**
-- [Lab 21 — Projet final](../labs/lab-21-projet-final/)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 21 projet final](../screencasts/screencast-21-projet-final.md)
+2. **Lab** : [lab-21-projet-final](../labs/lab-21-projet-final/README)
+3. **Quiz** : [quiz 21 projet final](../quizzes/quiz-21-projet-final.html)
+:::

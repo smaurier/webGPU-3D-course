@@ -5,13 +5,13 @@
 Implementer les calculs fondamentaux lies aux materiaux PBR, aux textures, aux ombres
 et aux conversions d'espace colorimetrique utilises dans les moteurs 3D modernes.
 
-## Concepts cles
+## Concepts clés
 
 ### Materiaux PBR (Physically Based Rendering)
 
-Le modele PBR utilise deux parametres principaux :
+Le modèle PBR utilise deux paramètres principaux :
 - **Metalness** [0, 1] : 0 = dielectrique (plastique, bois), 1 = metal
-- **Roughness** [0, 1] : 0 = parfaitement lisse (miroir), 1 = tres rugueux
+- **Roughness** [0, 1] : 0 = parfaitement lisse (miroir), 1 = très rugueux
 
 ### Texture UV Tiling
 
@@ -22,7 +22,7 @@ ou `fract(x)` retourne la partie fractionnaire de x.
 ### Shadow Mapping
 
 - **Shadow map** : la scene est rendue du point de vue de la lumiere
-- **Shadow bias** : petit decalage pour eviter le shadow acne
+- **Shadow bias** : petit decalage pour éviter le shadow acne
 - **PCF** (Percentage Closer Filtering) : echantillonnage du voisinage pour adoucir les ombres
 - **Cascaded Shadow Maps** : plusieurs niveaux de detail pour les ombres directionnelles
 
@@ -40,7 +40,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

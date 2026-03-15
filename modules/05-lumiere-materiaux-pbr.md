@@ -9,13 +9,13 @@
 A la fin de ce module, vous serez capable de :
 
 - Distinguer les types de lumieres (directionnelle, point, spot, ambiante, area, hemisphere)
-- Implementer le modele de Phong (ambient + diffuse Lambert + specular)
-- Implementer le modele Blinn-Phong avec le half-vector
+- Implementer le modèle de Phong (ambient + diffuse Lambert + specular)
+- Implementer le modèle Blinn-Phong avec le half-vector
 - Expliquer les principes du PBR : conservation d'energie et microfacets
 - Decrire le workflow metallic-roughness (standard glTF)
 - Implementer la BRDF Cook-Torrance (D, F, G)
 - Comprendre le normal mapping et l'espace tangent (matrice TBN)
-- Connaitre les bases de l'IBL (Image Based Lighting)
+- Connaître les bases de l'IBL (Image Based Lighting)
 - Appliquer le tone mapping HDR (Reinhard, ACES)
 
 ---
@@ -36,8 +36,8 @@ A la fin de ce module, vous serez capable de :
 
 ## Analogie : les lumieres comme les styles CSS
 
-:::tip Analogie pour developpeurs Vue.js
-En CSS, vous appliquez des "couches" visuelles a un element :
+:::tip Analogie pour développeurs Vue.js
+En CSS, vous appliquez des "couches" visuelles à un élément :
 
 ```css
 .card {
@@ -60,7 +60,7 @@ En 3D, l'eclairage est une somme de "couches" similaires :
 | `border` subtile | Effet Fresnel (plus de reflet aux bords) |
 | `:hover` change les ombres | Deplacer une lumiere change le rendu |
 
-La difference : en CSS, les "lumieres" sont fausses (box-shadow statique). En 3D, chaque pixel est calcule dynamiquement a partir de la position de la lumiere, de la camera et de la normale de la surface.
+La différence : en CSS, les "lumieres" sont fausses (box-shadow statique). En 3D, chaque pixel est calcule dynamiquement à partir de la position de la lumiere, de la camera et de la normale de la surface.
 :::
 
 ---
@@ -195,9 +195,9 @@ function spotLightAttenuation(
 
 ---
 
-## Modele de Phong
+## Modèle de Phong
 
-Le modele de Phong decompose l'eclairage en 3 composantes :
+Le modèle de Phong decompose l'eclairage en 3 composantes :
 
 ```
 MODELE DE PHONG
@@ -311,9 +311,9 @@ console.log('Phong color:', color.toString());
 
 ---
 
-## Modele Blinn-Phong
+## Modèle Blinn-Phong
 
-Le modele Blinn-Phong remplace le calcul du vecteur de reflexion R par le **half-vector** H, ce qui est plus efficace et donne de meilleurs resultats aux angles rasants.
+Le modèle Blinn-Phong remplace le calcul du vecteur de reflexion R par le **half-vector** H, ce qui est plus efficace et donne de meilleurs résultats aux angles rasants.
 
 ```
 BLINN-PHONG : HALF VECTOR
@@ -387,7 +387,7 @@ function blinnPhongLighting(
 
 ## PBR : Physically Based Rendering
 
-Le PBR est le standard actuel pour l'eclairage en temps reel. Il produit des resultats plus realistes car il respecte les lois de la physique optique.
+Le PBR est le standard actuel pour l'eclairage en temps réel. Il produit des résultats plus realistes car il respecte les lois de la physique optique.
 
 ```
 PRINCIPES DU PBR
@@ -1000,7 +1000,7 @@ console.log('sRGB:', linearToSRGB(tonemapACES(hdr)).toString()); // pret pour l'
 1. Implementez `phongLighting()` qui calcule l'eclairage de Phong complet (ambient + diffuse + specular)
 2. Implementez `blinnPhongLighting()` avec le half-vector
 3. Implementez `pbrDirectLight()` avec la BRDF Cook-Torrance (D, F, G)
-4. Comparez les resultats pour un materiau plastique rouge et un materiau or
+4. Comparez les résultats pour un materiau plastique rouge et un materiau or
 
 <details>
 <summary>Voir la solution</summary>
@@ -1167,7 +1167,7 @@ console.log('  PBR        :', pbrDirectLight(goldPBR, N, L, V, white).toString()
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Explication |
 |---------|-------------|
@@ -1195,6 +1195,17 @@ console.log('  PBR        :', pbrDirectLight(goldPBR, N, L, V, white).toString()
 - [Learn OpenGL — PBR Theory](https://learnopengl.com/PBR/Theory)
 - [Filament PBR (Google)](https://google.github.io/filament/Filament.html)
 - [Real Shading in Unreal Engine 4 (Brian Karis)](https://blog.selfshadow.com/publications/s2013-shading-course/)
-- [glTF PBR implementation reference](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material)
+- [glTF PBR implementation référence](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material)
 - [Physically Based Rendering: From Theory to Implementation (PBRT book)](https://pbrt.org/)
 - [HDRI Haven — Free HDR environment maps](https://polyhaven.com/hdris)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 05 lumiere pbr](../screencasts/screencast-05-lumiere-pbr.md)
+2. **Lab** : [lab-05-lumiere-materiaux](../labs/lab-05-lumiere-materiaux/README)
+3. **Visualisation** : [Modèles d'éclairage](../visualizations/lighting-models.html)
+4. **Quiz** : [quiz 05 lumiere pbr](../quizzes/quiz-05-lumiere-pbr.html)
+:::

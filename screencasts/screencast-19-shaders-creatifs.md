@@ -1,10 +1,10 @@
 # Screencast 19 — Shaders creatifs : terrain et eau
 
 ## Objectifs
-- Generer un terrain procedural avec du bruit de Perlin/Simplex
+- Générer un terrain procedural avec du bruit de Perlin/Simplex
 - Appliquer des textures par altitude (herbe, roche, neige)
-- Creer un shader d'eau realiste avec reflexion et refraction
-- Live coder les shaders en temps reel avec hot reload
+- Créer un shader d'eau realiste avec reflexion et refraction
+- Live coder les shaders en temps réel avec hot reload
 
 ## Plan de tournage
 | Timing | Contenu | Ecran |
@@ -19,12 +19,12 @@
 | 11:30-13:00 | Effet de Fresnel : plus de reflexion en angle rasant | VS Code + navigateur |
 | 13:00-14:30 | Combiner terrain + eau dans une scene complete | VS Code + navigateur |
 | 14:30-15:30 | Ajout de brouillard pour la profondeur atmospherique | VS Code + navigateur |
-| 15:30-16:00 | Recapitulatif | Slides |
+| 15:30-16:00 | Récapitulatif | Slides |
 
-## Points cles a montrer
-- Le bruit de Perlin est la base de quasiment toute generation procedurale
-- Les octaves de bruit ajoutent du detail a differentes echelles
-- Le ShaderMaterial de Three.js permet d'ecrire des vertex et fragment shaders custom
+## Points clés a montrer
+- Le bruit de Perlin est la base de quasiment toute génération procedurale
+- Les octaves de bruit ajoutent du detail a différentes echelles
+- Le ShaderMaterial de Three.js permet d'écrire des vertex et fragment shaders custom
 - L'effet de Fresnel est essentiel pour un rendu d'eau convaincant
 
 ## Ressources

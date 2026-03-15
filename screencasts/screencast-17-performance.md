@@ -12,21 +12,21 @@
 | 0:00-1:00 | Pourquoi profiler : "premature optimization is the root of all evil" | Slides |
 | 1:00-2:30 | Chrome DevTools : onglet Performance, GPU timeline | Navigateur DevTools |
 | 2:30-4:00 | Spector.js : capturer et inspecter les draw calls WebGL | Navigateur + extension |
-| 4:00-5:30 | stats.js et renderer.info : metriques en temps reel | VS Code + navigateur |
+| 4:00-5:30 | stats.js et renderer.info : metriques en temps réel | VS Code + navigateur |
 | 5:30-7:00 | CPU-bound vs GPU-bound : comment les distinguer | Slides + demo |
 | 7:00-8:30 | Draw calls : pourquoi les reduire, batching et merging | VS Code + navigateur |
 | 8:30-10:00 | Level of Detail (LOD) : afficher moins de polygones a distance | VS Code + navigateur |
 | 10:00-11:30 | Frustum culling : ne pas dessiner ce qui est hors champ | VS Code + navigateur |
-| 11:30-13:00 | Textures : compression (basis/KTX2), atlas, resolution adaptative | VS Code + navigateur |
-| 13:00-14:30 | Instancing et geometry merging : avant/apres comparaison | VS Code + navigateur |
+| 11:30-13:00 | Textures : compression (basis/KTX2), atlas, résolution adaptative | VS Code + navigateur |
+| 13:00-14:30 | Instancing et geometry merging : avant/après comparaison | VS Code + navigateur |
 | 14:30-15:30 | Checklist d'optimisation recapitulative | Slides |
-| 15:30-16:00 | Recapitulatif | Slides |
+| 15:30-16:00 | Récapitulatif | Slides |
 
-## Points cles a montrer
+## Points clés a montrer
 - Toujours mesurer avant d'optimiser
 - Les draw calls sont souvent le premier goulot d'etranglement
 - Le LOD est crucial pour les scenes avec beaucoup de geometrie
-- La compression de textures KTX2 reduit drastiquement l'utilisation memoire GPU
+- La compression de textures KTX2 reduit drastiquement l'utilisation mémoire GPU
 
 ## Ressources
 - Code source `labs/17-performance/`

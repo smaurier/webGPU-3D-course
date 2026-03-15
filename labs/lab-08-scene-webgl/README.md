@@ -3,10 +3,10 @@
 ## Objectif
 
 Implementer les structures de donnees et algorithmes d'un moteur de scene 3D :
-camera orbitale, delta time, scene graph hierarchique, matrice de normales, tri par transparence,
+camera orbitale, delta time, scene graph hiérarchique, matrice de normales, tri par transparence,
 frustum culling, skybox et fusion de geometries.
 
-## Concepts cles
+## Concepts clés
 
 ### Camera orbitale
 
@@ -17,18 +17,18 @@ La camera orbitale convertit des coordonnees spheriques `(rayon, theta, phi)` en
 
 ### Delta time
 
-Le delta time `dt` est la difference entre deux timestamps successifs, convertie en secondes.
+Le delta time `dt` est la différence entre deux timestamps successifs, convertie en secondes.
 Il permet de rendre les animations independantes du framerate.
 
 ### Scene graph
 
-Chaque noeud a une transformation locale (Mat4). La matrice monde d'un noeud est le produit
+Chaque noeud à une transformation locale (Mat4). La matrice monde d'un noeud est le produit
 de la matrice monde du parent par la matrice locale : `worldMatrix = parent.world * local`.
 
 ### Matrice de normales
 
-La matrice de normales est la transposee de l'inverse de la partie superieure 3x3 de la matrice modele.
-Elle garantit que les normales restent perpendiculaires apres des transformations non uniformes.
+La matrice de normales est la transposee de l'inverse de la partie superieure 3x3 de la matrice modèle.
+Elle garantit que les normales restent perpendiculaires après des transformations non uniformes.
 
 ### Tri par transparence
 
@@ -56,7 +56,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

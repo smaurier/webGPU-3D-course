@@ -9,11 +9,11 @@
 A la fin de ce module, vous serez capable de :
 
 - Decrire la chaine complete des espaces de coordonnees (objet → monde → camera → clip → NDC → ecran)
-- Construire une matrice lookAt a partir de eye, target et up
+- Construire une matrice lookAt à partir de eye, target et up
 - Construire les matrices de projection perspective et orthographique
 - Expliquer le role du frustum et le concept de frustum culling
-- Identifier les causes du z-fighting et savoir les prevenir
-- Connaitre les differences de NDC entre WebGL et WebGPU
+- Identifier les causes du z-fighting et savoir les prévenir
+- Connaître les différences de NDC entre WebGL et WebGPU
 - Projeter un point 3D sur l'ecran en TypeScript
 
 ---
@@ -36,8 +36,8 @@ A la fin de ce module, vous serez capable de :
 
 ## Analogie : la camera de Vue devtools
 
-:::tip Analogie pour developpeurs Vue.js
-Quand vous ouvrez les Vue devtools, vous inspectez votre arbre de composants depuis un "point de vue" exterieur. Vous pouvez zoomer sur un composant, filtrer l'arbre, et l'interface decoupe la vue pour ne montrer que ce qui vous interesse.
+:::tip Analogie pour développeurs Vue.js
+Quand vous ouvrez les Vue devtools, vous inspectez votre arbre de composants depuis un "point de vue" exterieur. Vous pouvez zoomer sur un composant, filtrer l'arbre, et l'interface découpé la vue pour ne montrer que ce qui vous interesse.
 
 En 3D, la camera fait exactement cela :
 
@@ -49,7 +49,7 @@ En 3D, la camera fait exactement cela :
 | Fenetre du navigateur (taille) | Viewport (largeur x hauteur) |
 | Filtrage des composants (visible/invisible) | Frustum culling (objets hors champ ignores) |
 
-La camera ne "deplace" pas les objets — elle definit un **cadrage** a travers lequel on observe la scene.
+La camera ne "deplace" pas les objets — elle définit un **cadrage** a travers lequel on observe la scene.
 :::
 
 ---
@@ -141,7 +141,7 @@ En NDC, y=1 est en haut. En pixels ecran, y=0 est en haut. Il faut **inverser l'
 
 ## lookAt : construire la matrice de vue
 
-La fonction `lookAt` est la facon la plus intuitive de positionner une camera. On donne 3 parametres :
+La fonction `lookAt` est la façon la plus intuitive de positionner une camera. On donne 3 paramètres :
 
 ```
 LOOKAT
@@ -381,7 +381,7 @@ function perspectiveDemo(): void {
 
 ## Projection orthographique
 
-La projection orthographique ne simule pas la perspective : les objets gardent la meme taille quelle que soit leur distance.
+La projection orthographique ne simule pas la perspective : les objets gardent la même taille quelle que soit leur distance.
 
 ```
 PROJECTION ORTHOGRAPHIQUE
@@ -631,14 +631,14 @@ console.log('Visible:', isSphereVisible(new Vec3(-100, 0, 0), 1, planes)); // fa
 ```
 
 :::tip Performance
-Dans un jeu avec 10 000 objets, le frustum culling peut eliminer 80-90% des objets avant meme qu'ils n'atteignent le GPU. C'est l'une des optimisations les plus rentables en rendu 3D. Three.js le fait automatiquement pour chaque `Mesh` via `object.frustumCulled = true` (par defaut).
+Dans un jeu avec 10 000 objets, le frustum culling peut eliminer 80-90% des objets avant même qu'ils n'atteignent le GPU. C'est l'une des optimisations les plus rentables en rendu 3D. Three.js le fait automatiquement pour chaque `Mesh` via `object.frustumCulled = true` (par defaut).
 :::
 
 ---
 
 ## Depth buffer et z-fighting
 
-### Le probleme de la precision en profondeur
+### Le problème de la précision en profondeur
 
 ```
 DISTRIBUTION DE LA PRECISION DU DEPTH BUFFER
@@ -703,7 +703,7 @@ console.log(`  z=100 : precision = ${depthPrecision(1, 1000, 100).toExponential(
 console.log(`  z=500 : precision = ${depthPrecision(1, 1000, 500).toExponential(2)} unites`);
 ```
 
-### Regles pour eviter le z-fighting
+### Regles pour éviter le z-fighting
 
 ```
 BONNES PRATIQUES DEPTH BUFFER
@@ -828,7 +828,7 @@ function screenToRay(
 
 ---
 
-## NDC : differences WebGL vs WebGPU
+## NDC : différences WebGL vs WebGPU
 
 ```
 NDC : NORMALIZED DEVICE COORDINATES
@@ -1152,12 +1152,12 @@ verify();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Explication |
 |---------|-------------|
 | Espaces de coordonnees | Objet → Monde (M) → Camera (V) → Clip (P) → NDC (/w) → Ecran |
-| lookAt | Construit la view matrix a partir de eye, target, up |
+| lookAt | Construit la view matrix à partir de eye, target, up |
 | View matrix | Inverse de la transformation camera — ramene la scene devant l'oeil |
 | Projection perspective | Simule la vision humaine — objets lointains retrecissent |
 | Projection orthographique | Pas de perspective — taille constante quelle que soit la distance |
@@ -1166,7 +1166,7 @@ verify();
 | Near / Far planes | Definissent la plage de profondeur visible |
 | Frustum | Volume en forme de pyramide tronquee (perspective) ou boite (ortho) |
 | Frustum culling | Eliminer les objets hors du frustum avant le rendu |
-| Depth buffer | Stocke la profondeur par pixel — precision non-lineaire en perspective |
+| Depth buffer | Stocke la profondeur par pixel — précision non-lineaire en perspective |
 | Z-fighting | Scintillement quand deux surfaces ont des profondeurs trop proches |
 | NDC | Coordonnees normalisees : x,y ∈ [-1,1], z ∈ [0,1] (WebGPU) ou [-1,1] (WebGL) |
 | Viewport transform | NDC → pixels ecran (avec inversion de Y) |
@@ -1180,3 +1180,14 @@ verify();
 - [WebGPU Coordinate Systems](https://gpuweb.github.io/gpuweb/#coordinate-systems)
 - [Reversed-Z in OpenGL (Nathan Reed)](https://developer.nvidia.com/content/depth-precision-visualized)
 - [Frustum Culling (Lighthouse3D)](http://www.lighthouse3d.com/tutorials/view-frustum-culling/)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 03 cameras](../screencasts/screencast-03-cameras.md)
+2. **Lab** : [lab-03-camera-projection](../labs/lab-03-camera-projection/README)
+3. **Visualisation** : [Projections](../visualizations/projections.html)
+4. **Quiz** : [quiz 03 cameras](../quizzes/quiz-03-cameras.html)
+:::

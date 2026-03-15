@@ -6,7 +6,7 @@ Implementer les algorithmes fondamentaux du rendu volumetrique : absorption de l
 (loi de Beer-Lambert), fonctions de phase pour la diffusion, ray marching dans un champ
 de densite, brouillard, echantillonnage de lumiere volumetrique et modelisation de nuages.
 
-## Concepts cles
+## Concepts clés
 
 ### Loi de Beer-Lambert
 
@@ -23,9 +23,9 @@ plus T tend vers 0 (absorption totale).
 ### Fonctions de phase
 
 Les fonctions de phase decrivent la probabilite qu'un photon soit diffuse dans une
-direction donnee apres interaction avec une particule.
+direction donnee après interaction avec une particule.
 
-- **Henyey-Greenstein** : parametre `g` dans [-1, 1]. g=0 isotrope, g>0 diffusion vers l'avant, g<0 vers l'arriere.
+- **Henyey-Greenstein** : paramètre `g` dans [-1, 1]. g=0 isotrope, g>0 diffusion vers l'avant, g<0 vers l'arriere.
 - **Rayleigh** : diffusion par petites particules (molecules d'air). Symetrique avec des pics a 0 et PI.
 
 ```
@@ -69,7 +69,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

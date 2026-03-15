@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scene Graph interactif</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { color: #00d4ff; margin-bottom: 0.5rem; font-size: 1.8rem; }
+  .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
+  .layout { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; max-width: 1200px; width: 100%; }
+  .tree-panel { flex: 2; min-width: 500px; }
+  .info-panel { flex: 1; min-width: 300px; background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 1.5rem; }
+  svg { background: #0d1117; border-radius: 12px; border: 2px solid #0f3460; width: 100%; }
+  .info-panel h2 { color: #00d4ff; font-size: 1.1rem; margin-bottom: 1rem; }
+  .info-panel h3 { color: #00d4ff; font-size: 0.9rem; margin: 1rem 0 0.5rem; }
+  .matrix-box { background: #0d1117; border-radius: 8px; padding: 0.8rem; font-family: 'Courier New', monospace; font-size: 0.75rem; line-height: 1.5; color: #7ee787; margin-bottom: 0.5rem; }
+  .matrix-label { color: #888; font-size: 0.8rem; margin-bottom: 0.3rem; }
+  .btn-animate { background: #00d4ff; color: #1a1a2e; border: none; border-radius: 8px; padding: 0.6rem 1.2rem; font-weight: 600; cursor: pointer; font-size: 0.85rem; margin-top: 1rem; width: 100%; }
+  .btn-animate:hover { background: #00b8d9; }
+  .node-info { font-size: 0.85rem; line-height: 1.6; color: #ccc; }
+  .propagation { background: #1a2a4e; border-radius: 8px; padding: 1rem; margin-top: 1rem; font-size: 0.8rem; line-height: 1.6; }
+  .propagation strong { color: #00d4ff; }
+</style>
+</head>
+<body>
+
+<h1>Scene Graph</h1>
+<p class="subtitle">Cliquez sur un noeud pour voir ses transformations. Animez pour voir la propagation.</p>
+
+<div class="layout">
+  <div class="tree-panel">
+    <svg id="treeSvg" viewBox="0 0 600 400" height="400"></svg>
+  </div>
+  <div class="info-panel">
+    <h2 id="nodeName">Selectionnez un noeud</h2>
+    <div class="node-info" id="nodeInfo">
+      Cliquez sur un noeud dans l'arbre pour afficher ses informations de transformation.
+    </div>
+    <div id="matrices"></div>
+    <button class="btn-animate" id="animBtn">▶ Animer la rotation de Group1</button>
+    <div class="propagation">
+      <strong>Propagation des transforms :</strong><br>
+      La matrice monde d'un noeud = matrice monde du parent x matrice locale du noeud.<br><br>
+      Quand Group1 tourne, Mesh1 et Mesh2 tournent aussi car leur matrice monde depend de celle de Group1.
+    </div>
+  </div>
+</div>
+
+<script>
+const sceneGraph = {
+  name: 'Root (Scene)', type: 'scene', tx: 0, ty: 0, rot: 0, sx: 1, sy: 1,
+  children: [
+    {
+      name: 'Group1', type: 'group', tx: -80, ty: 0, rot: 0, sx: 1, sy: 1,
+      children: [
+        { name: 'Mesh1 (Cube)', type: 'mesh', tx: -50, ty: 30, rot: 0, sx: 0.8, sy: 0.8, children: [] },
+        { name: 'Mesh2 (Sphere)', type: 'mesh', tx: 50, ty: 30, rot: 45, sx: 1, sy: 1, children: [] }
+      ]
+    },
+    {
+      name: 'Group2', type: 'group', tx: 80, ty: 0, rot: 0, sx: 1.2, sy: 1.2,
+      children: [
+        { name: 'Mesh3 (Plane)', type: 'mesh', tx: 0, ty: 40, rot: 0, sx: 1, sy: 1, children: [] }
+      ]
+    },
+    { name: 'Light1', type: 'light', tx: 0, ty: -60, rot: 0, sx: 1, sy: 1, children: [] }
+  ]
+};
+
+const svg = document.getElementById('treeSvg');
+const nodePositions = [];
+let selectedNode = null;
+let animating = false;
+let animAngle = 0;
+
+const colors = {
+  scene: '#00d4ff',
+  group: '#ffa657',
+  mesh: '#7ee787',
+  light: '#d2a8ff'
+};
+
+const icons = {
+  scene: '🌍',
+  group: '📁',
+  mesh: '🔺',
+  light: '💡'
+};
+
+function layoutTree(node, x, y, level, parentIdx, totalWidth) {
+  const idx = nodePositions.length;
+  nodePositions.push({ node, x, y, parentIdx });
+
+  const childCount = node.children.length;
+  if (childCount > 0) {
+    const childWidth = totalWidth / childCount;
+    const startX = x - totalWidth / 2 + childWidth / 2;
+    node.children.forEach((child, i) => {
+      layoutTree(child, startX + i * childWidth, y + 90, level + 1, idx, childWidth);
+    });
+  }
+}
+
+function drawTree() {
+  nodePositions.length = 0;
+  layoutTree(sceneGraph, 300, 50, 0, -1, 550);
+
+  let svgContent = '';
+
+  // Draw edges
+  nodePositions.forEach((pos, i) => {
+    if (pos.parentIdx >= 0) {
+      const parent = nodePositions[pos.parentIdx];
+      svgContent += `<line x1="${parent.x}" y1="${parent.y + 15}" x2="${pos.x}" y2="${pos.y - 15}" stroke="#0f3460" stroke-width="2"/>`;
+    }
+  });
+
+  // Draw nodes
+  nodePositions.forEach((pos, i) => {
+    const n = pos.node;
+    const col = colors[n.type];
+    const isSelected = selectedNode === n;
+    const r = isSelected ? 22 : 18;
+    const strokeW = isSelected ? 3 : 2;
+    const glow = isSelected ? `<circle cx="${pos.x}" cy="${pos.y}" r="28" fill="none" stroke="${col}" stroke-width="1" opacity="0.3"/>` : '';
+
+    svgContent += `
+      ${glow}
+      <circle cx="${pos.x}" cy="${pos.y}" r="${r}" fill="#16213e" stroke="${col}" stroke-width="${strokeW}" cursor="pointer" data-idx="${i}" class="node-circle"/>
+      <text x="${pos.x}" y="${pos.y + 5}" text-anchor="middle" font-size="14" cursor="pointer" data-idx="${i}" class="node-circle">${icons[n.type]}</text>
+      <text x="${pos.x}" y="${pos.y + 38}" text-anchor="middle" fill="${col}" font-size="10" font-family="Segoe UI, sans-serif">${n.name}</text>
+    `;
+  });
+
+  svg.innerHTML = svgContent;
+
+  // Add click handlers
+  svg.querySelectorAll('.node-circle').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      selectNode(nodePositions[idx].node, idx);
+    });
+  });
+}
+
+function getWorldMatrix(nodeIdx) {
+  const chain = [];
+  let idx = nodeIdx;
+  while (idx >= 0) {
+    chain.unshift(nodePositions[idx].node);
+    idx = nodePositions[idx].parentIdx;
+  }
+
+  let wx = 0, wy = 0, wr = 0, wsx = 1, wsy = 1;
+  chain.forEach(n => {
+    const rad = wr * Math.PI / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const rx = n.tx * cos - n.ty * sin;
+    const ry = n.tx * sin + n.ty * cos;
+    wx += rx * wsx;
+    wy += ry * wsy;
+    wr += n.rot;
+    wsx *= n.sx;
+    wsy *= n.sy;
+  });
+
+  return { tx: wx, ty: wy, rot: wr, sx: wsx, sy: wsy };
+}
+
+function matToString(label, tx, ty, rot, sx, sy) {
+  const rad = rot * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const m00 = (cos * sx).toFixed(3);
+  const m01 = (-sin * sy).toFixed(3);
+  const m10 = (sin * sx).toFixed(3);
+  const m11 = (cos * sy).toFixed(3);
+  return `<div class="matrix-label">${label}</div>
+<div class="matrix-box">| ${m00}  ${m01}  ${tx.toFixed(1)} |
+| ${m10}  ${m11}  ${ty.toFixed(1)} |
+| 0.000   0.000   1.0   |</div>`;
+}
+
+function selectNode(node, idx) {
+  selectedNode = node;
+  document.getElementById('nodeName').textContent = `${icons[node.type]} ${node.name}`;
+
+  const world = getWorldMatrix(idx);
+
+  document.getElementById('nodeInfo').innerHTML = `
+    <strong>Type :</strong> ${node.type}<br>
+    <strong>Position locale :</strong> (${node.tx}, ${node.ty})<br>
+    <strong>Rotation locale :</strong> ${node.rot.toFixed(1)} deg<br>
+    <strong>Scale local :</strong> (${node.sx}, ${node.sy})
+  `;
+
+  document.getElementById('matrices').innerHTML =
+    matToString('Matrice locale', node.tx, node.ty, node.rot, node.sx, node.sy) +
+    matToString('Matrice monde (propagee)', world.tx, world.ty, world.rot, world.sx, world.sy);
+
+  drawTree();
+}
+
+const animBtn = document.getElementById('animBtn');
+animBtn.addEventListener('click', () => {
+  animating = !animating;
+  animBtn.textContent = animating ? '⏸ Arreter l\'animation' : '▶ Animer la rotation de Group1';
+  if (animating) animate();
+});
+
+function animate() {
+  if (!animating) return;
+  animAngle += 1.5;
+  sceneGraph.children[0].rot = animAngle % 360;
+
+  // Re-select to update matrices
+  if (selectedNode) {
+    const idx = nodePositions.findIndex(p => p.node === selectedNode);
+    if (idx >= 0) selectNode(selectedNode, idx);
+  } else {
+    drawTree();
+  }
+
+  requestAnimationFrame(animate);
+}
+
+drawTree();
+</script>
+</body>
+</html>

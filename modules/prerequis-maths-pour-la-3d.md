@@ -1,4 +1,4 @@
-# Prerequis — Maths pour la 3D (depuis zero)
+# Prérequis — Maths pour la 3D (depuis zero)
 
 | Difficulte | Duree estimee | Lab | Quiz |
 |:----------:|:-------------:|:---:|:----:|
@@ -14,7 +14,7 @@ A la fin de ce module, vous serez capable de :
 - Comprendre les fonctions mathematiques et leur composition
 - Convertir degres en radians et vice-versa
 - Utiliser sin, cos, tan et atan2 pour les rotations et les angles
-- Calculer des distances en 2D et 3D avec le theoreme de Pythagore
+- Calculer des distances en 2D et 3D avec le théorème de Pythagore
 - Manipuler des vecteurs : longueur, normalisation, addition, scalaire
 - Calculer un produit scalaire et comprendre son interpretation geometrique
 - Avoir une intuition du produit vectoriel et des matrices
@@ -24,16 +24,16 @@ A la fin de ce module, vous serez capable de :
 
 ## Analogie : les maths 3D, c'est comme le CSS
 
-:::tip Analogie pour developpeurs web
-Vous connaissez deja plus de maths 3D que vous ne le pensez. Quand vous ecrivez en CSS :
+:::tip Analogie pour développeurs web
+Vous connaissez déjà plus de maths 3D que vous ne le pensez. Quand vous ecrivez en CSS :
 
 ```css
 transform: translate(100px, 50px) rotate(45deg) scale(1.5);
 ```
 
-Vous faites **exactement** ce qu'on fait en 3D : deplacer, tourner, redimensionner. La seule difference : en CSS, le navigateur fait les maths pour vous. En 3D, c'est vous qui les faites.
+Vous faites **exactement** ce qu'on fait en 3D : deplacer, tourner, redimensionner. La seule différence : en CSS, le navigateur fait les maths pour vous. En 3D, c'est vous qui les faites.
 
-Ce module part de zero — niveau 6eme — et vous amene progressivement jusqu'au niveau necessaire pour comprendre les transformations 3D. Pas de panique : si vous savez coder, vous savez deja penser de facon logique. Les maths, c'est juste une autre facon de coder.
+Ce module part de zero — niveau 6eme — et vous amene progressivement jusqu'au niveau nécessaire pour comprendre les transformations 3D. Pas de panique : si vous savez coder, vous savez déjà penser de façon logique. Les maths, c'est juste une autre façon de coder.
 :::
 
 ---
@@ -89,7 +89,7 @@ PROPORTIONS EN 3D
 
 ### L'interpolation lineaire (lerp)
 
-C'est **la** formule la plus utilisee en 3D, en animation, en jeux video. Elle repond a une question simple : "comment aller de A a B progressivement ?"
+C'est **la** formule la plus utilisee en 3D, en animation, en jeux video. Elle repond à une question simple : "comment aller de A a B progressivement ?"
 
 ```
 INTERPOLATION LINEAIRE (lerp)
@@ -139,13 +139,13 @@ for (let frame = 0; frame <= 60; frame++) {
 }
 ```
 
-:::tip Analogie developpeur
+:::tip Analogie développeur
 `lerp` c'est comme une transition CSS : `transition: left 1s linear`. Le navigateur fait un `lerp` entre la valeur de depart et la valeur d'arrivee, avec `t` qui va de 0 a 1 pendant la duree de la transition.
 :::
 
 ### Notation scientifique
 
-Les GPU utilisent souvent des nombres tres grands ou tres petits. TypeScript (et JavaScript) supportent la notation scientifique :
+Les GPU utilisent souvent des nombres très grands ou très petits. TypeScript (et JavaScript) supportent la notation scientifique :
 
 ```typescript
 // Notation scientifique : 1e-6 = 0.000001, 1e3 = 1000
@@ -371,8 +371,8 @@ console.log(radToDeg(Math.PI / 2));   // 90
 console.log(radToDeg(2 * Math.PI));   // 360
 ```
 
-:::warning Point cle
-Toutes les fonctions trigonometriques de JavaScript (`Math.sin`, `Math.cos`, `Math.atan2`, etc.) travaillent en **radians**, pas en degres. C'est la source d'erreur #1 des debutants en 3D. Convertissez toujours vos degres en radians avant d'appeler ces fonctions !
+:::warning Point clé
+Toutes les fonctions trigonometriques de JavaScript (`Math.sin`, `Math.cos`, `Math.atan2`, etc.) travaillent en **radians**, pas en degres. C'est la source d'erreur #1 des débutants en 3D. Convertissez toujours vos degres en radians avant d'appeler ces fonctions !
 :::
 
 ### Sin et cos visuellement
@@ -510,7 +510,7 @@ console.log('Distance (verif):', adjVerif.toFixed(2)); // 17.32m
 
 ### atan2(y, x) : retrouver l'angle depuis les coordonnees
 
-`atan2` est la fonction inverse de sin/cos combinee. Elle repond a la question : "j'ai un point (x, y), quel est l'angle ?"
+`atan2` est la fonction inverse de sin/cos combinee. Elle repond à la question : "j'ai un point (x, y), quel est l'angle ?"
 
 ```
 ATAN2 : RETROUVER L'ANGLE
@@ -606,9 +606,9 @@ console.log(`(${rotated45.x.toFixed(2)}, ${rotated45.y.toFixed(2)})`);
 
 ## 4. Les coordonnees
 
-### Systeme de coordonnees 2D
+### Système de coordonnees 2D
 
-Un systeme de coordonnees, c'est comme un plan avec une adresse pour chaque point. L'axe X va de gauche a droite, l'axe Y va de bas en haut.
+Un système de coordonnees, c'est comme un plan avec une adresse pour chaque point. L'axe X va de gauche a droite, l'axe Y va de bas en haut.
 
 ```
 SYSTEME DE COORDONNEES 2D
@@ -645,9 +645,9 @@ SYSTEME DE COORDONNEES 2D
   (-2, 2) est a gauche et en haut.
 ```
 
-### Distance entre deux points : le theoreme de Pythagore
+### Distance entre deux points : le théorème de Pythagore
 
-Le theoreme de Pythagore est l'outil fondamental pour calculer des distances. Dans un triangle rectangle : **a² + b² = c²** (ou c est l'hypotenuse).
+Le théorème de Pythagore est l'outil fondamental pour calculer des distances. Dans un triangle rectangle : **a² + b² = c²** (où c est l'hypotenuse).
 
 ```
 DISTANCE ENTRE DEUX POINTS
@@ -701,7 +701,7 @@ console.log(distance2D(0, 0, 3, 4)); // 5
 console.log(distance2D(0, 0, 1, 1)); // ~1.414 = sqrt(2)
 ```
 
-### Systeme de coordonnees 3D : l'axe Z
+### Système de coordonnees 3D : l'axe Z
 
 En 3D, on ajoute un troisieme axe : **Z** (la profondeur).
 
@@ -737,7 +737,7 @@ SYSTEME DE COORDONNEES 3D
 
 ### Distance 3D
 
-La distance 3D est une extension naturelle du theoreme de Pythagore :
+La distance 3D est une extension naturelle du théorème de Pythagore :
 
 ```typescript
 // ── Distance 3D ─────────────────────────────────────────
@@ -776,7 +776,7 @@ console.log(areObjectsClose(0, 0, 0, 10, 10, 10, 5)); // false (dist ≈ 17.32)
 ```
 
 :::tip Optimisation GPU
-Calculer `sqrt` est couteux. Quand on veut juste **comparer** des distances (sans connaitre la valeur exacte), on compare les distances **au carre** pour eviter le `sqrt` :
+Calculer `sqrt` est couteux. Quand on veut juste **comparer** des distances (sans connaître la valeur exacte), on compare les distances **au carre** pour éviter le `sqrt` :
 
 ```typescript
 function distanceSquared3D(
@@ -801,7 +801,7 @@ function distanceSquared3D(
 
 ### Qu'est-ce qu'un vecteur ?
 
-Un vecteur est une **fleche** qui a une direction et une longueur. Ce n'est PAS une position — c'est un **deplacement**, un **delta**.
+Un vecteur est une **fleche** qui à une direction et une longueur. Ce n'est PAS une position — c'est un **déplacement**, un **delta**.
 
 ```
 VECTEUR vs POINT
@@ -880,7 +880,7 @@ console.log(vecLength({ x: 1, y: 1, z: 1 }));   // ~1.732 = sqrt(3)
 
 ### Vecteur unitaire (normalise)
 
-Un vecteur **normalise** (ou **unitaire**) a une longueur de 1. Il garde sa direction, mais sa longueur est standardisee. C'est essentiel en 3D pour les directions, les normales de surface, l'eclairage.
+Un vecteur **normalise** (où **unitaire**) à une longueur de 1. Il garde sa direction, mais sa longueur est standardisee. C'est essentiel en 3D pour les directions, les normales de surface, l'eclairage.
 
 ```
 NORMALISATION
@@ -1021,7 +1021,7 @@ const dirAtoB = vecNormalize(aToB); // direction normalisee de A vers B
 
 ### Le produit scalaire (dot product)
 
-Le produit scalaire prend deux vecteurs et retourne un **nombre** (un scalaire). Ce nombre indique a quel point les deux vecteurs "pointent dans la meme direction".
+Le produit scalaire prend deux vecteurs et retourne un **nombre** (un scalaire). Ce nombre indique a quel point les deux vecteurs "pointent dans la même direction".
 
 ```
 PRODUIT SCALAIRE : a . b
@@ -1100,7 +1100,7 @@ console.log(isInFront(me, forward, enemy2)); // false
 
 ### Le produit vectoriel (cross product) — apercu
 
-Le produit vectoriel prend deux vecteurs et retourne un **troisieme vecteur** qui est **perpendiculaire** aux deux premiers. C'est comme ca qu'on calcule la "normale" d'une surface en 3D.
+Le produit vectoriel prend deux vecteurs et retourne un **troisieme vecteur** qui est **perpendiculaire** aux deux premiers. C'est comme ça qu'on calcule la "normale" d'une surface en 3D.
 
 ```
 PRODUIT VECTORIEL : a x b
@@ -1352,7 +1352,7 @@ console.log(clamp(1.7, 0, 1));   // 1   (au dessus → borne a 1)
 
 ### Smoothstep : interpolation douce
 
-`lerp` avance a vitesse constante (lineaire). `smoothstep` accelere au debut et decelere a la fin, comme une voiture qui demarre et freine en douceur.
+`lerp` avance a vitesse constante (lineaire). `smoothstep` accelere au debut et decelere à la fin, comme une voiture qui demarre et freine en douceur.
 
 ```
 LERP vs SMOOTHSTEP
@@ -1484,7 +1484,7 @@ for (let i = 0; i <= 10; i++) {
 
 ### Fonctions d'easing
 
-Les fonctions d'easing combinent lerp avec des courbes pour creer des animations naturelles. Ce sont les memes que celles de CSS (`ease-in`, `ease-out`, `ease-in-out`).
+Les fonctions d'easing combinent lerp avec des courbes pour créer des animations naturelles. Ce sont les memes que celles de CSS (`ease-in`, `ease-out`, `ease-in-out`).
 
 ```
 EASING FUNCTIONS
@@ -1779,7 +1779,7 @@ assertApprox(dotProduct2D(1, 0, -1, 0), -1, 'dot opposite');
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Formule / Explication | Utilisation en 3D |
 |---------|----------------------|-------------------|
@@ -1792,7 +1792,7 @@ assertApprox(dotProduct2D(1, 0, -1, 0), -1, 'dot opposite');
 | sin(θ), cos(θ) | Projection sur le cercle unite | Rotations, ondes, animations |
 | tan(θ) | sin / cos | Angles de vue, pentes |
 | atan2(y, x) | Angle depuis les coordonnees | "Regarder vers" une cible |
-| sin² + cos² = 1 | Identite de Pythagore | Verification, normalisation |
+| sin² + cos² = 1 | Identite de Pythagore | Vérification, normalisation |
 | Rotation 2D | x' = x*cos - y*sin, y' = x*sin + y*cos | Base de toutes les rotations |
 | Distance 2D | `sqrt(dx² + dy²)` | Detection de collision, proximite |
 | Distance 3D | `sqrt(dx² + dy² + dz²)` | Idem en 3D |
@@ -1804,7 +1804,7 @@ assertApprox(dotProduct2D(1, 0, -1, 0), -1, 'dot opposite');
 | Matrice | Tableau de nombres = "recette de transformation" | Rotation, echelle, translation |
 | Matrice identite | Diagonale de 1 — ne change rien | "transform: none" |
 | lerp(a, b, t) | `a + (b - a) * t` | Animation, transition, melange |
-| clamp(x, min, max) | Borner une valeur | Eviter les depassements |
+| clamp(x, min, max) | Borner une valeur | Éviter les depassements |
 | smoothstep | `3t² - 2t³` (Hermite) | Transitions douces, shaders |
 | Easing | ease-in (t²), ease-out (1-(1-t)²) | Animations naturelles |
 | Bezier | Double lerp avec points de controle | Courbes, chemins de camera |

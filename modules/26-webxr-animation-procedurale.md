@@ -8,36 +8,36 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Utiliser l'API WebXR Device pour detecter les capacites XR du navigateur
-- Creer une XRSession (immersive-vr ou immersive-ar) et gerer le cycle de vie
+- Utiliser l'API WebXR Device pour détecter les capacites XR du navigateur
+- Créer une XRSession (immersive-vr ou immersive-ar) et gérer le cycle de vie
 - Comprendre XRReferenceSpace, XRFrame, XRView et XRViewerPose
 - Implementer le rendu stereo (deux cameras, per-eye frustum, IPD)
 - Decrire le foveated rendering et son impact sur les performances
-- Gerer les controllers XR (XRInputSource, gamepad, hand tracking)
-- Integrer WebXR avec Three.js (renderer.xr, VRButton, ARButton)
+- Gérer les controllers XR (XRInputSource, gamepad, hand tracking)
+- Intégrer WebXR avec Three.js (renderer.xr, VRButton, ARButton)
 - Implementer le hit testing AR et l'estimation de lumiere
 - Comprendre les contraintes de performance VR (72-90 FPS, reprojection)
 - Implementer l'Inverse Kinematics avec CCD et FABRIK
-- Creer un cycle de marche procedural avec des fonctions sinusoidales
+- Créer un cycle de marche procedural avec des fonctions sinusoidales
 - Appliquer des spring dynamics pour le mouvement secondaire (cheveux, capes)
 - Construire un blend tree et une state machine d'animation
-- Utiliser le CCDIKSolver de Three.js pour l'IK en temps reel
+- Utiliser le CCDIKSolver de Three.js pour l'IK en temps réel
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Rendu volumetrique (Module 25)</summary>
+<summary>Rappel du cours précédent — Rendu volumetrique (Module 25)</summary>
 
 Au module 25, nous avons explore le rendu de volumes :
 
 - **Milieux participatifs** : absorption (sigma_a), scattering (sigma_s), extinction (sigma_t = sigma_a + sigma_s)
-- **Beer-Lambert** : transmittance T = exp(-sigma_t × distance), integration numerique pour les milieux heterogenes
+- **Beer-Lambert** : transmittance T = exp(-sigma_t × distance), intégration numérique pour les milieux heterogenes
 - **Fonctions de phase** : Henyey-Greenstein (g = asymetrie), Rayleigh (petites particules, sigma proportionnel a 1/lambda^4)
-- **Ray marching** : integration pas-a-pas le long du rayon, front-to-back compositing, early exit quand transmittance < 0.01
+- **Ray marching** : intégration pas-a-pas le long du rayon, front-to-back compositing, early exit quand transmittance < 0.01
 - **Brouillard** : depth fog (lineaire, exponentiel), height fog (densite decroissant avec l'altitude)
 - **God rays** : ray march + shadow map sampling pour la lumiere volumetrique visible
 - **Nuages** : Perlin-Worley noise (shape + detail), weather map, height gradient, Beer-powder pour le multi-scattering
-- **Atmosphere** : Rayleigh (ciel bleu) + Mie (halo du soleil), integration en 2 couches
+- **Atmosphere** : Rayleigh (ciel bleu) + Mie (halo du soleil), intégration en 2 couches
 - **Optimisations** : half-res rendering, reprojection temporelle, blue noise dithering
 
 Nous allons maintenant explorer deux domaines complementaires : la realite virtuelle/augmentee sur le web (WebXR) et l'animation procedurale (IK, spring dynamics, state machines).
@@ -49,7 +49,7 @@ Nous allons maintenant explorer deux domaines complementaires : la realite virtu
 ## WebXR : la realite virtuelle et augmentee dans le navigateur
 
 :::tip Analogie
-Le WebXR, c'est comme une fenetre magique. Normalement, ton navigateur affiche une page plate sur un ecran 2D. Avec WebXR, cette fenetre se transforme en deux petites fenetres — une pour chaque oeil — et la scene 3D que tu as construite "sort" de l'ecran pour t'entourer. C'est le meme moteur de rendu Three.js ou WebGPU, mais au lieu de dessiner une seule image, tu en dessines deux (legerement decalees pour creer la stereoscopie), et le casque s'occupe de tracker ta tete pour mettre a jour la camera en temps reel.
+Le WebXR, c'est comme une fenêtre magique. Normalement, ton navigateur affiche une page plate sur un ecran 2D. Avec WebXR, cette fenêtre se transforme en deux petites fenetres — une pour chaque oeil — et la scene 3D que tu as construite "sort" de l'ecran pour t'entourer. C'est le même moteur de rendu Three.js ou WebGPU, mais au lieu de dessiner une seule image, tu en dessines deux (legerement decalees pour créer la stereoscopie), et le casque s'occupe de tracker ta tete pour mettre a jour la camera en temps réel.
 :::
 
 ### L'API WebXR Device
@@ -90,7 +90,7 @@ Architecture WebXR :
   └─────────────────────────────────────────┘
 ```
 
-### Detection et creation de session
+### Detection et création de session
 
 ```typescript
 // Verifier le support WebXR
@@ -599,7 +599,7 @@ Contraintes de performance VR :
 ## Inverse Kinematics (IK) : faire bouger les os
 
 :::tip Analogie
-Quand tu attrapes une poignee de porte, ton cerveau ne calcule pas individuellement l'angle de ton epaule, puis ton coude, puis ton poignet. Il "vise" la poignee et tout le bras s'ajuste automatiquement. C'est exactement ce que fait l'IK : au lieu de specifier l'angle de chaque articulation (Forward Kinematics), tu specifies la position cible de l'extremite (la main), et l'algorithme calcule les angles necessaires pour l'atteindre.
+Quand tu attrapes une poignee de porte, ton cerveau ne calcule pas individuellement l'angle de ton epaule, puis ton coude, puis ton poignet. Il "vise" la poignee et tout le bras s'ajuste automatiquement. C'est exactement ce que fait l'IK : au lieu de spécifier l'angle de chaque articulation (Forward Kinematics), tu specifies la position cible de l'extremite (la main), et l'algorithme calcule les angles nécessaires pour l'atteindre.
 :::
 
 ### Forward Kinematics vs Inverse Kinematics
@@ -1196,7 +1196,7 @@ animate();
 
 ### FABRIK custom en Three.js
 
-L'implementation FABRIK vue plus haut s'applique directement aux bones Three.js. Il suffit d'extraire les positions world des bones, executer les passes backward/forward, puis convertir les positions resultantes en rotations locales pour chaque bone :
+L'implementation FABRIK vue plus haut s'applique directement aux bones Three.js. Il suffit d'extraire les positions world des bones, exécuter les passes backward/forward, puis convertir les positions resultantes en rotations locales pour chaque bone :
 
 ```typescript
 function solveFABRIKChain(bones: THREE.Bone[], target: THREE.Vector3, iterations = 5): void {
@@ -1236,7 +1236,7 @@ function solveFABRIKChain(bones: THREE.Bone[], target: THREE.Vector3, iterations
 
 ### Exercice XR.1 — Scene VR interactive avec IK
 
-Creer une scene VR dans Three.js avec :
+Créer une scene VR dans Three.js avec :
 1. Un environnement simple (sol, quelques objets)
 2. Des mains virtuelles qui suivent les controllers via IK (bras complets)
 3. Grab d'objets avec le trigger
@@ -1396,34 +1396,40 @@ renderer.setAnimationLoop(() => {
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | Complexite |
 |---------|-------------|:----------:|
 | **WebXR Device API** | navigator.xr, XRSession, XRFrame, XRView, XRViewerPose | Standard W3C |
 | **Rendu stereo** | Deux viewports (gauche/droite), IPD ~63mm, projection asymetrique | 2x la charge GPU |
-| **Foveated rendering** | Haute resolution au centre, basse en peripherie | -30-45% GPU |
-| **XRInputSource** | Controllers (trigger, squeeze, thumbstick) + hand tracking (25 joints) | Temps reel |
+| **Foveated rendering** | Haute résolution au centre, basse en peripherie | -30-45% GPU |
+| **XRInputSource** | Controllers (trigger, squeeze, thumbstick) + hand tracking (25 joints) | Temps réel |
 | **Three.js + WebXR** | renderer.xr.enabled, VRButton/ARButton, getController/getHand | Abstraction haut niveau |
 | **AR hit testing** | Detecter les surfaces reelles pour placer des objets virtuels | requestHitTestSource |
-| **Light estimation** | SH de l'eclairage reel pour integrer les objets 3D | Frame-level |
+| **Light estimation** | SH de l'eclairage réel pour intégrer les objets 3D | Frame-level |
 | **VR performance** | 72-90 FPS obligatoire, budget ~11ms/frame, ASW/reprojection | Critique |
 | **CCD IK** | Iterer joint par joint, tourner vers la cible, converge en 5-10 iter | Simple, robuste |
 | **FABRIK IK** | Backward + forward reaching, base sur les positions | Rapide, intuitif |
 | **Marche procedurale** | sin/cos par articulation, dephasage jambe/bras | Parametrique |
 | **Spring dynamics** | F = -k(x-rest) - d*v, pour cheveux/capes/accessoires | Par bone |
 | **Look-at constraint** | Orienter un bone vers une cible avec limite d'angle | Slerp + clamp |
-| **Blend tree** | Interpoler entre animations selon un parametre (vitesse, direction) | Lineaire/bilineaire |
-| **State machine** | Etats (idle, walk, run, jump) + transitions conditionnelles + crossfade | Graphe d'etats |
+| **Blend tree** | Interpoler entre animations selon un paramètre (vitesse, direction) | Lineaire/bilineaire |
+| **State machine** | Etats (idle, walk, run, jump) + transitions conditionnelles + crossfade | Graphe d'états |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [25 - Rendu volumetrique](./25-rendu-volumetrique.md) | [Module suivant](./27-prochain-module.md) |
 
-**Ressources associees :**
-- [Lab 26 — WebXR et animation procedurale](../labs/lab-26-webxr-animation/)
-- [Quiz 26 — WebXR et animation procedurale](../quizzes/quiz-26-webxr-animation.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 26 webxr animation](../screencasts/screencast-26-webxr-animation.md)
+2. **Lab** : [lab-26-webxr-animation-procedurale](../labs/lab-26-webxr-animation-procedurale/README)
+3. **Quiz** : [quiz 26 webxr animation](../quizzes/quiz-26-webxr-animation.html)
+:::

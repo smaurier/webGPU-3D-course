@@ -22,7 +22,7 @@ A la fin de ce module, vous serez capable de :
 <summary>Rappel du module precedent</summary>
 
 - Le GPU est optimise pour le **throughput** (milliers de cores simples en parallele)
-- WebGPU utilise des **descripteurs immutables** (pas d'etat global comme WebGL)
+- WebGPU utilise des **descripteurs immutables** (pas d'état global comme WebGL)
 - Three.js est une **abstraction** au-dessus de WebGL/WebGPU (comme Vue.js au-dessus du DOM)
 - La boucle de rendu utilise `requestAnimationFrame` avec un **deltaTime**
 - Le **device pixel ratio** assure un rendu net sur les ecrans HiDPI
@@ -34,8 +34,8 @@ A la fin de ce module, vous serez capable de :
 
 ## Analogie : l'algebre lineaire c'est le CSS de la 3D
 
-:::tip Analogie pour developpeurs Vue.js
-En CSS, vous positionnez des elements avec `translate`, `rotate`, `scale` et `transform-origin`. En 3D, c'est exactement la meme chose, mais avec des **vecteurs** et des **matrices**.
+:::tip Analogie pour développeurs Vue.js
+En CSS, vous positionnez des éléments avec `translate`, `rotate`, `scale` et `transform-origin`. En 3D, c'est exactement la même chose, mais avec des **vecteurs** et des **matrices**.
 
 | CSS | 3D |
 |-----|-----|
@@ -45,30 +45,30 @@ En CSS, vous positionnez des elements avec `translate`, `rotate`, `scale` et `tr
 | `transform-origin` | Origine locale de l'objet |
 | `transform: translate() rotate() scale()` | Multiplication de matrices (dans l'ordre inverse !) |
 
-La difference : en CSS, le navigateur fait les maths pour vous. En 3D, c'est vous qui les implementez.
+La différence : en CSS, le navigateur fait les maths pour vous. En 3D, c'est vous qui les implementez.
 :::
 
 ---
 
-## Du prerequis a l'algebre lineaire
+## Du prérequis a l'algebre lineaire
 
-Au module prerequis (Lab 00), vous avez decouvert les vecteurs de maniere intuitive :
+Au module prérequis (Lab 00), vous avez decouvert les vecteurs de manière intuitive :
 
 - Un **vecteur** est une fleche avec une direction et une longueur
-- Le **produit scalaire** (`dotProduct2D(a, b)`) mesure a quel point deux vecteurs "vont dans le meme sens"
+- Le **produit scalaire** (`dotProduct2D(a, b)`) mesure a quel point deux vecteurs "vont dans le même sens"
 - Les **operations de base** (addition, soustraction, mise a l'echelle) se font composante par composante
 - Les **proportions** et l'interpolation lineaire permettent de melanger deux valeurs
 
-Tout cela, vous l'avez ecrit avec des tableaux simples (`number[]`) et des fonctions libres. C'etait parfait pour comprendre les concepts.
+Tout cela, vous l'avez écrit avec des tableaux simples (`number[]`) et des fonctions libres. C'etait parfait pour comprendre les concepts.
 
-Maintenant, on va **formaliser** ces idees dans du code TypeScript reutilisable. Au module prerequis vous avez ecrit `dotProduct2D(a, b)` avec des tableaux. Maintenant on va structurer ca proprement avec des classes `Vec3` et `Mat4` qui encapsulent les donnees et les operations. Cela nous donne :
+Maintenant, on va **formaliser** ces idees dans du code TypeScript réutilisable. Au module prérequis vous avez écrit `dotProduct2D(a, b)` avec des tableaux. Maintenant on va structurer ça proprement avec des classes `Vec3` et `Mat4` qui encapsulent les donnees et les operations. Cela nous donne :
 
-- La **securite du typage** : impossible de passer accidentellement un Vec2 la ou on attend un Vec3
+- La **sécurité du typage** : impossible de passer accidentellement un Vec2 la ou on attend un Vec3
 - Le **chainage** : `a.sub(b).normalize().dot(c)` se lit naturellement
-- La **3eme dimension** : on passe de `[x, y]` a `(x, y, z)` — et meme `(x, y, z, w)` pour les coordonnees homogenes
+- La **3eme dimension** : on passe de `[x, y]` a `(x, y, z)` — et même `(x, y, z, w)` pour les coordonnees homogenes
 
-:::tip Vous avez deja les bases
-Si vous avez reussi le Lab 00, vous avez deja toutes les bases necessaires. Ce module ajoute la rigueur mathematique et la 3eme dimension, mais les principes restent les memes. Le dot product en 3D, c'est juste un terme de plus : `a.x*b.x + a.y*b.y + a.z*b.z`.
+:::tip Vous avez déjà les bases
+Si vous avez reussi le Lab 00, vous avez déjà toutes les bases nécessaires. Ce module ajoute la rigueur mathematique et la 3eme dimension, mais les principes restent les memes. Le dot product en 3D, c'est juste un terme de plus : `a.x*b.x + a.y*b.y + a.z*b.z`.
 :::
 
 ---
@@ -436,7 +436,7 @@ console.log(normalFlipped.toString()); // Vec3(0.000, 0.000, -1.000) — pointe 
 ```
 
 :::warning Winding order
-L'ordre des vertices d'un triangle determine la direction de sa normale. En WebGL/WebGPU, les triangles en **counter-clockwise** (sens anti-horaire) sont consideres comme "face avant" par defaut. C'est comme le z-index en CSS : l'ordre compte.
+L'ordre des vertices d'un triangle déterminé la direction de sa normale. En WebGL/WebGPU, les triangles en **counter-clockwise** (sens anti-horaire) sont consideres comme "face avant" par defaut. C'est comme le z-index en CSS : l'ordre compte.
 :::
 
 ---
@@ -445,7 +445,7 @@ L'ordre des vertices d'un triangle determine la direction de sa normale. En WebG
 
 ### Pourquoi 4x4 et pas 3x3 ?
 
-Une matrice 3x3 suffit pour la rotation et l'echelle, mais **pas pour la translation**. La translation necessite des **coordonnees homogenes** (4D).
+Une matrice 3x3 suffit pour la rotation et l'echelle, mais **pas pour la translation**. La translation nécessité des **coordonnees homogenes** (4D).
 
 ```
 COORDONNEES HOMOGENES
@@ -829,7 +829,7 @@ function uploadVertices(
 }
 ```
 
-:::tip Alignement memoire
+:::tip Alignement mémoire
 Les GPU ont des contraintes d'alignement strictes. Un `mat4x4<f32>` en WGSL doit etre aligne sur 16 bytes. Un `vec3<f32>` est en realite stocke avec 4 floats (padding a 16 bytes). Gardez cela en tete quand vous construisez vos uniform buffers.
 :::
 
@@ -916,8 +916,8 @@ class Vec4 {
 Implementez les fonctions suivantes en utilisant les classes `Vec3` et `Mat4` :
 
 1. `computeTriangleArea(v0, v1, v2)` — calculer l'aire d'un triangle en 3D
-2. `isPointInFrontOfPlane(point, planeNormal, planePoint)` — determiner si un point est devant un plan
-3. `verifyMatrixInverse(matrix)` — verifier que M * M^-1 = identite (a un epsilon pres)
+2. `isPointInFrontOfPlane(point, planeNormal, planePoint)` — déterminer si un point est devant un plan
+3. `verifyMatrixInverse(matrix)` — vérifier que M * M^-1 = identite (à un epsilon pres)
 
 <details>
 <summary>Voir la solution</summary>
@@ -1000,7 +1000,7 @@ console.log('Inverse valid:', verifyMatrixInverse(testMatrix)); // true
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Explication |
 |---------|-------------|
@@ -1010,7 +1010,7 @@ console.log('Inverse valid:', verifyMatrixInverse(testMatrix)); // true
 | Normalisation | Rendre la longueur = 1, essentiel pour les directions et les normales |
 | Mat4 | Matrice 4x4 en column-major — encode toutes les transformations 3D |
 | Coordonnees homogenes | w=1 pour les points (translatable), w=0 pour les vecteurs |
-| Column-major | Les colonnes sont stockees les unes apres les autres en memoire |
+| Column-major | Les colonnes sont stockees les unes après les autres en mémoire |
 | Multiplication | `M1 * M2` combine les transformations — l'ordre est important |
 | Inverse | `M^-1` annule la transformation — utile pour la view matrix |
 | Float32Array | Format natif pour envoyer des donnees au GPU |
@@ -1024,3 +1024,13 @@ console.log('Inverse valid:', verifyMatrixInverse(testMatrix)); // true
 - [Immersive Linear Algebra (interactif)](http://immersivemath.com/ila/index.html)
 - [glMatrix — librairie d'algebre lineaire optimisee](https://glmatrix.net/)
 - [WebGPU WGSL types and alignment](https://www.w3.org/TR/WGSL/#alignment-and-size)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 01 algebre lineaire](../screencasts/screencast-01-algebre-lineaire.md)
+2. **Lab** : [lab-01-algebre-lineaire](../labs/lab-01-algebre-lineaire/README)
+3. **Quiz** : [quiz 01 algebre lineaire](../quizzes/quiz-01-algebre-lineaire.html)
+:::

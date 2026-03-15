@@ -5,7 +5,7 @@
 Implementer les transformations 3D : matrices de translation, rotation, mise a l'echelle,
 et les quaternions pour les rotations fluides.
 
-## Concepts cles
+## Concepts clés
 
 ### Matrices de transformation
 
@@ -15,18 +15,18 @@ Une matrice de mise a l'echelle place `sx, sy, sz` sur la diagonale (indices 0, 
 ### Ordre SRT
 
 L'ordre standard est **Scale -> Rotate -> Translate** (SRT).
-En column-major, cela s'ecrit : `M = T * R * S` (on multiplie dans l'ordre inverse).
+En column-major, cela s'écrit : `M = T * R * S` (on multiplie dans l'ordre inverse).
 
 ### Quaternions
 
-Un quaternion `[x, y, z, w]` represente une rotation de maniere compacte et sans gimbal lock.
-- Creation depuis un axe et un angle : `q = [axis * sin(angle/2), cos(angle/2)]`
+Un quaternion `[x, y, z, w]` represente une rotation de manière compacte et sans gimbal lock.
+- Création depuis un axe et un angle : `q = [axis * sin(angle/2), cos(angle/2)]`
 - Multiplication : combine deux rotations
 - Slerp : interpolation spherique pour des animations fluides
 
 ### Conversion quaternion -> matrice
 
-Necessaire pour envoyer la rotation au GPU sous forme de matrice 4x4.
+Nécessaire pour envoyer la rotation au GPU sous forme de matrice 4x4.
 
 ## Exercices
 

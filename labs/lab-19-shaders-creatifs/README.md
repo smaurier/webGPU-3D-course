@@ -4,9 +4,9 @@
 
 Implementer les algorithmes mathematiques utilises dans les shaders creatifs :
 bruit de Perlin et Simplex, FBM, domain warping, SDF (Signed Distance Functions),
-ray marching, effets Fresnel, toon shading et generation procedurale.
+ray marching, effets Fresnel, toon shading et génération procedurale.
 
-## Concepts cles
+## Concepts clés
 
 ### Bruit de Perlin
 
@@ -25,18 +25,18 @@ et des amplitudes decroissantes (gain). Produit des details multi-echelles.
 
 ### SDF (Signed Distance Functions)
 
-Une SDF retourne la distance signee d'un point a une surface : negative a l'interieur,
+Une SDF retourne la distance signee d'un point à une surface : negative a l'interieur,
 positive a l'exterieur. Permet de combiner des formes avec min (union), max (intersection),
 et smooth min (union douce).
 
 ### Ray Marching
 
-Technique qui avance le long d'un rayon par pas egaux a la distance SDF.
+Technique qui avance le long d'un rayon par pas egaux à la distance SDF.
 Quand la distance est suffisamment petite, on considere qu'on a touche la surface.
 
 ### Effet Fresnel
 
-L'approximation de Schlick modele la reflexion aux angles rasants :
+L'approximation de Schlick modèle la reflexion aux angles rasants :
 `F = F0 + (1 - F0) * (1 - cos(theta))^5`
 
 ## Exercices
@@ -47,7 +47,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

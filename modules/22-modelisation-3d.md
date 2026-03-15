@@ -11,18 +11,18 @@ A la fin de ce module, vous serez capable de :
 - Naviguer dans l'interface de Blender et utiliser les raccourcis essentiels
 - Comprendre la modelisation polygonale : vertices, edges, faces, quads vs tris
 - Appliquer les modifiers courants (Subdivision Surface, Mirror, Boolean, Array)
-- Derouler les UVs d'un modele et comprendre les seams
+- Derouler les UVs d'un modèle et comprendre les seams
 - Configurer un materiau PBR dans Blender (Principled BSDF)
 - Baker des normal maps, AO maps et lightmaps
-- Creer un squelette basique (armature), peindre les poids et poser un modele
+- Créer un squelette basique (armature), peindre les poids et poser un modèle
 - Animer avec des keyframes et exporter en glTF 2.0
-- Optimiser les modeles pour le web (polycount, LOD, decimation)
+- Optimiser les modèles pour le web (polycount, LOD, decimation)
 - Comprendre la structure interne du format glTF (JSON + binaire)
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Projet final (Module 21)</summary>
+<summary>Rappel du cours précédent — Projet final (Module 21)</summary>
 
 Au module 21, nous avons assemble tous les concepts du cours :
 
@@ -34,7 +34,7 @@ Au module 21, nous avons assemble tous les concepts du cours :
 - **Camera duale** : OrbitControls + PointerLockControls avec toggle
 - **Checklist qualite** : 60 FPS, 0 memory leaks, progressive loading, dispose cleanup
 
-Ce module annexe couvre la creation des assets 3D eux-memes — le "contenu" que votre code affiche.
+Ce module annexe couvre la création des assets 3D eux-memes — le "contenu" que votre code affiche.
 
 </details>
 
@@ -43,7 +43,7 @@ Ce module annexe couvre la creation des assets 3D eux-memes — le "contenu" que
 ## Pourquoi un dev 3D web doit comprendre la modelisation
 
 :::tip Analogie
-Un developpeur web frontend n'a pas besoin d'etre graphiste, mais il doit comprendre les formats d'images, les couleurs, les polices. De la meme maniere, un dev 3D web n'a pas besoin d'etre modeliseur, mais il doit comprendre comment les modeles sont construits — pour debugger les UV qui ne collent pas, le mesh qui a des faces inversees, l'animation qui ne joue pas, ou le fichier glTF de 50 MB qui devrait en faire 5. Connaitre le pipeline de creation d'assets, c'est pouvoir communiquer avec les artistes 3D et diagnostiquer les problemes a la source.
+Un développeur web frontend n'a pas besoin d'etre graphiste, mais il doit comprendre les formats d'images, les couleurs, les polices. De la même manière, un dev 3D web n'a pas besoin d'etre modeliseur, mais il doit comprendre comment les modèles sont construits — pour debugger les UV qui ne collent pas, le mesh qui a des faces inversees, l'animation qui ne joue pas, ou le fichier glTF de 50 MB qui devrait en faire 5. Connaître le pipeline de création d'assets, c'est pouvoir communiquer avec les artistes 3D et diagnostiquer les problèmes à la source.
 :::
 
 ### Ce que vous devez savoir faire
@@ -324,7 +324,7 @@ Ou placer les seams ?
 
 ### Types d'unwrap
 
-| Methode | Quand l'utiliser | Qualite |
+| Méthode | Quand l'utiliser | Qualite |
 |---------|-----------------|---------|
 | **Unwrap** | Mesh avec seams bien places | Excellente |
 | **Smart UV Project** | Prototypage rapide, debug | Moyenne |
@@ -339,7 +339,7 @@ Ou placer les seams ?
 
 ### Le shader Principled BSDF = PBR metallic-roughness
 
-Le Principled BSDF de Blender est l'exact equivalent du modele PBR metallic-roughness utilise par Three.js (`MeshStandardMaterial`/`MeshPhysicalMaterial`).
+Le Principled BSDF de Blender est l'exact équivalent du modèle PBR metallic-roughness utilise par Three.js (`MeshStandardMaterial`/`MeshPhysicalMaterial`).
 
 ```
 Blender Principled BSDF           Three.js MeshStandardMaterial
@@ -488,7 +488,7 @@ Chaque bone controle une zone du mesh.
 La zone d'influence est definie par le weight painting.
 ```
 
-### Creer une armature dans Blender
+### Créer une armature dans Blender
 
 ```
 1. Shift+A → Armature → Single Bone
@@ -657,12 +657,12 @@ Animation :
 
 ### Erreurs courantes a l'export
 
-| Probleme | Cause | Solution |
+| Problème | Cause | Solution |
 |----------|-------|----------|
 | Textures manquantes | Fichiers non packes | File → External Data → Pack All Into .blend |
 | Mesh invisible | Normales inversees | Edit Mode → Mesh → Normals → Recalculate Outside |
-| Animation cassee | Bones non exportes | Verifier que l'armature est selectionnee |
-| Fichier trop gros | Textures non compressees | Reduire la resolution, activer Draco |
+| Animation cassee | Bones non exportes | Vérifier que l'armature est selectionnee |
+| Fichier trop gros | Textures non compressees | Reduire la résolution, activer Draco |
 | Materiaux noirs | Nodes non-standard | Utiliser uniquement Principled BSDF |
 | Scale incorrecte | Unite Blender ≠ metre | Appliquer le scale : Ctrl+A → Scale |
 
@@ -718,7 +718,7 @@ mixer.update(deltaTime);
 
 ---
 
-## Optimisation des modeles
+## Optimisation des modèles
 
 ### Polycount budget
 
@@ -729,7 +729,7 @@ mixer.update(deltaTime);
 | **Mobile** | 1K-10K tris | 50K-150K tris |
 | **VR** | 5K-30K tris | 200K-500K tris (x2 yeux) |
 
-### LOD creation dans Blender
+### LOD création dans Blender
 
 ```
 1. Dupliquer le modele (Shift+D)
@@ -805,7 +805,7 @@ Resolutions recommandees :
 - Mobile : diviser par 2
 ```
 
-### Ou trouver des textures et modeles gratuits
+### Ou trouver des textures et modèles gratuits
 
 | Source | Type | Licence | URL |
 |--------|------|---------|-----|
@@ -997,7 +997,7 @@ Buffer = "le fichier binaire" (les octets bruts)
 |-------|-----------|------|----------|
 | **Blender** | Modelisation, animation, rendu | Gratuit (GPL) | Tout le monde |
 | **Substance 3D Painter** | Texturing PBR | Payant (Adobe) | Texture artists |
-| **ZBrush** | Sculpting haute resolution | Payant | Character artists |
+| **ZBrush** | Sculpting haute résolution | Payant | Character artists |
 | **Maya** | Animation, rigging avance | Payant (Autodesk) | Studios AAA |
 | **3ds Max** | Arch-viz, jeux (Windows) | Payant (Autodesk) | Studios Windows |
 | **Houdini** | Effets proceduraux | Payant (Apprentice gratuit) | FX artists |
@@ -1007,13 +1007,13 @@ Buffer = "le fichier binaire" (les octets bruts)
 
 ## Pratique
 
-### Exercice MOD.1 — Exporter un modele de Blender vers Three.js
+### Exercice MOD.1 — Exporter un modèle de Blender vers Three.js
 
-1. Ouvrir Blender, creer un objet simple (une maison avec un toit)
+1. Ouvrir Blender, créer un objet simple (une maison avec un toit)
 2. Ajouter un materiau Principled BSDF avec une couleur de base
 3. Exporter en .glb avec compression Draco
-4. Charger le modele dans Three.js avec GLTFLoader + DRACOLoader
-5. Verifier que le materiau est correctement applique
+4. Charger le modèle dans Three.js avec GLTFLoader + DRACOLoader
+5. Vérifier que le materiau est correctement applique
 
 ```typescript
 // TODO: Configurer le DRACOLoader
@@ -1160,40 +1160,46 @@ window.addEventListener('resize', () => {
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | Outil |
 |---------|-------------|-------|
 | **Modelisation polygonale** | Vertices, edges, faces (quads preferred) | Blender Edit Mode |
 | **Modifiers** | Operations non-destructives (Subdivision, Mirror, Boolean) | Blender Modifier panel |
 | **UV unwrapping** | Deplier le mesh 3D en 2D pour appliquer des textures | Blender UV Editor |
-| **Principled BSDF** | Shader PBR = metallic-roughness (equivalent MeshStandardMaterial) | Blender Shader Editor |
+| **Principled BSDF** | Shader PBR = metallic-roughness (équivalent MeshStandardMaterial) | Blender Shader Editor |
 | **Baking** | "Cuire" les details high-poly en textures (normal, AO) | Blender Render → Bake |
 | **Rigging** | Squelette de bones pour deformer le mesh | Blender Armature |
-| **Weight painting** | Definir l'influence de chaque bone sur chaque vertex | Blender Weight Paint mode |
+| **Weight painting** | Définir l'influence de chaque bone sur chaque vertex | Blender Weight Paint mode |
 | **Animation** | Keyframes, interpolation, F-curves, NLA | Blender Timeline + Graph Editor |
 | **Export glTF** | Format standard 3D web (.glb = binaire unique) | Blender File → Export |
 | **Draco** | Compression geometrie (~60-80% reduction) | Extension glTF |
 | **LOD** | Plusieurs niveaux de detail pour la performance | Decimate modifier |
 
-| Etape pipeline | Input | Output | Responsable |
+| Étape pipeline | Input | Output | Responsable |
 |---------------|-------|--------|-------------|
-| **Modelisation** | Concept art / specifications | Mesh .blend | Modeliseur |
+| **Modelisation** | Concept art / spécifications | Mesh .blend | Modeliseur |
 | **UV** | Mesh | Mesh avec UVs | Modeliseur |
 | **Texturing** | Mesh + UVs | Textures PBR (albedo, normal, rough, metal, AO) | Texture artist |
 | **Rigging** | Mesh | Mesh + Armature | Rigger |
 | **Animation** | Mesh + Armature | Clips d'animation | Animateur |
 | **Export** | .blend complet | .glb optimise | Dev 3D / Pipeline TD |
-| **Integration** | .glb | Scene Three.js | Dev 3D web |
+| **Intégration** | .glb | Scene Three.js | Dev 3D web |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [21 - Projet final](./21-projet-final.md) | — |
 
-**Ressources associees :**
-- [Lab 22 — Modelisation 3D](../labs/lab-22-modelisation-3d/)
-- [Quiz 22 — Modelisation 3D](../quizzes/quiz-22-modelisation-3d.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 22 modelisation](../screencasts/screencast-22-modelisation.md)
+2. **Lab** : [lab-22-modelisation](../labs/lab-22-modelisation/README)
+3. **Quiz** : [quiz 22 modelisation](../quizzes/quiz-22-modelisation.html)
+:::

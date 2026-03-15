@@ -9,16 +9,16 @@
 - Comprendre le paradigme WebGPU (command-based) vs WebGL (state machine)
 - Obtenir un GPUDevice via navigator.gpu, requestAdapter, requestDevice
 - Configurer le canvas pour le rendu WebGPU
-- Maitriser la syntaxe WGSL : types, decorateurs, structures
-- Ecrire un vertex shader et un fragment shader en WGSL
+- Maîtriser la syntaxe WGSL : types, decorateurs, structures
+- Écrire un vertex shader et un fragment shader en WGSL
 - Comparer GLSL et WGSL cote a cote
 - Dessiner un premier triangle WebGPU complet
-- Gerer les erreurs et detecter les fonctionnalites disponibles
+- Gérer les erreurs et détecter les fonctionnalites disponibles
 
 ---
 
 <details>
-<summary>Rappel du cours precedent (Module 08 — Scene WebGL complete)</summary>
+<summary>Rappel du cours précédent (Module 08 — Scene WebGL complete)</summary>
 
 Dans le module 08, nous avons construit une scene WebGL complete avec :
 - Un pipeline de rendu complet : vertex buffer, index buffer, textures, uniforms
@@ -28,7 +28,7 @@ Dans le module 08, nous avons construit une scene WebGL complete avec :
 - La boucle de rendu `requestAnimationFrame` avec rotation de l'objet
 - Les limites de WebGL : state machine globale, pas de compute, verbeux
 
-WebGPU represente la prochaine generation. Il corrige les problemes architecturaux de WebGL en adoptant un modele explicite inspire de Vulkan, Metal et Direct3D 12.
+WebGPU represente la prochaine génération. Il corrige les problèmes architecturaux de WebGL en adoptant un modèle explicite inspire de Vulkan, Metal et Direct3D 12.
 
 </details>
 
@@ -41,34 +41,34 @@ WebGPU represente la prochaine generation. Il corrige les problemes architectura
 Imaginez que vous dirigez une cuisine de restaurant.
 
 **WebGL = un seul cuisinier avec une seule plaque** :
-- Le cuisinier change d'ustensile a chaque etape (bind state)
-- Il ne peut preparer qu'un plat a la fois (un draw call bloque les suivants)
+- Le cuisinier change d'ustensile à chaque étape (bind state)
+- Il ne peut preparer qu'un plat à la fois (un draw call bloque les suivants)
 - Pour changer de recette, il doit tout nettoyer et recommencer (changer le programme shader)
 - S'il fait une erreur, personne ne lui dit clairement quoi (erreurs silencieuses)
 
 **WebGPU = une brigade avec des fiches de commande** :
 - Chaque cuisinier recoit une fiche de commande immutable (command buffer)
 - Plusieurs cuisiniers preparent des plats en parallele (pipelines independants)
-- Les recettes sont pre-validees a la creation (pipeline pre-compile)
-- Un chef de salle verifie chaque commande avant envoi (validation explicite)
+- Les recettes sont pre-validees à la création (pipeline pre-compile)
+- Un chef de salle vérifié chaque commande avant envoi (validation explicite)
 
 ### Comparaison architecturale
 
 | Aspect | WebGL | WebGPU |
 |--------|-------|--------|
-| Modele | State machine | Command-based |
-| Etat global | Oui (un contexte mutable) | Non (objets immutables) |
-| Validation | Au moment du draw call | A la creation du pipeline |
+| Modèle | State machine | Command-based |
+| État global | Oui (un contexte mutable) | Non (objets immutables) |
+| Validation | Au moment du draw call | A la création du pipeline |
 | Compute shaders | Non | Oui |
 | Multi-thread | Non | Oui (via workers) |
 | Langage shader | GLSL ES | WGSL |
 | Inspiration | OpenGL ES | Vulkan / Metal / D3D12 |
-| Gestion memoire | Implicite | Explicite (buffers, layouts) |
+| Gestion mémoire | Implicite | Explicite (buffers, layouts) |
 | Erreurs | Silencieuses (`gl.getError()`) | Explicites (error scopes, device.lost) |
 
-### Le modele command-based
+### Le modèle command-based
 
-En WebGL, chaque appel modifie un etat global :
+En WebGL, chaque appel modifie un état global :
 
 ```typescript
 // WebGL : state machine — chaque appel modifie l'etat global
@@ -119,7 +119,7 @@ navigator.gpu                          // Point d'entree
                  +-- ...
 ```
 
-### Etape 1 : verifier le support
+### Étape 1 : vérifier le support
 
 ```typescript
 async function initWebGPU(): Promise<{ device: GPUDevice; context: GPUCanvasContext; format: GPUTextureFormat }> {
@@ -151,7 +151,7 @@ async function initWebGPU(): Promise<{ device: GPUDevice; context: GPUCanvasCont
 }
 ```
 
-### Etape 2 : demander un device
+### Étape 2 : demander un device
 
 ```typescript
 async function requestDeviceFromAdapter(adapter: GPUAdapter): Promise<GPUDevice> {
@@ -180,7 +180,7 @@ async function requestDeviceFromAdapter(adapter: GPUAdapter): Promise<GPUDevice>
 }
 ```
 
-### Etape 3 : configurer le canvas
+### Étape 3 : configurer le canvas
 
 ```typescript
 function configureCanvas(
@@ -242,7 +242,7 @@ async function initWebGPU(canvas: HTMLCanvasElement) {
 }
 ```
 
-> **Analogie avec WebGL** : en WebGL, on faisait `canvas.getContext('webgl2')` et on recevait directement un contexte pret a l'emploi. En WebGPU, l'initialisation est plus explicite : on choisit le GPU, on demande l'acces, puis on configure le canvas. C'est plus verbeux, mais on controle chaque etape.
+> **Analogie avec WebGL** : en WebGL, on faisait `canvas.getContext('webgl2')` et on recevait directement un contexte pret a l'emploi. En WebGPU, l'initialisation est plus explicite : on choisit le GPU, on demandé l'acces, puis on configure le canvas. C'est plus verbeux, mais on controle chaque étape.
 
 ---
 
@@ -682,7 +682,7 @@ fn fs_main(
 }
 ```
 
-### Differences cles
+### Differences clés
 
 | Concept | GLSL | WGSL |
 |---------|------|------|
@@ -696,7 +696,7 @@ fn fs_main(
 | Position | `gl_Position` | `@builtin(position)` |
 | Couleur sortie | `out vec4 fragColor;` | `-> @location(0) vec4f` |
 | Point d'entree | `void main()` | `@vertex fn vs_main()` |
-| Precision | `precision highp float;` | Pas necessaire (f32 par defaut) |
+| Precision | `precision highp float;` | Pas nécessaire (f32 par defaut) |
 | Constructeur | `vec3(1.0, 0.0, 0.0)` | `vec3f(1.0, 0.0, 0.0)` |
 
 ---
@@ -867,7 +867,7 @@ async function main() {
 main();
 ```
 
-### Flux d'execution detaille
+### Flux d'exécution détaillé
 
 ```
 1. navigator.gpu.requestAdapter()
@@ -1081,13 +1081,13 @@ async function initRenderer(canvas: HTMLCanvasElement) {
 
 ## Differences entre navigateurs
 
-### Etat du support WebGPU (mars 2026)
+### État du support WebGPU (mars 2026)
 
 | Navigateur | Status | Notes |
 |------------|--------|-------|
-| Chrome 113+ | Stable | Support complet, reference |
-| Edge 113+ | Stable | Meme moteur que Chrome (Chromium) |
-| Firefox | Nightly / behind flag | Support en progression, quelques differences |
+| Chrome 113+ | Stable | Support complet, référence |
+| Edge 113+ | Stable | Même moteur que Chrome (Chromium) |
+| Firefox | Nightly / behind flag | Support en progression, quelques différences |
 | Safari 18+ | Stable (macOS/iOS) | Backend Metal, quelques limites |
 | Chrome Android | Stable | Support GPU variable selon l'appareil |
 | Safari iOS 18+ | Stable | WebGPU via Metal |
@@ -1186,16 +1186,16 @@ async function detectCapabilities(): Promise<GPUCapabilities> {
 
 Chrome 121+ inclut un panneau **WebGPU** dans les DevTools :
 
-- **Adapter Info** : GPU detecte, limites, features supportees
+- **Adapter Info** : GPU détecté, limites, features supportees
 - **Buffer/Texture Inspector** : visualisation du contenu des buffers et textures
 - **Shader Editor** : edition live des shaders WGSL avec recompilation a chaud
 - **Command Timeline** : sequence des command buffers soumis au GPU
 
-> Activez `chrome://flags/#enable-webgpu-developer-features` pour des messages d'erreur plus detailles.
+> Activez `chrome://flags/#enable-webgpu-developer-features` pour des messages d'erreur plus détaillés.
 
 ### Validation layers
 
-WebGPU inclut des **validation layers** activees par defaut en developpement. Elles detectent :
+WebGPU inclut des **validation layers** activees par defaut en développement. Elles detectent :
 - Bindings manquants ou incompatibles
 - Depassement de limites (buffer size, texture dimensions)
 - Etats de pipeline invalides
@@ -1277,7 +1277,7 @@ if (adapter.features.has('timestamp-query')) {
 Creez un programme WebGPU qui :
 
 1. Initialise le device et configure le canvas
-2. Dessine un carre (deux triangles) avec des couleurs differentes par sommet
+2. Dessine un carre (deux triangles) avec des couleurs différentes par sommet
 3. Utilise un vertex buffer (pas les donnees en dur dans le shader)
 4. Anime le carre en faisant varier la couleur via un uniform `time`
 
@@ -1438,13 +1438,13 @@ main();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description |
 |---------|-------------|
 | `navigator.gpu` | Point d'entree de l'API WebGPU |
 | `GPUAdapter` | Represente le GPU physique, expose features et limits |
-| `GPUDevice` | Acces logique au GPU, cree les ressources |
+| `GPUDevice` | Acces logique au GPU, créé les ressources |
 | `GPUQueue` | File de commandes (`device.queue`) |
 | `GPUCommandEncoder` | Enregistre des commandes a soumettre |
 | `GPUCanvasContext` | Lie le rendu WebGPU au canvas HTML |
@@ -1454,18 +1454,18 @@ main();
 | WGSL `@fragment` | Decorateur de point d'entree fragment shader |
 | WGSL `@builtin(position)` | Position clip-space en sortie du vertex shader |
 | WGSL `@location(N)` | Emplacement d'entree/sortie inter-stages |
-| WGSL `@group(G) @binding(B)` | Reference a un binding dans un bind group |
+| WGSL `@group(G) @binding(B)` | Référence à un binding dans un bind group |
 | WGSL `var<uniform>` | Variable uniforme (lecture seule) |
 | WGSL `vec4f`, `mat4x4f` | Types vecteur et matrice avec suffixe de type |
 | `device.lost` | Promise resolue quand le device est perdu |
 | `pushErrorScope` / `popErrorScope` | Capture d'erreurs de validation |
-| State machine vs Command-based | WebGL mute un etat global, WebGPU enregistre des commandes |
+| State machine vs Command-based | WebGL mute un état global, WebGPU enregistre des commandes |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |-----------|---------|
 | [08 - Scene WebGL complete](./08-scene-webgl-complete) | [10 - Render pipeline et bind groups](./10-render-pipeline-bind-groups) |
 
@@ -1480,3 +1480,14 @@ main();
 - [WebGPU Fundamentals](https://webgpufundamentals.org/)
 - [Google Chrome — WebGPU](https://developer.chrome.com/docs/web-platform/webgpu)
 - [Your first WebGPU app (Google Codelab)](https://codelabs.developers.google.com/your-first-webgpu-app)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 09 webgpu](../screencasts/screencast-09-webgpu.md)
+2. **Lab** : [lab-09-webgpu-fondamentaux](../labs/lab-09-webgpu-fondamentaux/README)
+3. **Visualisation** : [GPU Pipeline](../visualizations/gpu-pipeline.html)
+4. **Quiz** : [quiz 09 webgpu](../quizzes/quiz-09-webgpu.html)
+:::

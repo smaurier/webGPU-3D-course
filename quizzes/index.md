@@ -1,11 +1,11 @@
 # Quizzes
 
-Testez vos connaissances apres chaque module.
+Testez vos connaissances après chaque module.
 
 | # | Quiz | Module |
 |---|------|--------|
-| Maths | [Prerequis mathematiques](./quiz-maths-prereq.html) | Prerequis |
-| 00 | [Prerequis et introduction](./quiz-00-prerequis.html) | Module 00 |
+| Maths | [Prérequis mathematiques](./quiz-maths-prereq.html) | Prérequis |
+| 00 | [Prérequis et introduction](./quiz-00-prerequis.html) | Module 00 |
 | 01 | [Algebre lineaire](./quiz-01-algebre-lineaire.html) | Module 01 |
 | 02 | [Transformations et quaternions](./quiz-02-transformations.html) | Module 02 |
 | 03 | [Cameras et projections](./quiz-03-cameras.html) | Module 03 |

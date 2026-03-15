@@ -9,17 +9,17 @@
 A la fin de ce module, vous serez capable de :
 
 - Configurer un materiau PBR complet avec toutes ses textures (albedo, normal, roughness, metalness, AO)
-- Exploiter les proprietes avancees de MeshPhysicalMaterial (clearcoat, transmission, sheen, iridescence)
+- Exploiter les propriétés avancees de MeshPhysicalMaterial (clearcoat, transmission, sheen, iridescence)
 - Charger et configurer des textures avec TextureLoader
 - Utiliser des environment maps HDR pour des reflexions realistes
-- Maitriser les 6 types de lumieres Three.js
+- Maîtriser les 6 types de lumieres Three.js
 - Configurer le shadow mapping avec qualite et performance optimales
-- Ecrire un ShaderMaterial personnalise en reutilisant vos connaissances GLSL
+- Écrire un ShaderMaterial personnalise en reutilisant vos connaissances GLSL
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Three.js fondamentaux (Module 13)</summary>
+<summary>Rappel du cours précédent — Three.js fondamentaux (Module 13)</summary>
 
 Au module 13, nous avons mis en place les bases de Three.js :
 
@@ -32,7 +32,7 @@ Au module 13, nous avons mis en place les bases de Three.js :
 - **OrbitControls** : rotation, zoom, pan avec damping
 - **Helpers** : AxesHelper, GridHelper pour le debug
 
-Nous allons maintenant approfondir les materiaux et les lumieres — les deux elements qui rendent une scene realiste.
+Nous allons maintenant approfondir les materiaux et les lumieres — les deux éléments qui rendent une scene realiste.
 
 </details>
 
@@ -40,9 +40,9 @@ Nous allons maintenant approfondir les materiaux et les lumieres — les deux el
 
 ## Materiaux PBR en detail
 
-### MeshStandardMaterial : toutes les proprietes
+### MeshStandardMaterial : toutes les propriétés
 
-Au module 05, vous avez etudie la theorie PBR (Physically Based Rendering) : le modele Cook-Torrance, la BRDF, les concepts de metalness/roughness. Three.js implemente tout cela dans `MeshStandardMaterial`.
+Au module 05, vous avez etudie la théorie PBR (Physically Based Rendering) : le modèle Cook-Torrance, la BRDF, les concepts de metalness/roughness. Three.js implemente tout cela dans `MeshStandardMaterial`.
 
 ```typescript
 import * as THREE from 'three';
@@ -110,13 +110,13 @@ textures/
 
 :::tip Sources de textures PBR gratuites
 - [ambientCG](https://ambientcg.com/) — CC0, haute qualite
-- [Poly Haven](https://polyhaven.com/) — CC0, textures + HDRIs + modeles
+- [Poly Haven](https://polyhaven.com/) — CC0, textures + HDRIs + modèles
 - [textures.com](https://www.textures.com/) — gratuit avec compte
 :::
 
 ---
 
-## MeshPhysicalMaterial : proprietes avancees
+## MeshPhysicalMaterial : propriétés avancees
 
 ### Clearcoat — peinture de voiture, parquet verni
 
@@ -391,10 +391,10 @@ rgbeLoader.load('/textures/env/studio.hdr', (hdrTexture) => {
 ```
 
 :::info PMREMGenerator
-PMREM = Pre-filtered Mipmaped Radiance Environment Map. C'est le meme concept que vous avez etudie au module 05 : la convolution de l'env map a differents niveaux de rugosite pour les reflexions speculaires. Three.js le fait automatiquement avec `PMREMGenerator`.
+PMREM = Pre-filtered Mipmaped Radiance Environment Map. C'est le même concept que vous avez etudie au module 05 : la convolution de l'env map a différents niveaux de rugosite pour les reflexions speculaires. Three.js le fait automatiquement avec `PMREMGenerator`.
 :::
 
-### EXR Loader (alternative haute precision)
+### EXR Loader (alternative haute précision)
 
 ```typescript
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
@@ -495,7 +495,7 @@ scene.add(spot);
 scene.add(spot.target);
 ```
 
-### RectAreaLight — fenetre / neon
+### RectAreaLight — fenêtre / neon
 
 ```typescript
 import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
@@ -522,7 +522,7 @@ rectArea.add(helper);
 
 :::warning RectAreaLight
 - Ne fonctionne qu'avec `MeshStandardMaterial` et `MeshPhysicalMaterial`
-- Ne genere PAS d'ombres (shadow map)
+- Ne généré PAS d'ombres (shadow map)
 - Necessite `RectAreaLightUniformsLib.init()` avant utilisation
 :::
 
@@ -568,7 +568,7 @@ function setupIndoorLighting(scene: THREE.Scene): void {
 
 ### Principe
 
-Le shadow mapping est une technique en deux passes que vous avez vue en theorie au module 05 :
+Le shadow mapping est une technique en deux passes que vous avez vue en théorie au module 05 :
 
 ```
 Passe 1 : Rendu depuis la lumiere → depth map (shadow map)
@@ -636,8 +636,8 @@ scene.add(shadowCameraHelper);
 ```
 
 :::tip Optimiser les ombres
-1. **Reduire le frustum** de la shadow camera au minimum necessaire
-2. **Augmenter la resolution** (mapSize) uniquement si visible
+1. **Reduire le frustum** de la shadow camera au minimum nécessaire
+2. **Augmenter la résolution** (mapSize) uniquement si visible
 3. **Limiter le nombre** de lumieres avec ombres (1-3 max)
 4. **Desactiver castShadow** sur les petits objets lointains
 5. **Utiliser PCFSoftShadowMap** pour le meilleur rapport qualite/perf
@@ -688,7 +688,7 @@ rgbeLoader.load('/textures/env/studio.hdr', (hdrTexture) => {
 
 ### Reutiliser vos connaissances GLSL
 
-Au module 07, vous avez ecrit des shaders GLSL pour WebGL. Three.js permet de reutiliser ces competences directement :
+Au module 07, vous avez écrit des shaders GLSL pour WebGL. Three.js permet de réutiliser ces compétences directement :
 
 ```typescript
 // ShaderMaterial : acces aux uniforms/varyings de Three.js
@@ -832,7 +832,7 @@ const rawMaterial = new THREE.RawShaderMaterial({
 | Effort de code | Moyen | Eleve |
 | Cas d'usage | Effets custom avec eclairage Three.js | Shaders 100% custom, portage WebGL brut |
 
-En general, preferez `ShaderMaterial` sauf si vous avez besoin d'un controle absolu sur le GLSL ou si vous portez un shader existant depuis votre code WebGL brut.
+En général, preferez `ShaderMaterial` sauf si vous avez besoin d'un controle absolu sur le GLSL ou si vous portez un shader existant depuis votre code WebGL brut.
 
 </details>
 
@@ -845,7 +845,7 @@ En general, preferez `ShaderMaterial` sauf si vous avez besoin d'un controle abs
 Creez une scene de demonstration de materiaux :
 
 1. Un sol texture avec des textures PBR completes (albedo, normal, roughness)
-2. 5 spheres alignees montrant differents materiaux :
+2. 5 spheres alignees montrant différents materiaux :
    - Metal (metalness=1, roughness=0.2)
    - Plastique (metalness=0, roughness=0.4)
    - Verre (transmission=1, ior=1.5)
@@ -855,7 +855,7 @@ Creez une scene de demonstration de materiaux :
 4. Une DirectionalLight avec ombres de bonne qualite
 5. OrbitControls pour naviguer
 
-**Indice** : Vous pouvez utiliser des couleurs solides (pas de textures obligatoires pour les spheres). L'important est la configuration des proprietes PBR.
+**Indice** : Vous pouvez utiliser des couleurs solides (pas de textures obligatoires pour les spheres). L'important est la configuration des propriétés PBR.
 
 <details>
 <summary>Solution</summary>
@@ -1014,9 +1014,9 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | API Three.js | Details cles |
+| Concept | API Three.js | Details clés |
 |---------|-------------|-------------|
 | Materiau PBR standard | `MeshStandardMaterial` | metalness, roughness + 7 types de textures |
 | Materiau PBR avance | `MeshPhysicalMaterial` | clearcoat, transmission, sheen, iridescence, anisotropy |
@@ -1042,4 +1042,14 @@ animate();
 - [Poly Haven — HDRIs gratuits](https://polyhaven.com/hdris)
 - [ambientCG — Textures PBR CC0](https://ambientcg.com/)
 - [Three.js Lighting Examples](https://threejs.org/examples/?q=light)
-- [LearnOpenGL — PBR Theory](https://learnopengl.com/PBR/Theory) — la theorie derriere l'implementation Three.js
+- [LearnOpenGL — PBR Theory](https://learnopengl.com/PBR/Theory) — la théorie derriere l'implementation Three.js
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 14 materiaux](../screencasts/screencast-14-materiaux.md)
+2. **Lab** : [lab-14-materiaux-lumieres](../labs/lab-14-materiaux-lumieres/README)
+3. **Quiz** : [quiz 14 materiaux](../quizzes/quiz-14-materiaux.html)
+:::

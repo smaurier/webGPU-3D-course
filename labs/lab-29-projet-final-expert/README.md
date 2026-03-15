@@ -2,11 +2,11 @@
 
 ## Objectif
 
-Ce lab est le **capstone** du cours : il integre l'ensemble des concepts abordes
-dans les 28 modules precedents en un projet final complet. Chaque fonction
-represente un sous-systeme que l'on retrouve dans un moteur 3D temps reel :
+Ce lab est le **capstone** du cours : il intégré l'ensemble des concepts abordes
+dans les 28 modules précédents en un projet final complet. Chaque fonction
+represente un sous-système que l'on retrouve dans un moteur 3D temps réel :
 
-- **Gestion de scene** : systemes ECS, boucle de mise a jour
+- **Gestion de scene** : systèmes ECS, boucle de mise a jour
 - **Chargement d'assets** : manifest JSON, validation
 - **Terrain** : chunks visibles, niveaux de detail (LOD)
 - **Eau** : vagues de Gerstner (somme de sinus)
@@ -16,13 +16,13 @@ represente un sous-systeme que l'on retrouve dans un moteur 3D temps reel :
 - **Cascaded Shadow Maps** : selection de cascade selon la profondeur
 - **Screen-Space Reflections** : ray marching en espace ecran
 - **TAA** : sequence de Halton pour le jitter sous-pixel
-- **Virtual Textures** : requete de page, eviction LRU
+- **Virtual Textures** : requête de page, eviction LRU
 - **Physique** : pas de temps fixe, accumulateur, alpha d'interpolation
 - **Audio spatial** : attenuation par distance, pan stereo
 - **IK look-at** : rotation de la tete vers une cible
-- **Animation** : machine a etats, crossfade
-- **Performance** : budget de frame, statistiques FPS, detection de fuites memoire
-- **Presets qualite** : parametres adaptes au tier GPU
+- **Animation** : machine a états, crossfade
+- **Performance** : budget de frame, statistiques FPS, detection de fuites mémoire
+- **Presets qualite** : paramètres adaptes au tier GPU
 
 ## Instructions
 
@@ -32,8 +32,8 @@ represente un sous-systeme que l'on retrouve dans un moteur 3D temps reel :
 
 ## Concepts integres
 
-Ce lab valide votre maitrise de : algebre lineaire, pipeline de rendu,
-shaders, physique, audio, animation, optimisation, gestion memoire et
+Ce lab valide votre maîtrise de : algebre lineaire, pipeline de rendu,
+shaders, physique, audio, animation, optimisation, gestion mémoire et
 architecture moteur.
 
 Bon courage pour ce dernier lab !

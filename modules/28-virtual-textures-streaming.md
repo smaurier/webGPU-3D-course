@@ -9,19 +9,19 @@
 A la fin de ce module, vous serez capable de :
 
 - Expliquer pourquoi les scenes massives necessitent du texture streaming
-- Decrire l'architecture d'un systeme de virtual texturing (page table, page cache, feedback)
+- Decrire l'architecture d'un système de virtual texturing (page table, page cache, feedback)
 - Implementer une page table avec indirection texture
-- Gerer un cache LRU de pages physiques en VRAM
-- Utiliser un feedback buffer pour determiner les pages visibles
+- Gérer un cache LRU de pages physiques en VRAM
+- Utiliser un feedback buffer pour déterminer les pages visibles
 - Comprendre les formats de compression GPU-native (BC7, ASTC, ETC2) et Basis Universal / KTX2
-- Creer un atlas de textures dynamique avec gestion du padding
-- Integrer un systeme de streaming simplifie dans Three.js
+- Créer un atlas de textures dynamique avec gestion du padding
+- Intégrer un système de streaming simplifie dans Three.js
 - Mesurer les metriques de performance (resident ratio, page faults, VRAM usage)
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Audio 3D spatial (Module 27)</summary>
+<summary>Rappel du cours précédent — Audio 3D spatial (Module 27)</summary>
 
 Au module 27, nous avons ajoute la dimension sonore a nos scenes 3D :
 
@@ -29,19 +29,19 @@ Au module 27, nous avons ajoute la dimension sonore a nos scenes 3D :
 - **Spatialisation** : PannerNode avec position 3D, AudioListener synchronise avec la camera
 - **HRTF** : Head-Related Transfer Function pour un rendu binaural realiste
 - **Effets audio** : ConvolverNode (reverb), BiquadFilter (lowpass/highpass), DelayNode (echo)
-- **Three.js audio** : THREE.AudioListener, THREE.PositionalAudio attache a un Object3D
+- **Three.js audio** : THREE.AudioListener, THREE.PositionalAudio attache à un Object3D
 - **AnalyserNode** : visualisation des frequences et de la forme d'onde
 
-Nous allons maintenant resoudre un probleme fondamental des scenes massives : comment afficher des gigaoctets de textures quand la VRAM n'en contient que quelques-uns.
+Nous allons maintenant résoudre un problème fondamental des scenes massives : comment afficher des gigaoctets de textures quand la VRAM n'en contient que quelques-uns.
 
 </details>
 
 ---
 
-## Le probleme : trop de textures, pas assez de VRAM
+## Le problème : trop de textures, pas assez de VRAM
 
 :::tip Analogie
-Imagine une bibliotheque gigantesque avec des millions de livres (tes textures). Tu ne peux pas tous les mettre sur ton bureau (la VRAM). Mais tu n'as jamais besoin de tous les livres en meme temps. Le virtual texturing, c'est comme un bibliothecaire intelligent qui regarde par-dessus ton epaule, voit quel chapitre tu vas lire, et le pose sur ton bureau juste avant que tu en aies besoin — tout en rangeant les chapitres que tu ne regardes plus.
+Imagine une bibliotheque gigantesque avec des millions de livres (tes textures). Tu ne peux pas tous les mettre sur ton bureau (la VRAM). Mais tu n'as jamais besoin de tous les livres en même temps. Le virtual texturing, c'est comme un bibliothecaire intelligent qui regarde par-dessus ton epaule, voit quel chapitre tu vas lire, et le pose sur ton bureau juste avant que tu en aies besoin — tout en rangeant les chapitres que tu ne regardes plus.
 :::
 
 ```
@@ -58,10 +58,10 @@ VRAM disponible : 4-24 Go (GPU), encore moins en WebGPU
 
 | Approche | Principe | Limitations |
 |----------|----------|-------------|
-| **Mip mapping classique** | Charger toutes les mip levels | Tout en memoire |
+| **Mip mapping classique** | Charger toutes les mip levels | Tout en mémoire |
 | **LOD textures** | Basse-res pour objets loin | Popping visible |
 | **Megatextures (id Tech 5)** | Une seule enorme texture virtuelle | Complexe, pas de tiling |
-| **Virtual texturing** | Pages a la demande, cache GPU | Flexible, standard moderne |
+| **Virtual texturing** | Pages à la demandé, cache GPU | Flexible, standard moderne |
 | **Sparse textures** | Allocation GPU partielle (hardware) | Pas encore dans WebGPU |
 
 ---
@@ -571,7 +571,7 @@ class ThreeVirtualTexture {
 }
 ```
 
-### LoadingManager pour le streaming reseau
+### LoadingManager pour le streaming réseau
 
 ```typescript
 class TexturePageLoader {
@@ -662,15 +662,15 @@ interface VTMetrics {
 
 ## Pratique
 
-### Exercice VT.1 — Systeme de virtual texturing simplifie
+### Exercice VT.1 — Système de virtual texturing simplifie
 
-Implementer un systeme complet :
+Implementer un système complet :
 1. Texture virtuelle 2048x2048 en pages de 128x128 (= 16x16 pages)
 2. Cache physique de 8x8 pages (64 slots max)
 3. Feedback simule (distance camera → centre de chaque page)
 4. Chargement progressif avec LRU eviction
 5. Shader d'indirection (page table → cache physique)
-6. Metriques en temps reel
+6. Metriques en temps réel
 
 ```typescript
 // TODO: PageCacheLRU (cache LRU)
@@ -845,11 +845,11 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | Complexite |
 |---------|-------------|:----------:|
-| **Virtual texturing** | Charger uniquement les pages visibles | Systeme complet |
+| **Virtual texturing** | Charger uniquement les pages visibles | Système complet |
 | **Page table** | Texture d'indirection (UV → position physique) | Petite texture RGBA |
 | **Page cache** | Pool LRU de pages physiques en VRAM | Budget fixe |
 | **Feedback buffer** | Rendu basse-res pour pages visibles | 1/4 ou 1/8 res |
@@ -873,10 +873,16 @@ animate();
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [27 - Audio 3D spatial](./27-audio-3d-spatial.md) | [29 - A venir](./29-a-venir.md) |
 
-**Ressources associees :**
-- [Lab 28 — Virtual textures et texture streaming](../labs/lab-28-virtual-textures-streaming/)
-- [Quiz 28 — Virtual textures et texture streaming](../quizzes/quiz-28-virtual-textures-streaming.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 28 virtual textures](../screencasts/screencast-28-virtual-textures.md)
+2. **Lab** : [lab-28-virtual-textures](../labs/lab-28-virtual-textures/)
+3. **Quiz** : [quiz 28 virtual textures](../quizzes/quiz-28-virtual-textures.html)
+:::

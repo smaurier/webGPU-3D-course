@@ -9,18 +9,18 @@
 A la fin de ce module, vous serez capable de :
 
 - Expliquer ce qu'est Three.js et pourquoi il abstrait WebGL/WebGPU
-- Creer une scene 3D complete avec Scene, Camera et Renderer
-- Configurer une PerspectiveCamera avec les bons parametres
+- Créer une scene 3D complete avec Scene, Camera et Renderer
+- Configurer une PerspectiveCamera avec les bons paramètres
 - Utiliser les geometries et materiaux de base
 - Mettre en place un render loop fluide avec `requestAnimationFrame`
 - Ajouter des controles interactifs avec OrbitControls
-- Gerer le redimensionnement du canvas proprement
+- Gérer le redimensionnement du canvas proprement
 - Utiliser les helpers de debug (AxesHelper, GridHelper)
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Techniques avancees WebGPU (Module 12)</summary>
+<summary>Rappel du cours précédent — Techniques avancees WebGPU (Module 12)</summary>
 
 Au module 12, nous avons explore les techniques avancees de WebGPU :
 
@@ -30,7 +30,7 @@ Au module 12, nous avons explore les techniques avancees de WebGPU :
 - **Timestamp queries** : mesurer les temps GPU avec `GPUQuerySet`
 - **Render bundles** : `GPURenderBundle` pour pre-enregistrer des commandes
 
-Ces techniques offrent un controle total mais demandent beaucoup de code boilerplate. Three.js va nous permettre d'obtenir des resultats similaires avec une fraction du code.
+Ces techniques offrent un controle total mais demandent beaucoup de code boilerplate. Three.js va nous permettre d'obtenir des résultats similaires avec une fraction du code.
 
 </details>
 
@@ -57,20 +57,20 @@ Three.js est une bibliotheque JavaScript/TypeScript qui abstrait les API graphiq
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Analogie avec ce que vous connaissez deja
+### Analogie avec ce que vous connaissez déjà
 
 | Concept bas niveau (WebGL/WebGPU) | Equivalent Three.js | Effort |
 |-----------------------------------|---------------------|--------|
 | Compiler vertex + fragment shaders | `new MeshStandardMaterial()` | ~2 lignes vs ~80 |
-| Creer VAO, VBO, IBO manuellement | `new BoxGeometry(1, 1, 1)` | ~1 ligne vs ~40 |
-| Calculer matrices MVP a la main | `camera.projectionMatrix` automatique | 0 lignes vs ~20 |
+| Créer VAO, VBO, IBO manuellement | `new BoxGeometry(1, 1, 1)` | ~1 ligne vs ~40 |
+| Calculer matrices MVP à la main | `camera.projectionMatrix` automatique | 0 lignes vs ~20 |
 | Configurer le depth test, blending | Active par defaut dans le renderer | 0 lignes vs ~10 |
-| Ecrire un render loop complet | `renderer.render(scene, camera)` | 1 ligne vs ~30 |
+| Écrire un render loop complet | `renderer.render(scene, camera)` | 1 ligne vs ~30 |
 
 :::tip Analogie Vue.js
 Si vous connaissez Vue.js, pensez a Three.js comme un framework similaire :
 - **Scene** = `App` (le conteneur racine)
-- **Mesh** = `Component` (un element visible)
+- **Mesh** = `Component` (un élément visible)
 - **Material** = `Style` (l'apparence)
 - **Camera** = `Viewport` (ce qu'on voit)
 - **Renderer** = le moteur Vue qui produit le DOM
@@ -133,7 +133,7 @@ Toute application Three.js repose sur trois objets fondamentaux :
 
 ### Scene : le conteneur racine
 
-La `Scene` est le graphe de scene — l'arbre hierarchique qui contient tous les objets 3D.
+La `Scene` est le graphe de scene — l'arbre hiérarchique qui contient tous les objets 3D.
 
 ```typescript
 const scene = new THREE.Scene();
@@ -181,9 +181,9 @@ scene.background = new THREE.Color(0x1a1a2e);
 
 ## PerspectiveCamera
 
-### Les parametres
+### Les paramètres
 
-La camera perspective simule la vision humaine. Elle est definie par 4 parametres que vous connaissez deja du module 03 (Cameras et projections) :
+La camera perspective simule la vision humaine. Elle est definie par 4 paramètres que vous connaissez déjà du module 03 (Cameras et projections) :
 
 ```typescript
 const camera = new THREE.PerspectiveCamera(
@@ -220,7 +220,7 @@ camera.lookAt(0, 0, 0);         // regarde le centre de la scene
 
 :::tip Valeurs recommandees
 - **fov** : 45-75 pour des scenes classiques, 90+ pour un effet fish-eye
-- **near** : 0.1 minimum (ne jamais mettre 0.001, ca cause du z-fighting)
+- **near** : 0.1 minimum (ne jamais mettre 0.001, ça cause du z-fighting)
 - **far** : aussi petit que possible — 100 suffit souvent
 - **aspect** : toujours `canvas.width / canvas.height`
 :::
@@ -382,7 +382,7 @@ const ring = new THREE.RingGeometry(0.5, 1, 32);
 
 ### BufferGeometry personnalise
 
-Vous avez deja cree des buffers manuellement en WebGL (module 06) et WebGPU (module 09). Three.js utilise le meme concept sous le capot :
+Vous avez déjà créé des buffers manuellement en WebGL (module 06) et WebGPU (module 09). Three.js utilise le même concept sous le capot :
 
 ```typescript
 // Triangle personnalise — meme logique que vos VBOs WebGL !
@@ -460,7 +460,7 @@ geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
 ## Materiaux de base
 
-### La hierarchie des materiaux
+### La hiérarchie des materiaux
 
 ```
               Material (base abstraite)
@@ -539,7 +539,7 @@ const physical = new THREE.MeshPhysicalMaterial({
 ```
 
 :::info Rappel du module 05
-Ces proprietes PBR (metalness, roughness, clearcoat, transmission) correspondent directement aux concepts physiques que vous avez etudies au module 05 — Lumiere, materiaux et PBR. Three.js implemente le modele Cook-Torrance avec GGX/Smith que vous avez vu en theorie.
+Ces propriétés PBR (metalness, roughness, clearcoat, transmission) correspondent directement aux concepts physiques que vous avez etudies au module 05 — Lumiere, materiaux et PBR. Three.js implemente le modèle Cook-Torrance avec GGX/Smith que vous avez vu en théorie.
 :::
 
 ---
@@ -748,7 +748,7 @@ window.addEventListener('resize', onResize);
 ```
 
 :::warning Erreur classique
-Oublier `camera.updateProjectionMatrix()` apres avoir modifie `aspect`, `fov`, `near` ou `far` est l'erreur la plus courante chez les debutants Three.js. Sans cet appel, la matrice de projection n'est pas recalculee et l'image sera deformee.
+Oublier `camera.updateProjectionMatrix()` après avoir modifie `aspect`, `fov`, `near` ou `far` est l'erreur la plus courante chez les débutants Three.js. Sans cet appel, la matrice de projection n'est pas recalculee et l'image sera deformee.
 :::
 
 ---
@@ -883,7 +883,7 @@ animate();
 
 ---
 
-## Le graphe de scene et la hierarchie
+## Le graphe de scene et la hiérarchie
 
 ### Groupes et parent-enfant
 
@@ -938,16 +938,16 @@ if (found) {
 
 ### Enonce
 
-Creez une scene Three.js qui affiche un systeme solaire simplifie :
+Creez une scene Three.js qui affiche un système solaire simplifie :
 
 1. Un soleil (sphere jaune emissive) au centre
-2. Trois planetes qui orbitent autour du soleil a des vitesses differentes
+2. Trois planetes qui orbitent autour du soleil a des vitesses différentes
 3. Une lune qui orbite autour de la deuxieme planete
 4. OrbitControls pour naviguer dans la scene
 5. Un sol avec GridHelper
 
 **Indices** :
-- Utilisez des `Group` pour la hierarchie planete-lune
+- Utilisez des `Group` pour la hiérarchie planete-lune
 - Utilisez `Math.sin()` et `Math.cos()` avec le temps pour les orbites
 - `MeshBasicMaterial` avec `emissive` pour le soleil (pas affecte par les lumieres)
 
@@ -1091,9 +1091,9 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | API Three.js | Ce que ca remplace (WebGL/WebGPU) |
+| Concept | API Three.js | Ce que ça remplace (WebGL/WebGPU) |
 |---------|-------------|-----------------------------------|
 | Conteneur racine | `new THREE.Scene()` | Gestion manuelle de listes d'objets |
 | Camera perspective | `new THREE.PerspectiveCamera(fov, aspect, near, far)` | Calcul matriciel de projection |
@@ -1103,7 +1103,7 @@ animate();
 | Objet visible | `new THREE.Mesh(geometry, material)` | Bind buffers + draw call |
 | Rendu | `renderer.render(scene, camera)` | Clear + use program + uniforms + draw |
 | Controles utilisateur | `new OrbitControls(camera, canvas)` | EventListeners + calculs manuels |
-| Hierarchie | `parent.add(child)` | Multiplication matricielle parent-enfant |
+| Hiérarchie | `parent.add(child)` | Multiplication matricielle parent-enfant |
 | Animations | `THREE.Clock` + `requestAnimationFrame` | `performance.now()` + delta calcule |
 | Debug | `AxesHelper`, `GridHelper` | Dessiner des lignes manuellement |
 | Redimensionnement | `camera.updateProjectionMatrix()` | Recalculer la matrice + `gl.viewport()` |
@@ -1117,3 +1117,14 @@ animate();
 - [Discover Three.js](https://discoverthreejs.com/)
 - [Three.js Journey](https://threejs-journey.com/) — cours video complet
 - [Three.js Examples](https://threejs.org/examples/) — centaines d'exemples interactifs
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 13 threejs](../screencasts/screencast-13-threejs.md)
+2. **Lab** : [lab-13-threejs-fondamentaux](../labs/lab-13-threejs-fondamentaux/README)
+3. **Visualisation** : [Scene Graph](../visualizations/scene-graph.html)
+4. **Quiz** : [quiz 13 threejs](../quizzes/quiz-13-threejs.html)
+:::

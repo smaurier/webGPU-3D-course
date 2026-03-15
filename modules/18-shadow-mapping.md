@@ -9,20 +9,20 @@
 A la fin de ce module, vous serez capable de :
 
 - Expliquer le principe du shadow mapping : rendre la scene du point de vue de la lumiere
-- Creer une depth map (shadow map) en rendant la profondeur dans une texture
+- Créer une depth map (shadow map) en rendant la profondeur dans une texture
 - Implementer un pipeline a 2 passes : shadow pass + render pass
 - Diagnostiquer et corriger le shadow acne et le peter panning avec le bias
 - Appliquer le PCF (Percentage Closer Filtering) pour adoucir les ombres
 - Implementer des Cascaded Shadow Maps (CSM) pour les grandes scenes
 - Comprendre les Variance Shadow Maps (VSM) et le PCSS
-- Gerer les ombres des point lights (cubemap shadow map 6 faces) et spot lights
+- Gérer les ombres des point lights (cubemap shadow map 6 faces) et spot lights
 - Coder un shadow mapping complet en WebGPU et en Three.js
 
 ---
 
-> **Rappel du module precedent**
-> Avant de continuer, verifie que tu peux repondre a ces questions :
-> 1. Quelles sont les 3 strategies principales d'optimisation de performance en Three.js ?
+> **Rappel du module précédent**
+> Avant de continuer, vérifié que tu peux repondre a ces questions :
+> 1. Quelles sont les 3 stratégies principales d'optimisation de performance en Three.js ?
 > 2. Comment fonctionne le frustum culling et pourquoi reduit-il la charge GPU ?
 > 3. Qu'est-ce que l'instanced rendering et quand l'utiliser ?
 >
@@ -31,7 +31,7 @@ A la fin de ce module, vous serez capable de :
 >
 > 1. LOD (Level of Detail), instanced rendering, et frustum culling — reduisent respectivement la complexite geometrique, les draw calls, et les objets rendus hors champ
 > 2. Le frustum culling elimine les objets en dehors du volume de vue de la camera avant de les envoyer au GPU — il compare la bounding box/sphere de chaque objet avec les 6 plans du frustum
-> 3. L'instanced rendering dessine N copies d'un meme mesh en un seul draw call, chaque instance ayant sa propre matrice de transformation — ideal pour les forets, particules, foules
+> 3. L'instanced rendering dessine N copies d'un même mesh en un seul draw call, chaque instance ayant sa propre matrice de transformation — ideal pour les forets, particules, foules
 > </details>
 
 ---
@@ -39,7 +39,7 @@ A la fin de ce module, vous serez capable de :
 ## Le principe du shadow mapping
 
 :::tip Analogie
-Imagine que tu es debout dans une piece avec une seule lampe de bureau. Pour savoir quelles zones sont dans l'ombre, tu pourrais te mettre **a la place de la lampe** et regarder ce que tu vois. Tout ce que tu vois est eclaire. Tout ce qui est cache derriere un objet est dans l'ombre. Le shadow mapping fait exactement ca : il rend la scene depuis le point de vue de la lumiere pour determiner ce qui est visible (eclaire) et ce qui est occulte (ombre).
+Imagine que tu es debout dans une piece avec une seule lampe de bureau. Pour savoir quelles zones sont dans l'ombre, tu pourrais te mettre **à la place de la lampe** et regarder ce que tu vois. Tout ce que tu vois est eclaire. Tout ce qui est cache derriere un objet est dans l'ombre. Le shadow mapping fait exactement ça : il rend la scene depuis le point de vue de la lumiere pour déterminer ce qui est visible (eclaire) et ce qui est occulte (ombre).
 :::
 
 ### L'idee en 2 passes
@@ -131,7 +131,7 @@ Shadow Map (vue depuis la lumiere)
 └─────────────────────────┘
 ```
 
-### Creation de la shadow map en WebGPU
+### Création de la shadow map en WebGPU
 
 ```typescript
 // Configuration de la texture de profondeur pour la shadow map
@@ -359,7 +359,7 @@ fn main(input: FragmentInput) -> @location(0) vec4f {
 
 ## Shadow acne et peter panning
 
-### Le probleme du shadow acne
+### Le problème du shadow acne
 
 Le shadow acne est un artefact visuel extremement courant en shadow mapping. Il se manifeste par des motifs de bandes noires (moiree) sur les surfaces eclairees.
 
@@ -405,7 +405,7 @@ let biasedPosition = worldPosition + normal * normalBias;
 
 ### Le peter panning
 
-Trop de bias cause un autre probleme : le **peter panning**. L'ombre se detache de l'objet, comme si l'objet flottait (comme Peter Pan).
+Trop de bias cause un autre problème : le **peter panning**. L'ombre se detache de l'objet, comme si l'objet flottait (comme Peter Pan).
 
 ```
 Sans bias (shadow acne) :      Trop de bias (peter panning) :
@@ -435,7 +435,7 @@ primitive: {
 
 ## PCF — Percentage Closer Filtering
 
-### Le probleme des ombres dures
+### Le problème des ombres dures
 
 Un seul echantillon de la shadow map produit des **ombres dures** (hard shadows) avec des bords creneles. En realite, les ombres ont des bords doux (penombre).
 
@@ -551,9 +551,9 @@ fn calculateShadowPoisson(worldPosition: vec3f, normal: vec3f) -> f32 {
 
 ## Cascaded Shadow Maps (CSM)
 
-### Le probleme de la resolution
+### Le problème de la résolution
 
-Pour les grandes scenes exterieures, une seule shadow map ne suffit pas. La resolution est gaspillee sur les objets lointains qui n'ont pas besoin de detail.
+Pour les grandes scenes exterieures, une seule shadow map ne suffit pas. La résolution est gaspillee sur les objets lointains qui n'ont pas besoin de detail.
 
 ```
 Camera frustum (vue de dessus) :
@@ -759,10 +759,10 @@ fn calculateShadowVSM(shadowCoord: vec2f, currentDepth: f32) -> f32 {
 | Aspect | Shadow Map classique | VSM |
 |--------|---------------------|-----|
 | **Filtrage** | Pas de blur possible (compare avant filtre) | Blur gaussien OK (filtre avant compare) |
-| **Performance** | Moins de memoire | 2 canaux (RG) + passes de blur |
+| **Performance** | Moins de mémoire | 2 canaux (RG) + passes de blur |
 | **Qualite** | Hard edges sans PCF | Ombres naturellement douces |
 | **Artefact** | Shadow acne | Light bleeding (halo lumineux) |
-| **Resolution** | Sensible a la taille | Moins sensible grace au blur |
+| **Resolution** | Sensible à la taille | Moins sensible grace au blur |
 
 ---
 
@@ -872,7 +872,7 @@ function createSpotLightShadowMatrix(
 
 ### Ombres douces realistes
 
-En realite, les ombres sont plus nettes pres de l'objet qui les projette et plus floues plus loin. Le PCSS simule ca.
+En realite, les ombres sont plus nettes pres de l'objet qui les projette et plus floues plus loin. Le PCSS simule ça.
 
 ```
   Lumiere (etendue)
@@ -946,7 +946,7 @@ fn calculatePCSS(worldPosition: vec3f, normal: vec3f) -> f32 {
 
 ## Contact shadows (screen-space)
 
-Les contact shadows ajoutent des petites ombres de contact en post-processing, la ou le shadow mapping manque de resolution.
+Les contact shadows ajoutent des petites ombres de contact en post-processing, la ou le shadow mapping manque de résolution.
 
 ```wgsl
 // Ray march dans le depth buffer pour trouver des occluders proches
@@ -998,7 +998,7 @@ fn contactShadow(
 
 ### Shadow mapping avec Three.js
 
-Three.js gere les ombres avec tres peu de code grace a son systeme integre :
+Three.js géré les ombres avec très peu de code grâce à son système intégré :
 
 ```typescript
 import * as THREE from 'three';
@@ -1128,9 +1128,9 @@ scene.add(spotHelper);
 ### Exercice SM.1 — Shadow mapping basique en WebGPU
 
 Complete le code suivant pour implementer un shadow mapping basique. Tu dois :
-1. Creer la texture de profondeur pour la shadow map
+1. Créer la texture de profondeur pour la shadow map
 2. Configurer le render pass de la shadow pass
-3. Ecrire la comparaison dans le fragment shader
+3. Écrire la comparaison dans le fragment shader
 
 ```typescript
 // Partie TypeScript — Setup
@@ -1224,7 +1224,7 @@ fn shadowLookup(worldPos: vec3f, lightMatrix: mat4x4f) -> f32 {
 
 ### Exercice SM.2 — Ajouter le PCF 3x3
 
-En partant de la solution precedente, ajoute un filtre PCF 3x3 pour adoucir les bords des ombres.
+En partant de la solution précédente, ajoute un filtre PCF 3x3 pour adoucir les bords des ombres.
 
 ```wgsl
 fn shadowLookupPCF(worldPos: vec3f, lightMatrix: mat4x4f) -> f32 {
@@ -1363,7 +1363,7 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
 | Technique | Usage | Passe(s) | Qualite | Performance |
 |-----------|-------|----------|---------|-------------|
@@ -1372,25 +1372,31 @@ animate();
 | **Poisson PCF** | Meilleur anti-aliasing | 2 | Bonne | Bonne |
 | **CSM** | Grandes scenes, directional light | N+1 (N cascades + render) | Haute | Moyenne |
 | **VSM** | Ombres floues | 2 + blur passes | Bonne (light bleeding) | Moyenne |
-| **PCSS** | Ombres realistes (penombre variable) | 2 | Tres haute | Couteuse |
+| **PCSS** | Ombres realistes (penombre variable) | 2 | Très haute | Couteuse |
 | **Point shadows** | Point lights | 6 + render | Haute | Couteuse (6 passes) |
 | **Contact shadows** | Details fins screen-space | Post-process | Complement | Moyenne |
 
-| Probleme | Cause | Solution |
+| Problème | Cause | Solution |
 |----------|-------|----------|
 | **Shadow acne** | Discretisation de la shadow map | Bias + normal bias + front-face culling |
 | **Peter panning** | Bias trop eleve | Reduire le bias, utiliser normal bias |
-| **Aliasing** | Resolution insuffisante de la shadow map | PCF, augmenter la resolution, CSM |
+| **Aliasing** | Resolution insuffisante de la shadow map | PCF, augmenter la résolution, CSM |
 | **Shadow swimming** | Mouvement de la camera change les cascades | Snapping des cascades sur les texels |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [17 - Performance et optimisation](./17-performance-optimisation.md) | [19 - Shaders creatifs et procedural](./19-shaders-creatifs.md) |
 
-**Ressources associees :**
-- [Lab 18 — Shadow mapping](../labs/lab-18-shadow-mapping/)
-- [Quiz 18 — Shadow mapping](../quizzes/quiz-18-shadow-mapping.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 18 shadows](../screencasts/screencast-18-shadows.md)
+2. **Lab** : [lab-18-shadow-mapping](../labs/lab-18-shadow-mapping/README)
+3. **Quiz** : [quiz 18 shadows](../quizzes/quiz-18-shadows.html)
+:::

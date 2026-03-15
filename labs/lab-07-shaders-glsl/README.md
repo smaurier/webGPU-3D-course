@@ -3,16 +3,16 @@
 ## Objectif
 
 Comprendre les fondamentaux des shaders GLSL : parsing de declarations, calcul de niveaux mipmap,
-modes de wrapping des coordonnees de texture, interpolation bilineaire, generation de coordonnees UV
+modes de wrapping des coordonnees de texture, interpolation bilineaire, génération de coordonnees UV
 et manipulation de normales/tangentes.
 
-## Concepts cles
+## Concepts clés
 
 ### Uniform blocks et attributs GLSL
 
-Les shaders GLSL declarent leurs entrees avec des mots-cles specifiques :
+Les shaders GLSL declarent leurs entrees avec des mots-clés spécifiques :
 - `uniform` pour les variables constantes par draw call (matrices, lumieres)
-- `attribute` (ou `in` en GLSL 300+) pour les donnees par sommet
+- `attribute` (où `in` en GLSL 300+) pour les donnees par sommet
 
 Savoir parser ces declarations est utile pour construire automatiquement les bindings cote CPU.
 
@@ -25,7 +25,7 @@ Le nombre de niveaux mipmap d'une texture de dimensions `w x h` est :
 
 - **Repeat** : `fract(u)` — la texture se repete
 - **Clamp** : `clamp(u, 0, 1)` — les bords sont etires
-- **Mirror** : rebondit a chaque entier
+- **Mirror** : rebondit à chaque entier
 
 ### Interpolation bilineaire
 
@@ -40,7 +40,7 @@ Pour echantillonner entre 4 texels, on interpole lineairement en U puis en V :
 ### Normales et tangentes
 
 - Pack/unpack : convertir une normale de `[-1,1]` vers `[0,1]` et inversement
-- Vecteur tangent : calcule a partir des positions et UV d'un triangle (base TBN)
+- Vecteur tangent : calcule à partir des positions et UV d'un triangle (base TBN)
 
 ## Exercices
 
@@ -50,7 +50,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

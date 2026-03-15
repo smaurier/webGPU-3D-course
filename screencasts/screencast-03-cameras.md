@@ -17,9 +17,9 @@
 | 7:00-8:30 | Le frustum : qu'est-ce qui est visible, culling basique | Slides + demo |
 | 8:30-10:30 | Implementation : camera orbite avec souris (yaw, pitch, distance) | VS Code + navigateur |
 | 10:30-12:00 | Gestion du zoom, du pan, et des limites | VS Code + navigateur |
-| 12:00-12:30 | Recapitulatif | Slides |
+| 12:00-12:30 | Récapitulatif | Slides |
 
-## Points cles a montrer
+## Points clés a montrer
 - La matrice view est l'inverse de la transformation de la camera
 - Le FOV controle le champ de vision et affecte la perspective
 - Near et far definissent la plage de profondeur (z-buffer)
@@ -28,4 +28,4 @@
 ## Ressources
 - Visualisation `visualizations/projections.html`
 - Code source `labs/03-cameras/`
-- Reference : matrice de projection OpenGL vs DirectX (row-major vs column-major)
+- Référence : matrice de projection OpenGL vs DirectX (row-major vs column-major)

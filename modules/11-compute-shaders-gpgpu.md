@@ -9,26 +9,26 @@
 A la fin de ce module, vous serez capable de :
 
 - Comprendre ce qu'est un compute shader et en quoi il differe du rendu graphique
-- Creer un `GPUComputePipeline` avec un shader WGSL
-- Maitriser le modele d'execution : workgroups, invocations, dimensions
+- Créer un `GPUComputePipeline` avec un shader WGSL
+- Maîtriser le modèle d'exécution : workgroups, invocations, dimensions
 - Utiliser les builtins `global_invocation_id`, `local_invocation_id`, `workgroup_id`
-- Lire et ecrire dans des storage buffers depuis un compute shader
+- Lire et écrire dans des storage buffers depuis un compute shader
 - Implementer les patterns map et reduce sur GPU
 - Utiliser `storageBarrier()` et `workgroupBarrier()` pour la synchronisation
 - Combiner compute et render pipelines dans une application hybride
-- Lire les resultats GPU cote CPU via `mapAsync` et `getMappedRange`
+- Lire les résultats GPU cote CPU via `mapAsync` et `getMappedRange`
 - Comprendre le role des staging buffers
-- Eviter les pieges de performance : occupancy, memory coalescing, bank conflicts
+- Éviter les pieges de performance : occupancy, memory coalescing, bank conflicts
 - Implementer une simulation de particules complete
 
 ---
 
 <details>
-<summary>Rappel du module precedent — Render pipeline et bind groups</summary>
+<summary>Rappel du module précédent — Render pipeline et bind groups</summary>
 
 Dans le module 10, nous avons decouvert :
 
-1. **Comment creer un GPURenderPipeline ?**
+1. **Comment créer un GPURenderPipeline ?**
    Via `device.createRenderPipeline()` avec vertex stage, fragment stage, primitive topology, depth-stencil et multisample. Le pipeline est un objet **immutable**.
 
 2. **Qu'est-ce qu'un bind group ?**
@@ -40,8 +40,8 @@ Dans le module 10, nous avons decouvert :
 4. **Comment encoder un render pass ?**
    `device.createCommandEncoder()` → `encoder.beginRenderPass(desc)` → `pass.setPipeline/setBindGroup/setVertexBuffer/drawIndexed` → `pass.end()` → `device.queue.submit()`.
 
-5. **Quelle est la difference majeure avec WebGL ?**
-   WebGPU valide a la **creation** des objets (pipeline, bind group) et non au draw call. Les erreurs sont explicites et apparaissent tot.
+5. **Quelle est la différence majeure avec WebGL ?**
+   WebGPU valide à la **création** des objets (pipeline, bind group) et non au draw call. Les erreurs sont explicites et apparaissent tot.
 
 </details>
 
@@ -75,24 +75,24 @@ Convoyeur impose l'ordre                 Pas d'ordre impose :
                                            quel ordre
 ```
 
-:::tip Analogie cle
-Un **compute shader** est comme un atelier ou chaque ouvrier (invocation) recoit un numero (`global_invocation_id`) et effectue sa tache independamment. Il n'y a pas de pipeline graphique impose — seulement un buffer d'entree, un calcul, et un buffer de sortie.
+:::tip Analogie clé
+Un **compute shader** est comme un atelier ou chaque ouvrier (invocation) recoit un numéro (`global_invocation_id`) et effectue sa tache independamment. Il n'y a pas de pipeline graphique impose — seulement un buffer d'entree, un calcul, et un buffer de sortie.
 :::
 
 ---
 
 ## 2. Qu'est-ce qu'un compute shader ?
 
-Un compute shader est un programme qui s'execute sur le GPU mais qui n'est **pas lie au rendu graphique**. Il n'a pas de vertex shader, pas de fragment shader, pas de rasterization. Il lit des donnees depuis des buffers, effectue des calculs, et ecrit les resultats dans d'autres buffers.
+Un compute shader est un programme qui s'exécuté sur le GPU mais qui n'est **pas lie au rendu graphique**. Il n'a pas de vertex shader, pas de fragment shader, pas de rasterization. Il lit des donnees depuis des buffers, effectue des calculs, et écrit les résultats dans d'autres buffers.
 
 ### 2.1 Cas d'usage typiques
 
 | Domaine | Exemple | Pourquoi le GPU ? |
 |---------|---------|-------------------|
-| Simulation | Particules, fluides, tissu | Des millions d'elements independants |
+| Simulation | Particules, fluides, tissu | Des millions d'éléments independants |
 | Traitement d'image | Flou, detection de contours, HDR | Chaque pixel est independant |
 | Tri et recherche | Bitonic sort, radix sort, prefix sum | Parallelisme massif |
-| Machine learning | Inference de modeles simples | Multiplications matricielles |
+| Machine learning | Inference de modèles simples | Multiplications matricielles |
 | Physique | N-body gravity, collision detection | O(n^2) mais parallelisable |
 | Post-processing | Bloom, SSAO, motion blur | Chaque pixel independant |
 
@@ -225,7 +225,7 @@ async function runComputeDouble(device: GPUDevice): Promise<Float32Array> {
 
 ## 4. Workgroups et invocations
 
-### 4.1 Le modele d'execution
+### 4.1 Le modèle d'exécution
 
 ```
 dispatchWorkgroups(4, 2, 1)   →   Lance 4 * 2 * 1 = 8 workgroups
@@ -283,7 +283,7 @@ fn main(
 | Dimension | Utilisation typique | Exemple |
 |-----------|-------------------|---------|
 | 1D : `@workgroup_size(64)` | Tableaux, listes, particules | Doubler un tableau |
-| 1D : `@workgroup_size(256)` | Reductions, prefix sum | Somme de N elements |
+| 1D : `@workgroup_size(256)` | Reductions, prefix sum | Somme de N éléments |
 | 2D : `@workgroup_size(16, 16)` | Images, textures, grilles | Flou gaussien |
 | 3D : `@workgroup_size(4, 4, 4)` | Voxels, simulations 3D | Fluides volumetriques |
 
@@ -376,7 +376,7 @@ fn count_alive(@builtin(global_invocation_id) gid: vec3u) {
 
 ## 6. Pattern map/reduce sur GPU
 
-### 6.1 Map — appliquer une fonction a chaque element
+### 6.1 Map — appliquer une fonction à chaque élément
 
 ```wgsl
 // map: f(x) = x * x (carre de chaque element)
@@ -391,9 +391,9 @@ fn map_square(@builtin(global_invocation_id) gid: vec3u) {
 }
 ```
 
-### 6.2 Reduce — agreger tous les elements
+### 6.2 Reduce — agreger tous les éléments
 
-La reduction sur GPU se fait en plusieurs etapes, en utilisant la memoire partagee du workgroup :
+La reduction sur GPU se fait en plusieurs étapes, en utilisant la mémoire partagee du workgroup :
 
 ```wgsl
 // reduce: somme de tous les elements
@@ -460,7 +460,7 @@ Pour N elements, il faut log2(N) iterations au lieu de N-1 additions sequentiell
 ```
 
 :::tip Deux passes pour un grand tableau
-Si le tableau a 1 million d'elements avec workgroup_size(256), la premiere passe produit ceil(1000000/256) = 3907 sommes partielles. Il faut ensuite une **deuxieme passe** (ou une reduction CPU) pour sommer ces 3907 valeurs.
+Si le tableau a 1 million d'éléments avec workgroup_size(256), la première passe produit ceil(1000000/256) = 3907 sommes partielles. Il faut ensuite une **deuxieme passe** (où une reduction CPU) pour sommer ces 3907 valeurs.
 :::
 
 ---
@@ -692,9 +692,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 ---
 
-## 9. Lire les resultats — mapAsync et getMappedRange
+## 9. Lire les résultats — mapAsync et getMappedRange
 
-### 9.1 Le probleme : CPU et GPU sont asynchrones
+### 9.1 Le problème : CPU et GPU sont asynchrones
 
 ```
 CPU timeline:    [dispatch]──────[...]──────────[read result]
@@ -744,7 +744,7 @@ async function readBufferFromGPU(
 }
 ```
 
-### 9.3 Staging buffers — pourquoi sont-ils necessaires ?
+### 9.3 Staging buffers — pourquoi sont-ils nécessaires ?
 
 ```
 Memoire GPU (VRAM)              Memoire CPU (RAM)
@@ -936,7 +936,7 @@ Regle pratique : workgroup_size doit etre un multiple de 32 (ou 64)
 et idealement >= 64. Valeur recommandee : 64 ou 256.
 ```
 
-### 11.2 Memory coalescing (acces memoire coalescents)
+### 11.2 Memory coalescing (acces mémoire coalescents)
 
 ```wgsl
 // BON : acces coalescent (threads consecutifs → adresses consecutives)
@@ -956,7 +956,7 @@ fn bad(@builtin(global_invocation_id) gid: vec3u) {
 }
 ```
 
-### 11.3 Bank conflicts (memoire partagee)
+### 11.3 Bank conflicts (mémoire partagee)
 
 ```
 La memoire partagee (workgroup) est divisee en "banks" (typiquement 32).
@@ -974,14 +974,14 @@ Solution : padding dans les tableaux partages
   var<workgroup> data: array<f32, 33>;  // 33 au lieu de 32 → decale les banks
 ```
 
-### 11.4 Tableau recapitulatif des bonnes pratiques
+### 11.4 Tableau récapitulatif des bonnes pratiques
 
 | Pratique | Impact | Recommandation |
 |----------|--------|----------------|
 | workgroup_size | Occupancy | 64 ou 256, multiple de 32 |
-| Acces memoire | Bande passante | Coalescent (threads consecutifs → adresses consecutives) |
-| Shared memory | Latence | Eviter les bank conflicts, utiliser du padding |
-| Branchement (if/else) | Divergence de warp | Minimiser, preferer step/mix |
+| Acces mémoire | Bande passante | Coalescent (threads consecutifs → adresses consecutives) |
+| Shared memory | Latence | Éviter les bank conflicts, utiliser du padding |
+| Branchement (if/else) | Divergence de warp | Minimiser, préférer step/mix |
 | Nombre de registres | Occupancy | Moins de variables locales = plus de warps actifs |
 | Buffer bindings | Overhead | Minimiser le nombre de bind groups |
 
@@ -995,12 +995,12 @@ Implementez un **traitement d'image en compute shader** :
 
 1. Chargez une image dans une texture WebGPU
 2. Ecrivez un compute shader qui applique un **flou gaussien 5x5** sur l'image
-3. Affichez le resultat avec un render pass (quad plein ecran)
+3. Affichez le résultat avec un render pass (quad plein ecran)
 4. Utilisez `@workgroup_size(16, 16)` pour le dispatch 2D
 5. Ajoutez un slider HTML qui controle l'intensite du flou (nombre de passes)
 
 **Indices :**
-- Le compute shader lit une `texture_2d<f32>` et ecrit dans une `texture_storage_2d<rgba8unorm, write>`
+- Le compute shader lit une `texture_2d<f32>` et écrit dans une `texture_storage_2d<rgba8unorm, write>`
 - Le noyau gaussien 5x5 :
   ```
   1  4  6  4  1
@@ -1112,10 +1112,10 @@ async function blurImage(
 }
 ```
 
-**Points cles :**
+**Points clés :**
 - Le dispatch 2D `(ceil(width/16), ceil(height/16))` couvre toute l'image
-- `textureLoad` lit un pixel a une coordonnee entiere (pas de filtrage)
-- `textureStore` ecrit dans une `texture_storage_2d`
+- `textureLoad` lit un pixel à une coordonnee entière (pas de filtrage)
+- `textureStore` écrit dans une `texture_storage_2d`
 - Le ping-pong entre 2 textures permet d'appliquer plusieurs passes de flou
 - Plus il y a de passes, plus le flou est intense (flou gaussien iteratif)
 
@@ -1123,11 +1123,11 @@ async function blurImage(
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description |
 |---------|-------------|
-| Compute shader | Programme GPU sans pipeline graphique, pour du calcul general |
+| Compute shader | Programme GPU sans pipeline graphique, pour du calcul général |
 | `GPUComputePipeline` | Pipeline contenant un seul stage compute |
 | `@compute @workgroup_size(N)` | Declare la taille d'un workgroup (N invocations) |
 | `dispatchWorkgroups(x, y, z)` | Lance x * y * z workgroups |
@@ -1135,23 +1135,33 @@ async function blurImage(
 | `local_invocation_id` | Position locale dans le workgroup |
 | `workgroup_id` | Identifiant du workgroup |
 | `var<storage, read_write>` | Storage buffer lisible et ecrivable par le compute shader |
-| `var<workgroup>` | Memoire partagee entre les invocations d'un workgroup |
+| `var<workgroup>` | Mémoire partagee entre les invocations d'un workgroup |
 | `workgroupBarrier()` | Synchronise toutes les invocations d'un workgroup |
 | `storageBarrier()` | Garantit la visibilite des ecritures storage dans le workgroup |
 | `atomicAdd` | Operation atomique sur un compteur partage |
-| Pattern map | Appliquer une fonction a chaque element (1:1) |
-| Pattern reduce | Agreger tous les elements en un seul (N:1) |
-| Staging buffer | Buffer `MAP_READ | COPY_DST` pour lire les resultats cote CPU |
+| Pattern map | Appliquer une fonction à chaque élément (1:1) |
+| Pattern reduce | Agreger tous les éléments en un seul (N:1) |
+| Staging buffer | Buffer `MAP_READ | COPY_DST` pour lire les résultats cote CPU |
 | `mapAsync` / `getMappedRange` | API pour lire un buffer GPU depuis JavaScript |
 | Compute + Render hybride | Un buffer STORAGE | VERTEX partage entre les deux pipelines |
 | Occupancy | Ratio warps actifs / warps max, viser >= 50% |
 | Memory coalescing | Threads consecutifs → adresses consecutives = performant |
-| Bank conflicts | Acces simultanees a la meme bank de memoire partagee = lent |
+| Bank conflicts | Acces simultanees à la même bank de mémoire partagee = lent |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [10 — Render pipeline et bind groups](./10-render-pipeline-bind-groups.md) | [12 — Techniques avancees WebGPU](./12-webgpu-avance.md) |
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 11 compute](../screencasts/screencast-11-compute.md)
+2. **Lab** : [lab-11-compute-shaders](../labs/lab-11-compute-shaders/README)
+3. **Quiz** : [quiz 11 compute](../quizzes/quiz-11-compute.html)
+:::

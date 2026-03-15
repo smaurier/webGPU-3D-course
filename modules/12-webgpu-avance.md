@@ -13,35 +13,35 @@ A la fin de ce module, vous serez capable de :
 - Pre-enregistrer des commandes avec les render bundles
 - Mesurer le temps GPU avec les timestamp queries
 - Effectuer des occlusion queries pour la visibility testing
-- Ecrire dans plusieurs textures simultanement (MRT)
+- Écrire dans plusieurs textures simultanement (MRT)
 - Implementer un deferred rendering complet avec G-buffer et lighting pass
 - Travailler avec les texture arrays et les cubemaps en WebGPU
-- Generer des mipmaps avec un compute shader
-- Appliquer des strategies de memory management (pooling, suballocation)
-- Connaitre les bonnes pratiques WebGPU pour maximiser la performance
+- Générer des mipmaps avec un compute shader
+- Appliquer des stratégies de memory management (pooling, suballocation)
+- Connaître les bonnes pratiques WebGPU pour maximiser la performance
 - Comparer WebGL et WebGPU pour choisir la bonne technologie
 
 ---
 
 <details>
-<summary>Rappel du module precedent — Compute shaders et GPGPU</summary>
+<summary>Rappel du module précédent — Compute shaders et GPGPU</summary>
 
 Dans le module 11, nous avons decouvert :
 
 1. **Qu'est-ce qu'un compute shader ?**
-   Un programme GPU pour du calcul general, sans pipeline graphique. Il lit/ecrit des storage buffers et s'execute en workgroups de threads paralleles.
+   Un programme GPU pour du calcul général, sans pipeline graphique. Il lit/écrit des storage buffers et s'exécuté en workgroups de threads paralleles.
 
 2. **Comment lancer un compute shader ?**
    `encoder.beginComputePass()` → `pass.setPipeline()` → `pass.setBindGroup()` → `pass.dispatchWorkgroups(x, y, z)` → `pass.end()`.
 
 3. **Qu'est-ce qu'un workgroup ?**
-   Un groupe d'invocations (threads) qui partagent une memoire locale (`var<workgroup>`) et peuvent se synchroniser via `workgroupBarrier()`.
+   Un groupe d'invocations (threads) qui partagent une mémoire locale (`var<workgroup>`) et peuvent se synchroniser via `workgroupBarrier()`.
 
-4. **Comment lire les resultats cote CPU ?**
+4. **Comment lire les résultats cote CPU ?**
    Via un staging buffer (`MAP_READ | COPY_DST`), `mapAsync(GPUMapMode.READ)`, puis `getMappedRange()`.
 
 5. **Comment combiner compute et render ?**
-   Un meme buffer peut avoir `STORAGE | VERTEX` usage. Le compute ecrit les positions, le render les lit comme vertex buffer.
+   Un même buffer peut avoir `STORAGE | VERTEX` usage. Le compute écrit les positions, le render les lit comme vertex buffer.
 
 </details>
 
@@ -79,8 +79,8 @@ Chronometre de scene                   Timestamp Queries
     le decor                                si completement cache
 ```
 
-:::tip Analogie cle
-Le **deferred rendering** est comme filmer chaque aspect de la scene separement (profondeur, couleurs, normales), puis assembler le tout en post-production (lighting pass). C'est plus complexe a mettre en place, mais cela permet de gerer un grand nombre de lumieres sans ralentissement.
+:::tip Analogie clé
+Le **deferred rendering** est comme filmer chaque aspect de la scene separement (profondeur, couleurs, normales), puis assembler le tout en post-production (lighting pass). C'est plus complexe a mettre en place, mais cela permet de gérer un grand nombre de lumieres sans ralentissement.
 :::
 
 ---
@@ -89,7 +89,7 @@ Le **deferred rendering** est comme filmer chaque aspect de la scene separement 
 
 ### 2.1 Rappel du concept
 
-L'instanced rendering dessine le meme mesh plusieurs fois en un seul draw call. Chaque instance peut avoir des donnees differentes (position, couleur, scale...).
+L'instanced rendering dessine le même mesh plusieurs fois en un seul draw call. Chaque instance peut avoir des donnees différentes (position, couleur, scale...).
 
 ### 2.2 Instance step mode
 
@@ -270,7 +270,7 @@ pass.end();
 
 ### 3.1 Qu'est-ce que le dessin indirect ?
 
-Le dessin indirect lit les parametres du draw call **depuis un buffer GPU** au lieu de les passer en argument JavaScript. Cela permet a un compute shader de decider combien d'objets dessiner sans intervention du CPU.
+Le dessin indirect lit les paramètres du draw call **depuis un buffer GPU** au lieu de les passer en argument JavaScript. Cela permet à un compute shader de decider combien d'objets dessiner sans intervention du CPU.
 
 ```
 Dessin DIRECT (classique) :              Dessin INDIRECT :
@@ -383,7 +383,7 @@ device.queue.submit([encoder.finish()]);
 
 ## 4. Render bundles
 
-### 4.1 Le probleme : cout CPU de l'encodage
+### 4.1 Le problème : cout CPU de l'encodage
 
 ```
 Sans render bundles :                  Avec render bundles :
@@ -468,7 +468,7 @@ function renderFrame(
 ```
 
 :::warning Limites des render bundles
-Les render bundles sont **immutables**. Si la scene change (ajout/suppression d'objets, changement de pipeline), il faut en creer un nouveau. Ils sont plus utiles pour les parties statiques de la scene (decor, terrain) que pour les elements dynamiques.
+Les render bundles sont **immutables**. Si la scene change (ajout/suppression d'objets, changement de pipeline), il faut en créer un nouveau. Ils sont plus utiles pour les parties statiques de la scene (decor, terrain) que pour les éléments dynamiques.
 :::
 
 ---
@@ -587,7 +587,7 @@ console.log(`GPU render time: ${gpuTimeMs.toFixed(2)} ms`);
 
 ### 6.1 Principe
 
-Les occlusion queries permettent de savoir si des fragments d'un draw call ont passe le depth test. Si aucun fragment n'est visible, l'objet est completement occlude (cache).
+Les occlusion queries permettent de savoir si des fragments d'un draw call ont passe le depth test. Si aucun fragment n'est visible, l'objet est complètement occlude (cache).
 
 ```
 Camera ─────▶ [Mur] [Cube cache]
@@ -636,7 +636,7 @@ encoder.resolveQuerySet(occlusionQuerySet, 0, objects.length, occlusionResolveBu
 
 ## 7. Multiple Render Targets (MRT)
 
-### 7.1 Ecrire dans plusieurs textures simultanement
+### 7.1 Écrire dans plusieurs textures simultanement
 
 ```
 Render pass classique :               MRT (Multiple Render Targets) :
@@ -1018,11 +1018,11 @@ fn fs_skybox(@location(0) direction: vec3f) -> @location(0) vec4f {
 
 ---
 
-## 10. Mipmap generation avec compute shader
+## 10. Mipmap génération avec compute shader
 
-WebGPU ne fournit pas de `generateMipmaps()` comme WebGL. Il faut generer les mipmaps manuellement, typiquement avec un compute shader.
+WebGPU ne fournit pas de `generateMipmaps()` comme WebGL. Il faut générer les mipmaps manuellement, typiquement avec un compute shader.
 
-### 10.1 Compute shader de generation de mipmaps
+### 10.1 Compute shader de génération de mipmaps
 
 ```wgsl
 // mipmap-gen.wgsl
@@ -1049,7 +1049,7 @@ fn generate_mip(@builtin(global_invocation_id) gid: vec3u) {
 }
 ```
 
-### 10.2 Pipeline TypeScript pour generer tous les niveaux
+### 10.2 Pipeline TypeScript pour générer tous les niveaux
 
 ```typescript
 function generateMipmaps(
@@ -1282,14 +1282,14 @@ for (const obj of objects) {
 |----------|--------|----------------|
 | Tri par pipeline | Reduit les state changes | Trier les objets par materiau/pipeline |
 | Render bundles | Reduit le travail CPU | Pre-enregistrer les draw calls statiques |
-| Instanced draw | Reduit les draw calls | 1 call pour N copies du meme mesh |
+| Instanced draw | Reduit les draw calls | 1 call pour N copies du même mesh |
 | Indirect draw | Eliminle le readback GPU→CPU | Le GPU decide du nombre d'instances |
 | Buffer pooling | Reduit les allocations | Reutiliser les buffers entre frames |
 | Ring buffer | Reduit le nombre de buffers | 1 gros buffer uniforms avec dynamic offsets |
 | Taille des workgroups | Occupancy GPU | 64 ou 256, multiple de 32 |
-| `loadOp: 'clear'` | Evite un load memoire | Toujours `clear` si on redessine tout |
-| `storeOp: 'discard'` | Evite un store memoire | `discard` pour le depth si pas relu |
-| Mipmaps | Qualite + performance | Toujours generer des mipmaps pour les textures 3D |
+| `loadOp: 'clear'` | Evite un load mémoire | Toujours `clear` si on redessine tout |
+| `storeOp: 'discard'` | Evite un store mémoire | `discard` pour le depth si pas relu |
+| Mipmaps | Qualite + performance | Toujours générer des mipmaps pour les textures 3D |
 
 ---
 
@@ -1300,7 +1300,7 @@ for (const obj of objects) {
 | **Paradigme** | State machine (bind, enable, disable) | Command-based (objets immutables) |
 | **Langage shader** | GLSL ES 3.00 | WGSL |
 | **Compute shaders** | Non | Oui (`GPUComputePipeline`) |
-| **Validation** | Au draw call (tardive, parfois silencieuse) | A la creation (fail-fast, explicite) |
+| **Validation** | Au draw call (tardive, parfois silencieuse) | A la création (fail-fast, explicite) |
 | **Multi-threading** | Non (tout sur le main thread) | Oui (encodage sur workers possible) |
 | **Draw indirect** | Via extension (`ANGLE_multi_draw`) | Natif (`drawIndirect`, `drawIndexedIndirect`) |
 | **Render bundles** | Non | Oui |
@@ -1310,8 +1310,8 @@ for (const obj of objects) {
 | **Memory management** | Automatique (driver) | Explicite (usage flags, staging buffers) |
 | **Compatibilite** | Quasi universelle (98%+ des navigateurs) | Chrome 113+, Firefox 121+, Safari 18+ |
 | **Performance brute** | Bonne | Meilleure (moins d'overhead CPU, compute) |
-| **Courbe d'apprentissage** | Moderee | Raide (plus de concepts a maitriser) |
-| **Ecosysteme** | Tres mature (Three.js, Babylon.js) | En croissance (Three.js WebGPU backend, wgpu) |
+| **Courbe d'apprentissage** | Moderee | Raide (plus de concepts à maîtriser) |
+| **Ecosysteme** | Très mature (Three.js, Babylon.js) | En croissance (Three.js WebGPU backend, wgpu) |
 
 ### Quand utiliser quoi ?
 
@@ -1338,7 +1338,7 @@ Choisir WebGL si :                      Choisir WebGPU si :
 
 Implementez un **deferred renderer simple** en WebGPU :
 
-1. **G-Buffer pass** : dessinez 5 cubes avec des couleurs differentes. Ecrivez dans 3 textures (position, normal, albedo)
+1. **G-Buffer pass** : dessinez 5 cubes avec des couleurs différentes. Ecrivez dans 3 textures (position, normal, albedo)
 2. **Lighting pass** : dessinez un quad plein ecran qui lit le G-buffer et calcule l'eclairage de 4 lumieres ponctuelles
 3. Ajoutez un **toggle** (touche espace) pour afficher chaque couche du G-buffer individuellement (debug view)
 4. Utilisez des **timestamp queries** pour mesurer le temps GPU de chaque passe
@@ -1600,25 +1600,25 @@ async function main() {
 main();
 ```
 
-**Points cles :**
-- Le G-buffer utilise `rgba16float` pour la position et les normales (precision suffisante)
+**Points clés :**
+- Le G-buffer utilise `rgba16float` pour la position et les normales (précision suffisante)
 - Le lighting pass utilise un triangle surdimensionne (3 vertices) au lieu d'un quad (6 vertices)
 - Le debug mode permet de visualiser chaque couche du G-buffer
 - Les timestamp queries mesurent le cout de chaque passe
-- Le Reinhard tone mapping `color / (color + 1)` convertit HDR en LDR de facon douce
+- Le Reinhard tone mapping `color / (color + 1)` convertit HDR en LDR de façon douce
 
 </details>
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description |
 |---------|-------------|
 | Instanced rendering | `stepMode: 'instance'` + `drawIndexed(count, instanceCount)` |
 | `@builtin(instance_index)` | Index de l'instance courante dans le vertex shader |
-| Draw indirect | `drawIndirect(buffer, offset)` — parametres lus depuis un GPUBuffer |
-| Frustum culling GPU | Compute shader ecrit le nombre d'instances dans un indirect buffer |
+| Draw indirect | `drawIndirect(buffer, offset)` — paramètres lus depuis un GPUBuffer |
+| Frustum culling GPU | Compute shader écrit le nombre d'instances dans un indirect buffer |
 | Render bundles | Commandes pre-enregistrees via `GPURenderBundleEncoder` |
 | Timestamp queries | `timestampWrites` dans le render pass + `resolveQuerySet` |
 | Occlusion queries | `beginOcclusionQuery(i)` / `endOcclusionQuery()` dans un render pass |
@@ -1627,8 +1627,8 @@ main();
 | Deferred rendering | G-buffer pass (geometrie) + lighting pass (eclairage) |
 | Texture arrays | `texture_2d_array<f32>`, `depthOrArrayLayers: N` |
 | Cubemaps WebGPU | `dimension: 'cube'`, `texture_cube<f32>` |
-| Mipmap generation | Compute shader avec box filter, 1 dispatch par level |
-| Buffer pooling | Reutiliser des buffers pour eviter les allocations |
+| Mipmap génération | Compute shader avec box filter, 1 dispatch par level |
+| Buffer pooling | Reutiliser des buffers pour éviter les allocations |
 | Ring buffer | 1 gros uniform buffer avec dynamic offsets |
 | Tri par pipeline | Minimiser les `setPipeline` dans un render pass |
 | WebGL vs WebGPU | WebGL = compatible partout, WebGPU = performant + compute |
@@ -1637,6 +1637,16 @@ main();
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [11 — Compute shaders et GPGPU](./11-compute-shaders-gpgpu.md) | [13 — Three.js fondamentaux](./13-threejs-fondamentaux.md) |
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 12 webgpu avance](../screencasts/screencast-12-webgpu-avance.md)
+2. **Lab** : [lab-12-webgpu-avance](../labs/lab-12-webgpu-avance/README)
+3. **Quiz** : [quiz 12 webgpu avance](../quizzes/quiz-12-webgpu-avance.html)
+:::

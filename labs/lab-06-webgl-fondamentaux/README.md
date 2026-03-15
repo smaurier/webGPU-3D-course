@@ -2,25 +2,25 @@
 
 ## Objectif
 
-Implementer les fonctions de preparation de donnees pour WebGL : creation de buffers
-de sommets entrelaces, buffers d'indices, analyse de shaders GLSL, et generation de geometrie.
+Implementer les fonctions de preparation de donnees pour WebGL : création de buffers
+de sommets entrelaces, buffers d'indices, analyse de shaders GLSL, et génération de geometrie.
 
-WebGL necessite un navigateur pour le rendu, mais toute la preparation des donnees se fait
+WebGL nécessité un navigateur pour le rendu, mais toute la preparation des donnees se fait
 en JavaScript pur. Ce lab teste cette partie.
 
-## Concepts cles
+## Concepts clés
 
 ### Vertex buffer entrelace
 
-Au lieu de separer positions et couleurs dans des buffers differents, on les entrelace :
+Au lieu de separer positions et couleurs dans des buffers différents, on les entrelace :
 `[px, py, pz, r, g, b, px, py, pz, r, g, b, ...]`
 
 Cela ameliore la localite du cache GPU.
 
 ### Index buffer
 
-Pour un quad (carre), on definit 4 sommets et 6 indices (2 triangles) au lieu de
-6 sommets. Economie de memoire et de bande passante.
+Pour un quad (carre), on définit 4 sommets et 6 indices (2 triangles) au lieu de
+6 sommets. Economie de mémoire et de bande passante.
 
 ### Stride et offsets
 
@@ -35,10 +35,10 @@ Position offset = 0, color offset = 12.
 Extraire les declarations `uniform` d'un shader avec des expressions regulieres.
 Utile pour l'introspection et les outils de debug.
 
-### Generation de geometrie
+### Génération de geometrie
 
-Generer un plan subdivise avec ses positions, indices et coordonnees UV.
-Base de tout systeme de generation procedurale de terrain ou de grille.
+Générer un plan subdivise avec ses positions, indices et coordonnees UV.
+Base de tout système de génération procedurale de terrain ou de grille.
 
 ## Exercices
 

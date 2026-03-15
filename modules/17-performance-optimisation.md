@@ -8,29 +8,29 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Mesurer les metriques de performance 3D : FPS, draw calls, triangles, memoire GPU
-- Utiliser stats.js et `renderer.info` pour le monitoring en temps reel
+- Mesurer les metriques de performance 3D : FPS, draw calls, triangles, mémoire GPU
+- Utiliser stats.js et `renderer.info` pour le monitoring en temps réel
 - Exploiter le frustum culling et le Level of Detail (LOD) pour reduire la charge GPU
 - Optimiser les draw calls avec InstancedMesh et le merge de geometries
 - Compresser les assets (Draco, KTX2, atlasing de textures)
-- Appliquer le dispose pattern pour eviter les fuites memoire
+- Appliquer le dispose pattern pour éviter les fuites mémoire
 - Deporter le rendu dans un Web Worker avec OffscreenCanvas
 - Profiler le GPU avec Chrome DevTools et Spector.js
 - Comprendre le batching par materiau et par distance
-- Configurer THREE.WebGPURenderer et decouvrir TSL (Three.js Shading Language)
-- Definir et respecter un budget de performance (16ms / 8ms par frame)
+- Configurer THREE.WebGPURenderer et découvrir TSL (Three.js Shading Language)
+- Définir et respecter un budget de performance (16ms / 8ms par frame)
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Post-processing et effets (Module 16)</summary>
+<summary>Rappel du cours précédent — Post-processing et effets (Module 16)</summary>
 
 Au module 16, nous avons explore les effets visuels et les interactions :
 
 - **EffectComposer** : pipeline de post-processing par chaine de passes
 - **Passes standard** : RenderPass, UnrealBloomPass, SSAOPass, BokehPass, SMAAPass
-- **ShaderPass** : ecrire ses propres effets (vignette, color grading, film grain, chromatic aberration)
-- **OutputPass** : tone mapping + encoding sRGB en derniere passe
+- **ShaderPass** : écrire ses propres effets (vignette, color grading, film grain, chromatic aberration)
+- **OutputPass** : tone mapping + encoding sRGB en dernière passe
 - **WebGLRenderTarget** : render-to-texture, depth texture
 - **Points + PointsMaterial** : particules CPU avec BufferGeometry
 - **GPUComputationRenderer** : simulation de particules sur GPU (GPGPU)
@@ -48,7 +48,7 @@ Ces effets sont visuellement spectaculaires mais coutent cher en GPU. Ce module 
 
 ### Analogie : le budget d'un film
 
-Un realisateur a un budget fixe pour son film. Chaque scene couteuse (explosions, figurants, decors) consomme une partie du budget. S'il depasse, le film ne sortira pas a temps. En 3D temps reel, le budget est le **temps par frame** :
+Un realisateur à un budget fixe pour son film. Chaque scene couteuse (explosions, figurants, decors) consomme une partie du budget. S'il dépasse, le film ne sortira pas a temps. En 3D temps réel, le budget est le **temps par frame** :
 
 ```
 60 FPS  →  16.67 ms par frame   (standard)
@@ -213,7 +213,7 @@ mesh.geometry.computeBoundingBox();
 mesh.geometry.computeBoundingSphere();
 ```
 
-:::warning Probleme courant : objet invisible
+:::warning Problème courant : objet invisible
 Si un objet disparait quand la camera bouge, sa bounding sphere est probablement incorrecte. Cela arrive souvent avec les SkinnedMesh ou les objets deformes par shader. Solutions :
 ```typescript
 // Option 1 : recalculer la bounding sphere
@@ -279,7 +279,7 @@ scene.add(lod);
 lod.autoUpdate = true;
 ```
 
-### Generer les niveaux de LOD automatiquement
+### Générer les niveaux de LOD automatiquement
 
 ```typescript
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
@@ -350,7 +350,7 @@ instancedMesh.instanceMatrix.needsUpdate = true;
 scene.add(instancedMesh);
 ```
 
-| Methode | 1 000 objets | 10 000 objets | 100 000 objets |
+| Méthode | 1 000 objets | 10 000 objets | 100 000 objets |
 |---------|:------------:|:-------------:|:--------------:|
 | Mesh individuel | ~1000 DC, 60 FPS | ~10000 DC, 15 FPS | Crash |
 | InstancedMesh | 1 DC, 60 FPS | 1 DC, 60 FPS | 1 DC, 45 FPS |
@@ -363,7 +363,7 @@ scene.add(instancedMesh);
 
 ### BufferGeometryUtils.mergeGeometries
 
-Pour les objets statiques qui partagent le meme materiau mais ont des geometries differentes, on peut les fusionner en une seule geometrie :
+Pour les objets statiques qui partagent le même materiau mais ont des geometries différentes, on peut les fusionner en une seule geometrie :
 
 ```typescript
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -407,7 +407,7 @@ console.log(
 ```
 
 :::warning Limites du merge
-- Tous les objets doivent partager le **meme materiau**
+- Tous les objets doivent partager le **même materiau**
 - Les objets fusionnes ne peuvent plus etre deplacer individuellement
 - Le frustum culling s'applique au mesh fusionne entier (moins efficace)
 - Ideal pour les decors statiques : murs, sols, vegetation
@@ -417,8 +417,8 @@ console.log(
 
 | Critere | InstancedMesh | mergeGeometries |
 |---------|:-------------:|:---------------:|
-| Meme geometrie | Oui (obligatoire) | Non (geometries differentes OK) |
-| Meme materiau | Oui | Oui |
+| Même geometrie | Oui (obligatoire) | Non (geometries différentes OK) |
+| Même materiau | Oui | Oui |
 | Objets deplacables | Oui (setMatrixAt) | Non (fige) |
 | Frustum culling individuel | Non | Non |
 | Couleur par objet | Oui (setColorAt) | Non |
@@ -478,7 +478,7 @@ texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 // Cout GPU quasi nul, amelioration visible significative
 ```
 
-### Precharger et reutiliser les textures
+### Precharger et réutiliser les textures
 
 ```typescript
 // ─── Cache de textures ────────────────────────────────────
@@ -516,9 +516,9 @@ material2.map = tex; // meme reference, pas de doublon en VRAM
 
 ## Le dispose pattern
 
-### Le probleme des fuites memoire
+### Le problème des fuites mémoire
 
-En JavaScript, le garbage collector nettoie la memoire automatiquement. Mais les ressources GPU (geometries, textures, materiaux, render targets) ne sont **pas** gerees par le GC. Si vous ne les disposez pas manuellement, elles restent en VRAM indefiniment.
+En JavaScript, le garbage collector nettoie la mémoire automatiquement. Mais les ressources GPU (geometries, textures, materiaux, render targets) ne sont **pas** gerees par le GC. Si vous ne les disposez pas manuellement, elles restent en VRAM indefiniment.
 
 ```
 Fuite typique :
@@ -600,7 +600,7 @@ function disposeComposer(composer: EffectComposer): void {
 }
 ```
 
-### Verifier les fuites
+### Vérifier les fuites
 
 ```typescript
 // ─── Avant/apres pour detecter les fuites ─────────────────
@@ -626,9 +626,9 @@ logMemorySnapshot('Apres dispose');
 
 ## OffscreenCanvas : rendu dans un Worker
 
-### Le probleme du main thread
+### Le problème du main thread
 
-Le rendu 3D et le JavaScript partagent le meme thread. Si la scene est lourde, l'UI (boutons, scrolling, input) devient lente. La solution : deporter le rendu dans un **Web Worker** avec `OffscreenCanvas`.
+Le rendu 3D et le JavaScript partagent le même thread. Si la scene est lourde, l'UI (boutons, scrolling, input) devient lente. La solution : deporter le rendu dans un **Web Worker** avec `OffscreenCanvas`.
 
 ```
 ┌─── Main Thread ─────────────────────────────────────────┐
@@ -698,7 +698,7 @@ function animate(): void {
 :::warning Limitations d'OffscreenCanvas
 - Pas d'acces au DOM depuis le Worker (pas de CSS2DRenderer, pas de stats.js classique)
 - Les events doivent etre proxifies depuis le main thread
-- OrbitControls necessite un wrapper adapte (`three/addons/controls/OrbitControls.js` ne marche pas directement)
+- OrbitControls nécessité un wrapper adapte (`three/addons/controls/OrbitControls.js` ne marche pas directement)
 - Support navigateur : Chrome, Edge, Firefox. Safari support partiel.
 :::
 
@@ -748,7 +748,7 @@ spector.displayUI(); // affiche un bouton de capture
 | FPS | 60+ | 30-60 | <30 | Reduire la complexite |
 | Draw calls | <100 | 100-500 | >500 | Instancing, merge, batching |
 | Triangles | <500K | 500K-2M | >2M | LOD, simplification |
-| Textures VRAM | <256 Mo | 256-512 Mo | >512 Mo | Compression KTX2, resolution |
+| Textures VRAM | <256 Mo | 256-512 Mo | >512 Mo | Compression KTX2, résolution |
 | Frame time | <12ms | 12-16ms | >16ms | Profiler et optimiser le bottleneck |
 
 ---
@@ -791,7 +791,7 @@ for (let i = 0; i < 100; i++) {
 
 Three.js trie automatiquement :
 - **Opaques : front-to-back** — les pixels proches sont rendus en premier, les lointains echouent au depth test (early-Z rejection, economise du fragment processing)
-- **Transparents : back-to-front** — necessaire pour un alpha blending correct
+- **Transparents : back-to-front** — nécessaire pour un alpha blending correct
 
 ```typescript
 // Forcer l'ordre de rendu pour des cas speciaux
@@ -838,7 +838,7 @@ animate();
 
 ### TSL : Three.js Shading Language
 
-TSL remplace le GLSL brut par un systeme de **nodes** en JavaScript/TypeScript. Il genere automatiquement du WGSL (WebGPU) ou du GLSL (WebGL) :
+TSL remplace le GLSL brut par un système de **nodes** en JavaScript/TypeScript. Il généré automatiquement du WGSL (WebGPU) ou du GLSL (WebGL) :
 
 ```typescript
 import {
@@ -921,11 +921,11 @@ const glslMaterial = new THREE.ShaderMaterial({
 | Maturite | Stable | Production-ready (depuis r160+) |
 | Compute shaders | Non (GPGPU hack) | Oui (natif) |
 | Multi-draw | Non | Oui |
-| Performances theoriques | Bonnes | Meilleures (moins d'overhead CPU) |
+| Performances théoriques | Bonnes | Meilleures (moins d'overhead CPU) |
 | Ecosysteme (post-processing, etc.) | Complet | En cours |
 | Production | Oui | Oui (depuis r160+) |
 
-:::tip Strategie recommandee
+:::tip Stratégie recommandee
 Utilisez `WebGPURenderer` avec fallback WebGL :
 ```typescript
 import WebGPURenderer from 'three/webgpu';
@@ -941,14 +941,14 @@ Ecrivez vos materiaux custom en TSL (pas en GLSL) pour la compatibilite future.
 
 ## Checklist d'optimisation
 
-| Etape | Actions |
+| Étape | Actions |
 |-------|---------|
 | 1. Identifier le bottleneck | `renderer.info.render.calls` eleve = CPU-bound ; triangles > 2M = GPU-bound ; textures > 512 Mo = VRAM-bound |
 | 2. Reduire les draw calls | InstancedMesh, mergeGeometries, materiaux partages, texture atlas |
 | 3. Reduire la geometrie | LOD, simplification Blender, compression Draco |
-| 4. Optimiser les textures | KTX2/Basis, resolution max 2048, channel packing, puissance de 2 |
-| 5. Allegerer les shaders | Moins de lumieres, MeshStandard vs Physical, bloom demi-resolution |
-| 6. Eviter les fuites | dispose() sur geometries/materiaux/textures/render targets |
+| 4. Optimiser les textures | KTX2/Basis, résolution max 2048, channel packing, puissance de 2 |
+| 5. Allegerer les shaders | Moins de lumieres, MeshStandard vs Physical, bloom demi-résolution |
+| 6. Éviter les fuites | dispose() sur geometries/materiaux/textures/render targets |
 | 7. Allegerer le JS | Cacher les traversals, throttle raycaster, OffscreenCanvas + Worker |
 
 ---
@@ -963,7 +963,7 @@ Partez de cette scene volontairement non optimisee et appliquez toutes les techn
 - 2000 cubes individuels (chacun son propre Mesh et Material)
 - Textures 4096x4096 non compressees
 - Pas de LOD
-- Post-processing : bloom + SSAO + FXAA (tout a pleine resolution)
+- Post-processing : bloom + SSAO + FXAA (tout a pleine résolution)
 - Pas de dispose quand on change de scene
 
 **Objectifs** :
@@ -973,7 +973,7 @@ Partez de cette scene volontairement non optimisee et appliquez toutes les techn
 4. Partager les materiaux entre les objets identiques
 5. Ajouter un `PerformanceMonitor` affichant FPS, draw calls, triangles
 6. Implementer `disposeScene()` qui nettoie tout proprement
-7. Mesurer les gains : noter draw calls et FPS avant/apres
+7. Mesurer les gains : noter draw calls et FPS avant/après
 
 **Indice** : L'objectif est de passer de ~2000+ draw calls a <50, et de maintenir 60 FPS stables.
 
@@ -1237,13 +1237,13 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | API / Outil | Details cles |
+| Concept | API / Outil | Details clés |
 |---------|------------|-------------|
 | Budget performance | — | 16ms pour 60 FPS, 8ms pour 120 FPS |
 | FPS monitoring | `stats.js` | `stats.begin()` / `stats.end()` dans le render loop |
-| Stats renderer | `renderer.info` | calls, triangles, geometries, textures en memoire |
+| Stats renderer | `renderer.info` | calls, triangles, geometries, textures en mémoire |
 | Frustum culling | `object.frustumCulled` | Automatique, base sur la bounding sphere |
 | Level of Detail | `THREE.LOD` | `addLevel(mesh, distance)`, 3+ niveaux |
 | Instancing | `InstancedMesh` | `setMatrixAt()`, 1 draw call pour N objets |
@@ -1251,13 +1251,13 @@ animate();
 | Compression geometrie | DRACOLoader | 60-90% reduction taille fichier |
 | Compression textures | KTX2Loader | Reste compresse en VRAM (BC7/ETC2/ASTC) |
 | Dispose pattern | `.dispose()` | Geometrie, materiau, texture, render target |
-| Detection fuites | `renderer.info.memory` | Comparer avant/apres dispose |
+| Detection fuites | `renderer.info.memory` | Comparer avant/après dispose |
 | Offscreen canvas | `OffscreenCanvas` + Worker | Rendu 3D sans bloquer le main thread |
 | GPU profiling | Chrome DevTools, Spector.js | Frame capture, draw call inspection |
-| Tri par materiau | Automatique + materiaux partages | Reduire les changements d'etat GPU |
+| Tri par materiau | Automatique + materiaux partages | Reduire les changements d'état GPU |
 | Tri par distance | Automatique | Front-to-back opaque, back-to-front transparent |
 | WebGPU renderer | `WebGPURenderer` | Production-ready, fallback WebGL automatique |
-| TSL | `MeshStandardNodeMaterial` | Shading en TypeScript, genere GLSL ou WGSL |
+| TSL | `MeshStandardNodeMaterial` | Shading en TypeScript, généré GLSL ou WGSL |
 
 ---
 
@@ -1271,3 +1271,13 @@ animate();
 - [Three.js TSL Documentation](https://github.com/mrdoob/three.js/wiki/Three.js-Shading-Language)
 - [WebGPU Fundamentals](https://webgpufundamentals.org/) — pour comprendre pourquoi WebGPU est plus performant
 - [Discover three.js — Performance](https://discoverthreejs.com/tips-and-tricks/)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 17 performance](../screencasts/screencast-17-performance.md)
+2. **Lab** : [lab-17-performance](../labs/lab-17-performance/README)
+3. **Quiz** : [quiz 17 performance](../quizzes/quiz-17-performance.html)
+:::

@@ -2,14 +2,14 @@
 
 ## Objectif
 
-Maitriser les bases de WebGPU et WGSL : parsing de shaders WGSL, alignement de buffers,
+Maîtriser les bases de WebGPU et WGSL : parsing de shaders WGSL, alignement de buffers,
 descripteurs de vertex layout, correspondances GLSL/WGSL, et conversion de triangle strip.
 
-## Concepts cles
+## Concepts clés
 
 ### Parsing WGSL
 
-WGSL utilise une syntaxe differente de GLSL :
+WGSL utilise une syntaxe différente de GLSL :
 - Les structs sont declares avec `struct Name { field: type, ... }`
 - Les bind groups : `@group(G) @binding(B) var<uniform> name: Type;`
 - Les entry points : `@vertex`, `@fragment`, `@compute`
@@ -21,7 +21,7 @@ La taille du buffer doit etre un multiple de 256 : `ceil(size / 256) * 256`.
 
 ### Vertex buffer layout
 
-Un descripteur de vertex buffer definit le `arrayStride` (octets par sommet)
+Un descripteur de vertex buffer définit le `arrayStride` (octets par sommet)
 et les attributs (`shaderLocation`, `offset`, `format`).
 
 ### Correspondances GLSL → WGSL
@@ -38,7 +38,7 @@ et les attributs (`shaderLocation`, `offset`, `format`).
 
 ### Triangle strip vers triangle list
 
-Un triangle strip de N sommets genere N-2 triangles. Le triangle i utilise les sommets
+Un triangle strip de N sommets généré N-2 triangles. Le triangle i utilise les sommets
 `[i, i+1, i+2]` avec inversion du winding pour les triangles impairs.
 
 ## Exercices
@@ -49,7 +49,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

@@ -9,9 +9,9 @@
 A la fin de ce module, vous serez capable de :
 
 - Comparer les formats 3D (glTF, FBX, OBJ, USDZ) et justifier la dominance de glTF 2.0 sur le web
-- Charger un modele `.glb`/`.gltf` avec GLTFLoader et naviguer dans sa structure
+- Charger un modèle `.glb`/`.gltf` avec GLTFLoader et naviguer dans sa structure
 - Configurer DRACOLoader pour la compression de geometrie et KTX2Loader pour les textures GPU
-- Parcourir la hierarchie d'une scene avec `traverse()` et `getObjectByName()`
+- Parcourir la hiérarchie d'une scene avec `traverse()` et `getObjectByName()`
 - Utiliser AnimationMixer, AnimationClip et AnimationAction pour jouer et enchainer des animations
 - Comprendre les animations squelettiques (bones, SkinnedMesh) et les morph targets
 - Instancier des milliers d'objets efficacement avec InstancedMesh
@@ -19,7 +19,7 @@ A la fin de ce module, vous serez capable de :
 ---
 
 <details>
-<summary>Rappel du cours precedent — Materiaux et lumieres Three.js (Module 14)</summary>
+<summary>Rappel du cours précédent — Materiaux et lumieres Three.js (Module 14)</summary>
 
 Au module 14, nous avons explore les materiaux PBR et l'eclairage dans Three.js :
 
@@ -31,7 +31,7 @@ Au module 14, nous avons explore les materiaux PBR et l'eclairage dans Three.js 
 - **Shadow mapping** : configuration de la shadow camera, mapSize, bias, normalBias, PCFSoftShadowMap
 - **ShaderMaterial / RawShaderMaterial** : GLSL personnalise dans Three.js
 
-Nous allons maintenant apprendre a charger des modeles 3D crees dans des logiciels comme Blender, et a jouer leurs animations.
+Nous allons maintenant apprendre a charger des modèles 3D crees dans des logiciels comme Blender, et a jouer leurs animations.
 
 </details>
 
@@ -98,7 +98,7 @@ USDZ       ←→  HEIF    (ecosysteme Apple, AR Kit)
 
 ---
 
-## GLTFLoader : charger un modele
+## GLTFLoader : charger un modèle
 
 ### Chargement de base
 
@@ -134,9 +134,9 @@ async function loadModel(): Promise<void> {
 }
 ```
 
-### Structure du resultat GLTF
+### Structure du résultat GLTF
 
-Quand un modele est charge, le callback recoit un objet `GLTF` dont la structure est riche :
+Quand un modèle est charge, le callback recoit un objet `GLTF` dont la structure est riche :
 
 ```typescript
 interface GLTFResult {
@@ -181,7 +181,7 @@ async function inspectModel(): Promise<void> {
 
 ### Configurer les materiaux et les ombres
 
-Les modeles glTF importent leurs materiaux PBR, mais il faut souvent activer les ombres et ajuster l'environment map :
+Les modèles glTF importent leurs materiaux PBR, mais il faut souvent activer les ombres et ajuster l'environment map :
 
 ```typescript
 async function loadWithShadows(): Promise<void> {
@@ -208,9 +208,9 @@ async function loadWithShadows(): Promise<void> {
 
 ## DRACOLoader : compression de geometrie
 
-### Le probleme
+### Le problème
 
-Un modele 3D detaille peut facilement peser 50 Mo+ en geometrie brute. **Draco** est un algorithme de compression developpe par Google qui reduit la taille des geometries de **60 a 90%**.
+Un modèle 3D détaillé peut facilement peser 50 Mo+ en geometrie brute. **Draco** est un algorithme de compression développé par Google qui reduit la taille des geometries de **60 a 90%**.
 
 ```
 Sans Draco :   model.glb = 45 Mo
@@ -250,10 +250,10 @@ Copiez les fichiers du decoder dans votre dossier public :
 ```bash
 cp -r node_modules/three/examples/jsm/libs/draco/ public/draco/
 ```
-Les fichiers necessaires : `draco_decoder.js`, `draco_decoder.wasm`, `draco_wasm_wrapper.js`
+Les fichiers nécessaires : `draco_decoder.js`, `draco_decoder.wasm`, `draco_wasm_wrapper.js`
 :::
 
-### Compresser un modele avec glTF-Transform
+### Compresser un modèle avec glTF-Transform
 
 ```bash
 # Installer glTF-Transform (outil CLI)
@@ -276,7 +276,7 @@ gltf-transform ktx2 model_opt.glb model_final.glb
 
 ### Pourquoi compresser les textures ?
 
-Les textures sont souvent le plus gros poste de memoire GPU. Une texture 4K RGBA non compressee occupe **64 Mo** en VRAM. Les formats GPU compresses (BCn, ETC, ASTC) restent compresses en VRAM.
+Les textures sont souvent le plus gros poste de mémoire GPU. Une texture 4K RGBA non compressee occupe **64 Mo** en VRAM. Les formats GPU compresses (BCn, ETC, ASTC) restent compresses en VRAM.
 
 ```
 Texture 4096x4096 RGBA :
@@ -315,11 +315,11 @@ Basis Universal (utilise par KTX2) transcode automatiquement vers le format opti
 
 ---
 
-## Hierarchie de scene
+## Hiérarchie de scene
 
 ### Parcourir la scene
 
-Chaque modele glTF importe une hierarchie d'objets — comme un arbre DOM en HTML. Three.js fournit des methodes pour la parcourir :
+Chaque modèle glTF importe une hiérarchie d'objets — comme un arbre DOM en HTML. Three.js fournit des méthodes pour la parcourir :
 
 ```typescript
 // ─── traverse() : parcours recursif de tous les descendants ───
@@ -350,7 +350,7 @@ root.children.forEach((child) => {
 });
 ```
 
-### Exemple : inventaire d'un modele
+### Exemple : inventaire d'un modèle
 
 ```typescript
 interface SceneInventory {
@@ -410,7 +410,7 @@ console.log(`Materials uniques: ${inv.materials.size}`);
 
 ---
 
-## AnimationMixer : le systeme d'animation
+## AnimationMixer : le système d'animation
 
 ### Analogie : le lecteur de musique
 
@@ -478,7 +478,7 @@ L'erreur la plus courante est d'oublier d'appeler `mixer.update()` dans le rende
 
 ### AnimationClip : le morceau
 
-Un `AnimationClip` est un ensemble de **KeyframeTrack** — des courbes d'animation pour chaque propriete animee :
+Un `AnimationClip` est un ensemble de **KeyframeTrack** — des courbes d'animation pour chaque propriété animee :
 
 ```typescript
 // ─── Structure d'un AnimationClip ─────────────────────────
@@ -608,7 +608,7 @@ function animate(): void {
 }
 ```
 
-### Evenements d'animation
+### Événements d'animation
 
 ```typescript
 // ─── Ecouter la fin d'une animation ──────────────────────
@@ -807,9 +807,9 @@ function updateBlink(delta: number): void {
 
 ## InstancedMesh : milliers d'objets
 
-### Le probleme des draw calls
+### Le problème des draw calls
 
-Chaque `scene.add(mesh)` = un draw call GPU. 10 000 arbres = 10 000 draw calls = ~15 FPS. `InstancedMesh` resout ce probleme en dessinant N copies d'une meme geometrie en **un seul draw call**.
+Chaque `scene.add(mesh)` = un draw call GPU. 10 000 arbres = 10 000 draw calls = ~15 FPS. `InstancedMesh` resout ce problème en dessinant N copies d'une même geometrie en **un seul draw call**.
 
 ```
 Sans instancing :   10 000 meshes  →  10 000 draw calls  →  15 FPS
@@ -900,7 +900,7 @@ function animateInstances(time: number): void {
 }
 ```
 
-### Instancier un modele glTF
+### Instancier un modèle glTF
 
 ```typescript
 async function createForest(): Promise<void> {
@@ -1012,7 +1012,7 @@ function startApp(): void {
 
 Creez une application qui :
 
-1. Charge un modele glTF anime (utilisez un modele gratuit de [Mixamo](https://www.mixamo.com/) ou [Ready Player Me](https://readyplayer.me/))
+1. Charge un modèle glTF anime (utilisez un modèle gratuit de [Mixamo](https://www.mixamo.com/) ou [Ready Player Me](https://readyplayer.me/))
 2. Affiche la liste des animations disponibles dans la console
 3. Joue l'animation "idle" par defaut
 4. Permet de basculer entre idle / walk / run avec les touches du clavier (crossfade de 0.3s)
@@ -1021,7 +1021,7 @@ Creez une application qui :
 
 **Indices** :
 - Utilisez la classe `CharacterAnimationController` vue plus haut comme point de depart
-- Les modeles Mixamo exportent en glTF avec des noms d'animation comme "idle", "walking", "running"
+- Les modèles Mixamo exportent en glTF avec des noms d'animation comme "idle", "walking", "running"
 - N'oubliez pas `mixer.update(delta)` dans le render loop
 
 <details>
@@ -1243,16 +1243,16 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
-| Concept | API Three.js | Details cles |
+| Concept | API Three.js | Details clés |
 |---------|-------------|-------------|
 | Format 3D web | glTF 2.0 (`.glb`/`.gltf`) | Standard Khronos, PBR natif, animations, compression |
-| Charger un modele | `GLTFLoader.loadAsync()` | Retourne `{ scene, animations, cameras, asset }` |
-| Compression geometrie | `DRACOLoader` | Reduction 60-90%, necessite le decoder WASM |
+| Charger un modèle | `GLTFLoader.loadAsync()` | Retourne `{ scene, animations, cameras, asset }` |
+| Compression geometrie | `DRACOLoader` | Reduction 60-90%, nécessité le decoder WASM |
 | Compression textures | `KTX2Loader` | Basis Universal, reste compresse en VRAM |
-| Parcours hierarchie | `traverse()`, `getObjectByName()` | Parcours recursif de tous les descendants |
-| Systeme d'animation | `AnimationMixer` | `mixer.update(delta)` dans le render loop |
+| Parcours hiérarchie | `traverse()`, `getObjectByName()` | Parcours récursif de tous les descendants |
+| Système d'animation | `AnimationMixer` | `mixer.update(delta)` dans le render loop |
 | Clip d'animation | `AnimationClip` | Ensemble de KeyframeTrack, duree, nom |
 | Controles lecture | `AnimationAction` | play, stop, pause, timeScale, weight, loop |
 | Transition fluide | `crossFadeTo()` | Fondu enchaine entre deux actions |
@@ -1273,3 +1273,13 @@ animate();
 - [glTF-Transform — Optimisation CLI](https://gltf-transform.dev/)
 - [Three.js Animation System](https://threejs.org/docs/#manual/en/introduction/Animation-system)
 - [Ready Player Me — Avatars 3D](https://readyplayer.me/)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 15 modèles](../screencasts/screencast-15-modeles.md)
+2. **Lab** : [lab-15-modèles-animations](../labs/lab-15-modeles-animations/README)
+3. **Quiz** : [quiz 15 modèles](../quizzes/quiz-15-modeles.html)
+:::

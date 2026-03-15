@@ -4,7 +4,7 @@
 - Comprendre les trois transformations fondamentales : Scale, Rotation, Translation (SRT)
 - Construire les matrices de transformation 4x4 correspondantes
 - Decouvrir les quaternions comme alternative aux angles d'Euler
-- Visualiser le probleme du gimbal lock et comment le resoudre
+- Visualiser le problème du gimbal lock et comment le résoudre
 
 ## Plan de tournage
 | Timing | Contenu | Ecran |
@@ -15,13 +15,13 @@
 | 4:00-6:00 | Matrice de rotation : autour de X, Y, Z, axe arbitraire | VS Code + visualisation |
 | 6:00-7:30 | Ordre SRT : pourquoi Scale puis Rotate puis Translate | Visualisation interactive |
 | 7:30-8:30 | Angles d'Euler : roulis, tangage, lacet | Slides + demo |
-| 8:30-10:00 | Gimbal lock : demonstration visuelle du probleme | Demo 3D animee |
-| 10:00-12:00 | Quaternions : intuition, creation, interpolation (slerp) | Slides + VS Code |
+| 8:30-10:00 | Gimbal lock : demonstration visuelle du problème | Demo 3D animee |
+| 10:00-12:00 | Quaternions : intuition, création, interpolation (slerp) | Slides + VS Code |
 | 12:00-13:30 | Implementation : classe Transform avec position, rotation, scale | VS Code |
-| 13:30-14:00 | Recapitulatif | Slides |
+| 13:30-14:00 | Récapitulatif | Slides |
 
-## Points cles a montrer
-- L'ordre de multiplication des matrices change le resultat visuellement
+## Points clés a montrer
+- L'ordre de multiplication des matrices change le résultat visuellement
 - Le gimbal lock se produit quand deux axes de rotation s'alignent
 - Les quaternions evitent le gimbal lock et permettent des interpolations lisses
 - La fonction slerp pour des transitions fluides entre orientations

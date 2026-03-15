@@ -8,15 +8,15 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Expliquer ce qu'est un milieu participatif (participating media) et ses proprietes optiques
+- Expliquer ce qu'est un milieu participatif (participating media) et ses propriétés optiques
 - Appliquer la loi de Beer-Lambert pour calculer la transmittance
 - Distinguer in-scattering et out-scattering et leur role dans le transport de lumiere
 - Implementer les fonctions de phase Henyey-Greenstein et Rayleigh
-- Decrire l'equation du rendu volumetrique et son integration numerique
+- Decrire l'equation du rendu volumetrique et son intégration numérique
 - Implementer le ray marching volumetrique avec pas fixe et adaptatif
-- Creer differents types de brouillard : depth fog, height fog, exponential fog
+- Créer différents types de brouillard : depth fog, height fog, exponential fog
 - Implementer un eclairage volumetrique (god rays) par ray marching + shadow map
-- Generer des nuages avec du bruit Perlin-Worley et le modele Beer-powder
+- Générer des nuages avec du bruit Perlin-Worley et le modèle Beer-powder
 - Comprendre la diffusion atmospherique de Rayleigh (ciel bleu) et de Mie (couchers de soleil)
 - Implementer un fog volumetrique en WGSL compute pass
 - Optimiser les performances avec le rendu half-res, la reprojection temporelle et le blue noise
@@ -24,19 +24,19 @@ A la fin de ce module, vous serez capable de :
 ---
 
 <details>
-<summary>Rappel du cours precedent — Global illumination et techniques screen-space (Module 24)</summary>
+<summary>Rappel du cours précédent — Global illumination et techniques screen-space (Module 24)</summary>
 
-Au module 24, nous avons explore l'illumination globale en temps reel :
+Au module 24, nous avons explore l'illumination globale en temps réel :
 
 - **Illumination globale** : lumiere indirecte via rebonds, color bleeding, caustics
 - **Light probes / SH** : capturer l'irradiance en 9 coefficients SH (bandes 0/1/2), interpolation trilineaire dans une grille 3D
 - **Reflection probes** : cubemaps avec box projection pour les reflexions dans les interieurs
-- **Cubemap convolution** : integrer l'hemisphere pour obtenir une irradiance map diffuse
+- **Cubemap convolution** : intégrer l'hemisphere pour obtenir une irradiance map diffuse
 - **VXGI** : voxeliser la scene, mipmaps 3D, cone tracing pour l'indirect
 - **SSR** : ray march dans le depth buffer, Hi-Z tracing pour l'acceleration, fallback environment map
 - **SSGI** : generaliser le SSR a toutes les directions pour le diffus indirect
 - **TAA** : jitter projection (Halton), reprojection temporelle, neighborhood clamping (YCoCg), velocity buffer
-- **HBAO+ / GTAO** : ambient occlusion base sur l'horizon, integration analytique par slice
+- **HBAO+ / GTAO** : ambient occlusion base sur l'horizon, intégration analytique par slice
 
 Nous allons maintenant plonger dans le rendu volumetrique — simuler la lumiere qui traverse des milieux comme le brouillard, la fumee et les nuages.
 
@@ -47,7 +47,7 @@ Nous allons maintenant plonger dans le rendu volumetrique — simuler la lumiere
 ## Milieux participatifs : quand l'air n'est pas vide
 
 :::tip Analogie
-Imagine que tu conduis dans un epais brouillard la nuit. Tes phares eclairent le brouillard lui-meme — tu vois des "rayons" de lumiere. Pourquoi ? Parce que les gouttelettes d'eau en suspension dans l'air interceptent la lumiere, en absorbent une partie, et en renvoient une partie vers tes yeux. L'air n'est plus "invisible" : il participe au transport de la lumiere. C'est exactement ce que font les milieux participatifs en 3D — le brouillard, la fumee, les nuages ne sont pas des surfaces mais des volumes qui interagissent avec chaque rayon lumineux.
+Imagine que tu conduis dans un epais brouillard la nuit. Tes phares eclairent le brouillard lui-même — tu vois des "rayons" de lumiere. Pourquoi ? Parce que les gouttelettes d'eau en suspension dans l'air interceptent la lumiere, en absorbent une partie, et en renvoient une partie vers tes yeux. L'air n'est plus "invisible" : il participe au transport de la lumiere. C'est exactement ce que font les milieux participatifs en 3D — le brouillard, la fumee, les nuages ne sont pas des surfaces mais des volumes qui interagissent avec chaque rayon lumineux.
 :::
 
 ### Proprietes optiques d'un milieu participatif
@@ -173,7 +173,7 @@ Phase isotrope :
 
 ### Henyey-Greenstein
 
-La fonction de phase la plus utilisee en graphisme. Le parametre `g` controle l'asymetrie.
+La fonction de phase la plus utilisee en graphisme. Le paramètre `g` controle l'asymetrie.
 
 ```
 Henyey-Greenstein :
@@ -215,7 +215,7 @@ fn dual_lobe_phase(cos_theta: f32, g_forward: f32, g_back: f32, blend: f32) -> f
 
 ### Rayleigh
 
-Pour les tres petites particules (molecules d'air) : la lumiere bleue est plus diffusee que la rouge.
+Pour les très petites particules (molecules d'air) : la lumiere bleue est plus diffusee que la rouge.
 
 ```
 Rayleigh scattering :
@@ -996,7 +996,7 @@ const volumetricFogShader = {
 
 ## Performance : optimisations essentielles
 
-### Half-resolution rendering
+### Half-résolution rendering
 
 ```
 Full-res (1920x1080) :     Half-res (960x540) + upsample :
@@ -1062,11 +1062,11 @@ fn animated_blue_noise(pixel: vec2u, frame: u32) -> f32 {
 
 ### Exercice VOL.1 — Height fog + god rays en Three.js
 
-Creer une scene avec :
-1. Un terrain genere (PlaneGeometry + displacement)
+Créer une scene avec :
+1. Un terrain généré (PlaneGeometry + displacement)
 2. Un height fog qui se concentre dans les vallees
 3. Un soleil directionnel avec des god rays (ray march dans un ShaderPass)
-4. Parametre `fogDensity`, `fogHeight` et `sunIntensity` ajustables avec dat.gui
+4. Paramètre `fogDensity`, `fogHeight` et `sunIntensity` ajustables avec dat.gui
 
 ```typescript
 // TODO: Creer le terrain (PlaneGeometry + PerlinNoise displacement)
@@ -1333,7 +1333,7 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | Formule / Cout |
 |---------|-------------|:--------------:|
@@ -1342,7 +1342,7 @@ animate();
 | **In/Out-scattering** | Lumiere deviee vers/hors de la direction d'observation | Integrale sur la sphere |
 | **Henyey-Greenstein** | Phase function parametrique (g: forward/back scatter) | g=0 isotrope, g=0.8 forward |
 | **Rayleigh** | Diffusion par petites particules, sigma proportionnel a 1/lambda^4 | Ciel bleu, couchee de soleil |
-| **Ray marching** | Integration numerique le long du rayon, pas fixe ou adaptatif | 32-128 pas typiquement |
+| **Ray marching** | Intégration numérique le long du rayon, pas fixe ou adaptatif | 32-128 pas typiquement |
 | **Depth fog** | Lineaire ou exponentiel, base sur la distance camera-fragment | ~0.1ms (fragment shader) |
 | **Height fog** | Densite decroissant exponentiellement avec l'altitude | ~0.1ms (fragment shader) |
 | **God rays** | Ray march + shadow map sampling le long du rayon | ~1-3ms (16-32 pas) |
@@ -1350,17 +1350,23 @@ animate();
 | **Beer-powder** | 2 × exp(-d) × (1 - exp(-2d)), simule le multi-scattering dans les nuages | Approximation rapide |
 | **Atmosphere** | Rayleigh (molecules) + Mie (aerosols) integres le long du rayon | ~2ms (32+8 pas) |
 | **Half-res render** | Rendre le volume a 1/4 des pixels, upsample bilateral | 4x plus rapide |
-| **Reprojection temporelle** | Reutiliser 90% de la frame precedente (reprojetee) | Qualite gratuite |
+| **Reprojection temporelle** | Reutiliser 90% de la frame précédente (reprojetee) | Qualite gratuite |
 | **Blue noise** | Distribution de bruit uniforme pour le jitter du ray marching | Banding invisible |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [24 - Global illumination](./24-global-illumination-screen-space.md) | [26 - WebXR et animation procedurale](./26-webxr-animation-procedurale.md) |
 
-**Ressources associees :**
-- [Lab 25 — Rendu volumetrique](../labs/lab-25-rendu-volumetrique/)
-- [Quiz 25 — Rendu volumetrique](../quizzes/quiz-25-rendu-volumetrique.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 25 volumetrique](../screencasts/screencast-25-volumetrique.md)
+2. **Lab** : [lab-25-rendu-volumetrique](../labs/lab-25-rendu-volumetrique/README)
+3. **Quiz** : [quiz 25 volumetrique](../quizzes/quiz-25-volumetrique.html)
+:::

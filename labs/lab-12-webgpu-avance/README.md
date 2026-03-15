@@ -3,25 +3,25 @@
 ## Objectif
 
 Explorer les techniques avancees de WebGPU : instanced rendering, indirect draw,
-deferred rendering (G-buffer), cubemap, generation de mipmaps, ring buffer allocator
+deferred rendering (G-buffer), cubemap, génération de mipmaps, ring buffer allocator
 et analyse de timestamps GPU.
 
-## Concepts cles
+## Concepts clés
 
 ### Instance buffer
 
-Pour dessiner N instances d'un meme mesh, on prepare un buffer contenant une matrice modele 4x4
+Pour dessiner N instances d'un même mesh, on prepare un buffer contenant une matrice modèle 4x4
 (16 floats = 64 octets) par instance. Le GPU lit automatiquement la matrice correspondant
-a chaque instance via `stepMode: 'instance'`.
+à chaque instance via `stepMode: 'instance'`.
 
 ### Indirect draw
 
-Au lieu de specifier les arguments de draw dans le code CPU, on les ecrit dans un buffer GPU :
+Au lieu de spécifier les arguments de draw dans le code CPU, on les écrit dans un buffer GPU :
 `[vertexCount, instanceCount, firstVertex, firstInstance]` (4 x uint32).
 
 ### G-buffer (deferred rendering)
 
-Le rendu differe ecrit dans plusieurs render targets (G-buffer) :
+Le rendu differe écrit dans plusieurs render targets (G-buffer) :
 - Position : `rgba32float`
 - Normale : `rgba16float`
 - Albedo : `rgba8unorm`
@@ -55,7 +55,7 @@ Completez les fonctions dans `exercise.ts` puis lancez les tests :
 npx tsx exercise.ts
 ```
 
-Verifiez vos resultats avec la solution :
+Verifiez vos résultats avec la solution :
 
 ```bash
 npx tsx solution.ts

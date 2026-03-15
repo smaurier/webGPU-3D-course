@@ -9,30 +9,30 @@
 A la fin de ce module, vous serez capable de :
 
 - Implementer les fonctions de noise (Perlin, Simplex, Worley) en GLSL et WGSL
-- Combiner des octaves de noise avec le FBM pour creer des details multi-echelles
-- Generer un terrain procedural avec vertex displacement dans le vertex shader
-- Creer un water shader avec deformation sinusoidale, refraction et Fresnel
-- Ecrire des textures procedurales (marble, wood, fire) purement mathematiques
-- Definir des SDFs et les combiner avec des operations booleennes
+- Combiner des octaves de noise avec le FBM pour créer des details multi-echelles
+- Générer un terrain procedural avec vertex displacement dans le vertex shader
+- Créer un water shader avec deformation sinusoidale, refraction et Fresnel
+- Écrire des textures procedurales (marble, wood, fire) purement mathematiques
+- Définir des SDFs et les combiner avec des operations booleennes
 - Implementer un ray marcher dans le fragment shader pour le rendu volumetrique
 - Appliquer des effets stylises : toon shading, outline, dissolution, UV distortion
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — Shadow mapping et techniques d'ombres (Module 18)</summary>
+<summary>Rappel du cours précédent — Shadow mapping et techniques d'ombres (Module 18)</summary>
 
 Au module 18, nous avons couvert les techniques d'ombres :
 
 - **Shadow mapping 2 passes** : render depuis la lumiere (depth map) puis comparer la profondeur de chaque fragment avec la shadow map
 - **Shadow acne / Peter panning** : artefacts causes par la discretisation, corriges avec bias et normal bias
 - **PCF (Percentage Closer Filtering)** : echantillonner plusieurs texels de la shadow map pour adoucir les bords
-- **CSM (Cascaded Shadow Maps)** : decouper le frustum en cascades pour repartir la resolution sur les grandes scenes
+- **CSM (Cascaded Shadow Maps)** : découper le frustum en cascades pour repartir la résolution sur les grandes scenes
 - **VSM (Variance Shadow Maps)** : stocker depth + depth² pour permettre le blur gaussien, inegalite de Chebyshev
 - **Point light shadows** : 6 passes de rendu dans un cubemap (fov = 90°)
 - **Three.js** : `castShadow`, `receiveShadow`, `shadow.mapSize`, `shadow.bias`, `PCFSoftShadowMap`
 
-Nous allons maintenant utiliser les shaders pour creer des effets visuels proceduraux — sans aucune texture image.
+Nous allons maintenant utiliser les shaders pour créer des effets visuels proceduraux — sans aucune texture image.
 
 </details>
 
@@ -41,7 +41,7 @@ Nous allons maintenant utiliser les shaders pour creer des effets visuels proced
 ## Noise functions : le coeur du procedural
 
 :::tip Analogie
-Imagine un champ de ble vu d'avion. Les epis ne sont pas parfaitement alignes, mais leur desordre a une **structure** — il y a des zones qui ondulent ensemble, des motifs a grande echelle et des details fins. Les fonctions de noise font exactement ca : elles generent du "hasard structure" — ni trop ordonne (grille), ni trop chaotique (bruit blanc). C'est la base de pratiquement tout ce qui a l'air "naturel" en 3D.
+Imagine un champ de ble vu d'avion. Les epis ne sont pas parfaitement alignes, mais leur desordre à une **structure** — il y a des zones qui ondulent ensemble, des motifs a grande echelle et des details fins. Les fonctions de noise font exactement ça : elles generent du "hasard structure" — ni trop ordonne (grille), ni trop chaotique (bruit blanc). C'est la base de pratiquement tout ce qui a l'air "naturel" en 3D.
 :::
 
 ### Bruit blanc vs noise coherent
@@ -61,8 +61,8 @@ Inutilisable visuellement      Aspect "naturel" et organique
 
 ### Perlin noise — les bases
 
-Le Perlin noise fonctionne en 3 etapes :
-1. **Grille** : definir des gradients aleatoires aux noeuds d'une grille reguliere
+Le Perlin noise fonctionne en 3 étapes :
+1. **Grille** : définir des gradients aleatoires aux noeuds d'une grille reguliere
 2. **Vecteurs distance** : pour chaque point, calculer le vecteur vers chaque noeud voisin
 3. **Interpolation** : combiner les produits scalaires (gradient . distance) avec une courbe de lissage
 
@@ -299,16 +299,16 @@ fn fbm(p: vec2f, octaves: i32, lacunarity: f32, gain: f32) -> f32 {
 
 ### Parametres du FBM
 
-| Parametre | Role | Valeur typique | Effet visuel |
+| Paramètre | Role | Valeur typique | Effet visuel |
 |-----------|------|----------------|--------------|
 | **octaves** | Nombre de couches | 4-8 | Plus d'octaves = plus de detail fin |
 | **lacunarity** | Multiplicateur de frequence | 2.0 | >2 = details plus serres par octave |
 | **gain (persistance)** | Multiplicateur d'amplitude | 0.5 | >0.5 = details fins plus prononces |
-| **amplitude initiale** | Poids de la premiere octave | 0.5-1.0 | Echelle globale du bruit |
+| **amplitude initiale** | Poids de la première octave | 0.5-1.0 | Echelle globale du bruit |
 
 ---
 
-## Terrain generation
+## Terrain génération
 
 ### Heightmap procedural
 
@@ -726,7 +726,7 @@ float sceneBlob(vec3 p, float time) {
 
 ### Le principe
 
-Le ray marching avance le long d'un rayon par pas variables : a chaque etape, on evalue la SDF au point courant pour connaitre la distance minimale au plus proche objet, et on avance de cette distance.
+Le ray marching avance le long d'un rayon par pas variables : à chaque étape, on évalué la SDF au point courant pour connaître la distance minimale au plus proche objet, et on avance de cette distance.
 
 ```
 Camera                                          Surface
@@ -980,7 +980,7 @@ vec3 toonShading(vec3 normal, vec3 lightDir, vec3 baseColor) {
 
 ## Outline shader
 
-### Methode 1 : post-process (Sobel edge detection)
+### Méthode 1 : post-process (Sobel edge detection)
 
 ```glsl
 // Fragment shader post-process — detection de contours Sobel
@@ -1024,7 +1024,7 @@ void main() {
 }
 ```
 
-### Methode 2 : normal extrusion (vertex-based)
+### Méthode 2 : normal extrusion (vertex-based)
 
 ```glsl
 // Vertex shader — passe d'outline par extrusion des normales
@@ -1116,7 +1116,7 @@ void main() {
 ### Exercice SH.1 — Terrain procedural avec water shader
 
 Creez une scene Three.js contenant :
-1. Un terrain genere par noise (ShaderMaterial avec vertex displacement)
+1. Un terrain généré par noise (ShaderMaterial avec vertex displacement)
 2. Un plan d'eau avec Fresnel et reflets speculaires
 3. Une animation en boucle (vagues, temps)
 
@@ -1377,7 +1377,7 @@ window.addEventListener('resize', () => {
 
 ---
 
-## Resume
+## Résumé
 
 | Technique | Principe | Usage typique |
 |-----------|----------|---------------|
@@ -1405,10 +1405,17 @@ window.addEventListener('resize', () => {
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [18 - Shadow mapping](./18-shadow-mapping.md) | [20 - Physique et interactions](./20-physique-interactions.md) |
 
-**Ressources associees :**
-- [Lab 19 — Shaders creatifs](../labs/lab-19-shaders-creatifs/)
-- [Quiz 19 — Shaders creatifs](../quizzes/quiz-19-shaders-creatifs.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 19 shaders creatifs](../screencasts/screencast-19-shaders-creatifs.md)
+2. **Lab** : [lab-19-shaders-creatifs](../labs/lab-19-shaders-creatifs/README)
+3. **Visualisation** : [Shader Sandbox](../visualizations/shader-sandbox.html)
+4. **Quiz** : [quiz 19 shaders creatifs](../quizzes/quiz-19-shaders-creatifs.html)
+:::

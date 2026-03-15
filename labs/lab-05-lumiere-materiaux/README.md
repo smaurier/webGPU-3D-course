@@ -2,10 +2,10 @@
 
 ## Objectif
 
-Implementer les modeles d'eclairage classiques (Lambert, Phong, Blinn-Phong) et le
-modele PBR (Cook-Torrance) avec les fonctions GGX, Fresnel-Schlick et Smith.
+Implementer les modèles d'eclairage classiques (Lambert, Phong, Blinn-Phong) et le
+modèle PBR (Cook-Torrance) avec les fonctions GGX, Fresnel-Schlick et Smith.
 
-## Concepts cles
+## Concepts clés
 
 ### Lambert (diffus)
 

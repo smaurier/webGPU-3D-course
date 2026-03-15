@@ -8,17 +8,17 @@
 
 - Comprendre la structure complete d'un GPURenderPipeline
 - Configurer les vertex buffers avec GPUVertexBufferLayout
-- Maitriser les bind groups et bind group layouts
-- Creer et mettre a jour des uniform buffers et storage buffers
+- Maîtriser les bind groups et bind group layouts
+- Créer et mettre a jour des uniform buffers et storage buffers
 - Binder des textures et des samplers aux shaders
 - Configurer le depth-stencil et le multisampling (MSAA)
-- Encoder un render pass complet avec toutes ses etapes
-- Comprendre la difference fondamentale entre les bindings WebGL et WebGPU
+- Encoder un render pass complet avec toutes ses étapes
+- Comprendre la différence fondamentale entre les bindings WebGL et WebGPU
 
 ---
 
 <details>
-<summary>Rappel du cours precedent (Module 09 — WebGPU architecture et WGSL)</summary>
+<summary>Rappel du cours précédent (Module 09 — WebGPU architecture et WGSL)</summary>
 
 Dans le module 09, nous avons decouvert :
 - Le paradigme command-based de WebGPU vs la state machine de WebGL
@@ -28,7 +28,7 @@ Dans le module 09, nous avons decouvert :
 - Un premier triangle avec un pipeline minimal et un shader inline
 - La gestion d'erreurs : `device.lost`, `pushErrorScope` / `popErrorScope`
 
-Dans ce module, nous allons approfondir le coeur du rendu WebGPU : le render pipeline et le systeme de bind groups qui remplace les appels `gl.bindTexture`, `gl.uniformMatrix4fv`, etc. de WebGL.
+Dans ce module, nous allons approfondir le coeur du rendu WebGPU : le render pipeline et le système de bind groups qui remplace les appels `gl.bindTexture`, `gl.uniformMatrix4fv`, etc. de WebGL.
 
 </details>
 
@@ -40,13 +40,13 @@ Dans ce module, nous allons approfondir le coeur du rendu WebGPU : le render pip
 
 Pensez au render pipeline comme une chaine de montage dans une usine automobile :
 
-- **Vertex stage** = l'atelier de decoupe : transforme la matiere brute (vertices) en pieces positionnees
-- **Primitive assembly + rasterization** = l'atelier d'assemblage : assemble les pieces en formes (triangles) et les decoupe aux dimensions
-- **Fragment stage** = l'atelier de peinture : donne la couleur finale a chaque pixel visible
-- **Depth-stencil** = le controle qualite : verifie que chaque piece est visible (pas cachee derriere une autre)
-- **Output merger** = l'expedition : ecrit le resultat final dans le framebuffer
+- **Vertex stage** = l'atelier de découpé : transforme la matiere brute (vertices) en pieces positionnees
+- **Primitive assembly + rasterization** = l'atelier d'assemblage : assemble les pieces en formes (triangles) et les découpé aux dimensions
+- **Fragment stage** = l'atelier de peinture : donne la couleur finale à chaque pixel visible
+- **Depth-stencil** = le controle qualite : vérifié que chaque piece est visible (pas cachee derriere une autre)
+- **Output merger** = l'expedition : écrit le résultat final dans le framebuffer
 
-La difference avec WebGL : en WebGPU, toute la chaine est **pre-configuree et immutable**. On ne peut pas changer un seul maillon en cours de route. Si on veut une variante, on cree une nouvelle chaine.
+La différence avec WebGL : en WebGPU, toute la chaine est **pre-configuree et immutable**. On ne peut pas changer un seul maillon en cours de route. Si on veut une variante, on créé une nouvelle chaine.
 
 ### Structure du pipeline
 
@@ -87,7 +87,7 @@ GPURenderPipeline
         +-- alphaToCoverageEnabled
 ```
 
-### Creation d'un pipeline complet
+### Création d'un pipeline complet
 
 ```typescript
 const pipeline = device.createRenderPipeline({
@@ -228,7 +228,7 @@ const bindGroup = device.createBindGroup({
 | Pipeline unique | `'auto'` |
 | Plusieurs pipelines partagent des bind groups | Layout explicite |
 | Bind groups crees avant le pipeline | Layout explicite |
-| Performance critique (eviter les re-creations) | Layout explicite |
+| Performance critique (éviter les re-creations) | Layout explicite |
 | Plusieurs variantes de shader (debug, release) | Layout explicite |
 
 ---
@@ -357,7 +357,7 @@ const perInstanceLayout: GPUVertexBufferLayout = {
 
 ---
 
-## Bind groups : le coeur du systeme de ressources
+## Bind groups : le coeur du système de ressources
 
 ### Concept
 
@@ -432,7 +432,7 @@ pass.draw(/* objet 2 */);
 
 ## Uniform buffers
 
-### Creation et mise a jour
+### Création et mise a jour
 
 ```typescript
 // Les uniforms sont des donnees constantes pour un draw call.
@@ -560,15 +560,15 @@ for (let i = 0; i < NUM_OBJECTS; i++) {
 
 ## Storage buffers
 
-### Difference avec les uniform buffers
+### Différence avec les uniform buffers
 
 | Aspect | Uniform buffer | Storage buffer |
 |--------|---------------|----------------|
-| Acces | Lecture seule | Lecture + ecriture |
+| Acces | Lecture seule | Lecture + écriture |
 | Taille max | ~64 Ko (typique) | ~128 Mo a 2 Go |
 | Alignement | Strict (256 bytes pour dynamic offset) | 4 bytes |
 | Performance | Optimise pour petites donnees frequentes | Optimise pour grandes donnees |
-| Cas d'usage | Matrices, temps, parametres | Tableaux de particules, instances, resultats compute |
+| Cas d'usage | Matrices, temps, paramètres | Tableaux de particules, instances, résultats compute |
 
 ### Utilisation dans le shader
 
@@ -598,7 +598,7 @@ fn vs_main(
 }
 ```
 
-### Creation cote TypeScript
+### Création cote TypeScript
 
 ```typescript
 interface Particle {
@@ -649,7 +649,7 @@ device.queue.writeBuffer(particleBuffer, 0, data);
 
 ## Texture bindings
 
-### Creer une texture depuis une image
+### Créer une texture depuis une image
 
 ```typescript
 async function loadTexture(
@@ -741,7 +741,7 @@ const textureBindGroup = device.createBindGroup({
 });
 ```
 
-> **Analogie WebGL** : en WebGL, texture et sampler sont fusionnes dans un `sampler2D`. En WebGPU, ils sont separes — on peut reutiliser le meme sampler pour plusieurs textures, ou changer de sampler sans recreer la texture.
+> **Analogie WebGL** : en WebGL, texture et sampler sont fusionnes dans un `sampler2D`. En WebGPU, ils sont separes — on peut réutiliser le même sampler pour plusieurs textures, ou changer de sampler sans recreer la texture.
 
 ---
 
@@ -749,7 +749,7 @@ const textureBindGroup = device.createBindGroup({
 
 ### Pourquoi un depth buffer ?
 
-Sans depth test, les objets sont dessines dans l'ordre de soumission — un objet dessine en dernier apparait toujours devant, meme s'il est geometriquement derriere.
+Sans depth test, les objets sont dessines dans l'ordre de soumission — un objet dessine en dernier apparait toujours devant, même s'il est geometriquement derriere.
 
 ### Configuration
 
@@ -796,9 +796,9 @@ const renderPass = encoder.beginRenderPass({
 |--------|-----------|---------|-------|
 | `depth16unorm` | 16 bits | Non | Economique, mobile |
 | `depth24plus` | 24+ bits | Non | Standard desktop |
-| `depth32float` | 32 bits float | Non | Haute precision |
+| `depth32float` | 32 bits float | Non | Haute précision |
 | `depth24plus-stencil8` | 24 bits + 8 bits | Oui | Avec stencil |
-| `depth32float-stencil8` | 32 bits + 8 bits | Oui | Max precision + stencil |
+| `depth32float-stencil8` | 32 bits + 8 bits | Oui | Max précision + stencil |
 
 ### depthCompare : fonctions de comparaison
 
@@ -852,7 +852,7 @@ const renderPass = encoder.beginRenderPass({
 });
 ```
 
-> **Analogie WebGL** : en WebGL, MSAA etait gere implicitement par le navigateur via `antialias: true` dans les options du contexte. En WebGPU, c'est explicite — on cree la texture MSAA et on configure le resolve.
+> **Analogie WebGL** : en WebGL, MSAA etait géré implicitement par le navigateur via `antialias: true` dans les options du contexte. En WebGPU, c'est explicite — on créé la texture MSAA et on configure le resolve.
 
 ---
 
@@ -1012,7 +1012,7 @@ lightingPass.end();
 
 ## Comparaison WebGL vs WebGPU : bindings
 
-### WebGL : etat mutable, bindings individuels
+### WebGL : état mutable, bindings individuels
 
 ```typescript
 // WebGL : chaque binding est un appel separe, etat global mutable
@@ -1072,7 +1072,7 @@ device.queue.submit([encoder.finish()]);
 | Binder une texture | `gl.activeTexture()` + `gl.bindTexture()` + `gl.uniform1i()` | Inclus dans le bind group |
 | Configurer un attribut | `gl.bindBuffer()` + `gl.vertexAttribPointer()` + `gl.enableVertexAttribArray()` | Inclus dans le pipeline (buffers) |
 | Dessiner | `gl.drawElements()` | `pass.drawIndexed()` |
-| Validation | Au draw call (lent, silencieux) | A la creation du pipeline/bind group (rapide, explicite) |
+| Validation | Au draw call (lent, silencieux) | A la création du pipeline/bind group (rapide, explicite) |
 
 ---
 
@@ -1341,7 +1341,7 @@ main();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description |
 |---------|-------------|
@@ -1353,9 +1353,9 @@ main();
 | `stepMode: 'instance'` | Le buffer avance d'un stride par instance |
 | `GPUBindGroup` | Groupe immutable de ressources (buffers, textures, samplers) |
 | `GPUBindGroupLayout` | Decrit la structure d'un bind group (types, visibilite) |
-| `@group(G) @binding(B)` | Reference WGSL vers un binding dans un bind group |
+| `@group(G) @binding(B)` | Référence WGSL vers un binding dans un bind group |
 | Uniform buffer | Petit, lecture seule, optimise pour donnees frequemment mises a jour |
-| Storage buffer | Grand, lecture/ecriture, pour tableaux et donnees volumineuses |
+| Storage buffer | Grand, lecture/écriture, pour tableaux et donnees volumineuses |
 | `depthStencil` | Configuration du test de profondeur dans le pipeline |
 | `multisample: { count: 4 }` | MSAA 4x (anti-aliasing) |
 | `colorAttachments` | Cibles de rendu du render pass (textures de sortie) |
@@ -1367,7 +1367,7 @@ main();
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |-----------|---------|
 | [09 - WebGPU architecture et WGSL](./09-webgpu-architecture-wgsl) | [11 - Compute shaders et GPGPU](./11-compute-shaders-gpgpu) |
 
@@ -1382,3 +1382,13 @@ main();
 - [WebGPU Best Practices — Buffer Upload](https://toji.dev/webgpu-best-practices/buffer-uploads)
 - [WGSL Memory Layout](https://www.w3.org/TR/WGSL/#memory-layouts)
 - [WebGPU Fundamentals — Vertex Buffers](https://webgpufundamentals.org/webgpu/lessons/webgpu-vertex-buffers.html)
+
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 10 render pipeline](../screencasts/screencast-10-render-pipeline.md)
+2. **Lab** : [lab-10-render-pipeline](../labs/lab-10-render-pipeline/README)
+3. **Quiz** : [quiz 10 render pipeline](../quizzes/quiz-10-render-pipeline.html)
+:::

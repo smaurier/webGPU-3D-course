@@ -8,20 +8,20 @@
 
 A la fin de ce module, vous serez capable de :
 
-- Creer et configurer un AudioContext et comprendre l'audio graph
+- Créer et configurer un AudioContext et comprendre l'audio graph
 - Charger des fichiers audio avec fetch + decodeAudioData
 - Spatialiser une source audio avec PannerNode et AudioListener
-- Configurer les modeles de distance (linear, inverse, exponential)
+- Configurer les modèles de distance (linear, inverse, exponential)
 - Utiliser le panningModel HRTF pour un rendu binaural realiste
 - Appliquer des effets (reverb, filtres, compression, delay) dans le graphe audio
-- Integrer l'audio positionnel dans Three.js avec AudioListener et PositionalAudio
-- Gerer la politique autoplay des navigateurs (user gesture + resume)
+- Intégrer l'audio positionnel dans Three.js avec AudioListener et PositionalAudio
+- Gérer la politique autoplay des navigateurs (user gesture + résumé)
 - Visualiser les frequences audio avec AnalyserNode
 
 ---
 
 <details>
-<summary>Rappel du cours precedent — WebXR et animation procedurale (Module 26)</summary>
+<summary>Rappel du cours précédent — WebXR et animation procedurale (Module 26)</summary>
 
 Au module 26, nous avons couvert l'immersion via WebXR :
 
@@ -41,7 +41,7 @@ Nous allons maintenant ajouter la dimension sonore a nos scenes 3D — car une e
 ## Pourquoi l'audio spatial
 
 :::tip Analogie
-Imagine que tu es dans une foret. Tu entends un oiseau chanter a droite, un ruisseau couler devant toi, et le vent souffler derriere. Sans meme ouvrir les yeux, tu peux localiser chaque source sonore. L'audio spatial dans une scene 3D reproduit exactement ca : il place les sons dans l'espace pour que ton cerveau les localise comme dans le monde reel. Sans audio spatial, tous les sons arrivent "a plat" — comme ecouter la foret a travers un telephone mono.
+Imagine que tu es dans une foret. Tu entends un oiseau chanter a droite, un ruisseau couler devant toi, et le vent souffler derriere. Sans même ouvrir les yeux, tu peux localiser chaque source sonore. L'audio spatial dans une scene 3D reproduit exactement ça : il place les sons dans l'espace pour que ton cerveau les localise comme dans le monde réel. Sans audio spatial, tous les sons arrivent "a plat" — comme ecouter la foret a travers un telephone mono.
 :::
 
 ```
@@ -339,7 +339,7 @@ delay.connect(audioCtx.destination);
 
 ---
 
-## Integration Three.js
+## Intégration Three.js
 
 ```typescript
 import * as THREE from 'three';
@@ -571,11 +571,11 @@ function createAudioVisualizer(ctx: AudioContext, source: AudioNode, canvas: HTM
 
 ### Exercice AUDIO.1 — Scene 3D avec audio spatial
 
-Creer une scene Three.js contenant :
+Créer une scene Three.js contenant :
 1. Trois sources audio positionnelles (feu, ruisseau, haut-parleur directionnel)
 2. Un analyseur de frequences affiche sur un plan dans la scene
 3. Controle orbital — le son change quand on se deplace
-4. Un bouton "Entrer" pour gerer l'autoplay policy
+4. Un bouton "Entrer" pour gérer l'autoplay policy
 5. Un toggle "Sous l'eau" qui applique un filtre low-pass global
 
 ```typescript
@@ -772,15 +772,15 @@ animate();
 
 ---
 
-## Resume
+## Résumé
 
 | Concept | Description | API / Classe |
 |---------|-------------|:------------:|
-| **AudioContext** | Coeur du systeme audio, gere le graphe et le timing | `new AudioContext()` |
-| **AudioBuffer** | Donnees audio decodees en memoire (PCM) | `ctx.decodeAudioData()` |
+| **AudioContext** | Coeur du système audio, géré le graphe et le timing | `new AudioContext()` |
+| **AudioBuffer** | Donnees audio decodees en mémoire (PCM) | `ctx.decodeAudioData()` |
 | **PannerNode** | Positionne une source dans l'espace 3D | `ctx.createPanner()` |
 | **AudioListener** | Position/orientation de l'auditeur | `ctx.listener` |
-| **HRTF** | Modele binaural realiste (filtrage de la tete) | `panningModel: 'HRTF'` |
+| **HRTF** | Modèle binaural realiste (filtrage de la tete) | `panningModel: 'HRTF'` |
 | **Distance models** | linear, inverse, exponential | `panner.distanceModel` |
 | **Cone directionnel** | innerAngle, outerAngle, outerGain | `panner.coneInnerAngle` |
 | **ConvolverNode** | Reverb par convolution (impulse response) | `ctx.createConvolver()` |
@@ -788,7 +788,7 @@ animate();
 | **DelayNode** | Echo / retard audio avec feedback | `ctx.createDelay()` |
 | **AnalyserNode** | Extraction de donnees frequentielles | `ctx.createAnalyser()` |
 | **AudioWorklet** | Traitement audio custom sur le thread audio | `ctx.audioWorklet.addModule()` |
-| **THREE.PositionalAudio** | Source audio 3D attachee a un Object3D | `new THREE.PositionalAudio()` |
+| **THREE.PositionalAudio** | Source audio 3D attachee à un Object3D | `new THREE.PositionalAudio()` |
 | **Autoplay policy** | Contexte suspendu sans geste utilisateur | `ctx.resume()` |
 
 | Technique | Quand l'utiliser | Cout CPU |
@@ -797,17 +797,23 @@ animate();
 | `HRTF` panning | Casque, VR/AR, immersion | Moyen |
 | ConvolverNode reverb | Ambiance de salle, cathedrale | Eleve |
 | BiquadFilter | Murs, eau, radio, distance | Faible |
-| AudioWorklet | Effets custom temps reel | Variable |
-| OfflineAudioContext | Pre-calcul, generation procedurale | Aucun (offline) |
+| AudioWorklet | Effets custom temps réel | Variable |
+| OfflineAudioContext | Pre-calcul, génération procedurale | Aucun (offline) |
 
 ---
 
 ## Navigation
 
-| Precedent | Suivant |
+| Précédent | Suivant |
 |:---------:|:-------:|
 | [26 - WebXR et animation procedurale](./26-webxr-immersive.md) | [28 - Virtual textures et texture streaming](./28-virtual-textures-streaming.md) |
 
-**Ressources associees :**
-- [Lab 27 — Audio 3D spatial](../labs/lab-27-audio-3d-spatial/)
-- [Quiz 27 — Audio 3D spatial](../quizzes/quiz-27-audio-3d-spatial.html)
+---
+
+<!-- parcours-recommande -->
+
+::: tip Parcours recommandé
+1. **Screencast** : [screencast 27 audio 3d](../screencasts/screencast-27-audio-3d.md)
+2. **Lab** : [lab-27-audio-3d](../labs/lab-27-audio-3d/)
+3. **Quiz** : [quiz 27 audio 3d](../quizzes/quiz-27-audio-3d.html)
+:::
