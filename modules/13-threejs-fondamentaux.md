@@ -1120,6 +1120,175 @@ animate();
 
 ---
 
+## React Three Fiber (R3F) — Three.js declaratif pour React
+
+### Qu'est-ce que React Three Fiber ?
+
+[React Three Fiber](https://docs.pmnd.rs/react-three-fiber) (R3F) est un **renderer React pour Three.js**. Il permet d'ecrire des scenes Three.js sous forme de composants React declaratifs, en utilisant JSX au lieu de code imperatif.
+
+R3F n'est pas une surcouche qui simplifie Three.js — c'est une **integration profonde** qui mappe 1:1 chaque objet Three.js vers un composant JSX. Tout ce que vous savez de Three.js reste valide.
+
+```
+Three.js imperatif                    React Three Fiber (declaratif)
+────────────────────                  ────────────────────────────────
+const scene = new Scene()             <Canvas>
+const mesh = new Mesh(                  <mesh>
+  new BoxGeometry(1,1,1),                 <boxGeometry args={[1,1,1]} />
+  new MeshStandardMaterial({              <meshStandardMaterial color="orange" />
+    color: 'orange'                     </mesh>
+  })                                  </Canvas>
+)
+scene.add(mesh)
+```
+
+### Les packages principaux
+
+```bash
+# Package principal — le renderer React pour Three.js
+pnpm add @react-three/fiber three
+
+# Types TypeScript
+pnpm add -D @types/three
+
+# Drei — collection de helpers et abstractions utiles
+pnpm add @react-three/drei
+
+# Postprocessing (optionnel)
+pnpm add @react-three/postprocessing
+
+# Physique (optionnel)
+pnpm add @react-three/rapier
+```
+
+| Package | Role | Equivalent vanilla |
+|---------|------|--------------------|
+| `@react-three/fiber` | Renderer React → Three.js | Three.js core |
+| `@react-three/drei` | Helpers pre-construits (OrbitControls, Text, Environment...) | Three.js addons + code custom |
+| `@react-three/postprocessing` | Effets post-processing declaratifs | EffectComposer + passes manuelles |
+| `@react-three/rapier` | Physique 3D (Rapier WASM) | Cannon.js / Ammo.js manuels |
+
+### Quand utiliser R3F vs vanilla Three.js
+
+| Critere | R3F | Vanilla Three.js |
+|---------|-----|-------------------|
+| **Projet React existant** | Ideal — s'integre naturellement | Necessite un bridge imperatif |
+| **UI reactive liee a la 3D** | Excellent — state React = state 3D | Synchronisation manuelle penible |
+| **Performance critique** (jeux) | Bon, mais overhead React possible | Controle total, zero overhead |
+| **Prototypage rapide** | Tres rapide grace a drei | Plus de boilerplate |
+| **Equipe React** | Courbe d'apprentissage douce | Necessite d'apprendre l'API imperative |
+| **Equipe non-React** | Pas pertinent | Choix naturel |
+| **WebGPU renderer** | Support experimental (r160+) | Support direct |
+| **Editeur / outil 3D complexe** | Possible mais limites | Plus adapte |
+
+> **Regle pratique** : si votre application est en React et que la 3D est une partie de l'UI (et pas l'UI entiere), R3F est presque toujours le bon choix.
+
+### Exemple de base : `<Canvas>`, `<mesh>`, `useFrame`
+
+```tsx
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { useRef } from 'react';
+import type { Mesh } from 'three';
+
+// Composant 3D — un cube qui tourne
+function SpinningCube() {
+  const meshRef = useRef<Mesh>(null!);
+
+  // useFrame = requestAnimationFrame dans le monde R3F
+  // Appele a chaque frame (~60fps)
+  useFrame((state, delta) => {
+    meshRef.current.rotation.y += delta; // 1 radian par seconde
+    meshRef.current.rotation.x += delta * 0.5;
+  });
+
+  return (
+    <mesh ref={meshRef} position={[0, 0.5, 0]}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color="hotpink" metalness={0.3} roughness={0.4} />
+    </mesh>
+  );
+}
+
+// Composant principal
+export function Scene() {
+  return (
+    <Canvas camera={{ position: [3, 2, 5], fov: 75 }}>
+      {/* Lumieres */}
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[5, 5, 5]} intensity={1} />
+
+      {/* Objets */}
+      <SpinningCube />
+
+      {/* Sol */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[10, 10]} />
+        <meshStandardMaterial color="#333" />
+      </mesh>
+
+      {/* Controles — equivalent de OrbitControls */}
+      <OrbitControls enableDamping />
+
+      {/* Helpers */}
+      <axesHelper args={[3]} />
+      <gridHelper args={[10, 10]} />
+    </Canvas>
+  );
+}
+```
+
+**Points cles a observer** :
+
+- `<Canvas>` cree automatiquement le `WebGLRenderer`, la `Scene` et gere le resize
+- Chaque composant Three.js est accessible en **camelCase** : `<meshStandardMaterial>`, `<boxGeometry>`, `<ambientLight>`
+- Les `args` correspondent aux arguments du constructeur Three.js : `new BoxGeometry(1, 1, 1)` → `args={[1, 1, 1]}`
+- Les props correspondent aux proprietes de l'objet : `material.color = "hotpink"` → `color="hotpink"`
+- `useFrame` remplace votre `requestAnimationFrame` + `renderer.render()` — il est appele a chaque frame
+
+### L'ecosysteme drei
+
+[Drei](https://github.com/pmndrs/drei) est une collection de helpers qui abstrait les patterns courants de Three.js :
+
+```tsx
+import {
+  OrbitControls,     // Controles camera
+  Environment,       // Environnement HDR (reflexions PBR)
+  Text,              // Texte 3D (base sur troika-three-text)
+  Html,              // Elements HTML dans la scene 3D
+  useGLTF,           // Charger des modeles .glb/.gltf
+  useTexture,        // Charger des textures
+  Float,             // Animation de flottement
+  MeshReflectorMaterial, // Sol reflechissant
+  Sky,               // Ciel procedural
+  Stars,             // Champ d'etoiles
+  ContactShadows,    // Ombres de contact (pas de shadow map)
+  Sparkles,          // Particules scintillantes
+} from '@react-three/drei';
+```
+
+**Exemple avec drei** :
+
+```tsx
+function Scene() {
+  return (
+    <Canvas>
+      <Environment preset="sunset" />
+      <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
+        <Text fontSize={1} color="white">
+          Hello 3D
+        </Text>
+      </Float>
+      <ContactShadows position={[0, -0.5, 0]} opacity={0.5} />
+      <OrbitControls />
+    </Canvas>
+  );
+}
+```
+
+En quelques lignes, vous obtenez un texte 3D flottant avec un environnement HDR, des ombres de contact et des controles camera. L'equivalent en Three.js vanilla demanderait facilement 80-100 lignes de code imperatif.
+
+---
+
 <!-- parcours-recommande -->
 
 ::: tip Parcours recommandé
