@@ -12,7 +12,7 @@ Le site s'ouvre avec une sidebar navigable. Commence par le premier module (00).
 ## Structure
 
 ```
-14-webgpu-3d/
+20-webgpu-3d/
 ├── modules/          ← Cours théoriques (00, 01, 02...)
 ├── labs/             ← Exercices pratiques (exercise.ts → solution.ts)
 ├── quizzes/          ← Quiz interactifs (.html)

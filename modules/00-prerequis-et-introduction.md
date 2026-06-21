@@ -1,12 +1,12 @@
 # 00 — Prérequis & Introduction à la 3D Web
 
 <!-- nav-cours-précédent -->
-> **Cours précédent** : [React Native](../../13-react-native/modules/27-projet-final.md). Si tu arrives ici sans avoir fait les cours précédents, consulte le [guide de démarrage](../../GUIDE-DEMARRAGE.md).
 
+> **Cours précédent** : [React Native](../../19-react-native/modules/27-projet-final.md). Si tu arrives ici sans avoir fait les cours précédents, consulte le [guide de démarrage](../../GUIDE-DEMARRAGE.md).
 
-| Difficulte | Duree estimee | Lab | Quiz |
-|:----------:|:-------------:|:---:|:----:|
-| 1/5        | 60 min        | --  | [Quiz 00](../quizzes/quiz-00-prerequis.html) |
+| Difficulte | Duree estimee | Lab |                     Quiz                     |
+| :--------: | :-----------: | :-: | :------------------------------------------: |
+|    1/5     |    60 min     | --  | [Quiz 00](../quizzes/quiz-00-prerequis.html) |
 
 ## Objectifs pedagogiques
 
@@ -35,7 +35,7 @@ interface Vertex {
   uv: [number, number];
 }
 
-type BufferUsage = 'vertex' | 'index' | 'uniform';
+type BufferUsage = "vertex" | "index" | "uniform";
 
 async function loadShader(url: string): Promise<string> {
   const response = await fetch(url);
@@ -63,9 +63,9 @@ class TypedBuffer<T extends Float32Array | Uint16Array> {
 <canvas id="gl-canvas" width="800" height="600"></canvas>
 
 <script>
-  const canvas = document.getElementById('gl-canvas');
-  const ctx = canvas.getContext('2d'); // On passera a 'webgl2' et 'webgpu'
-  ctx.fillStyle = '#ff0000';
+  const canvas = document.getElementById("gl-canvas");
+  const ctx = canvas.getContext("2d"); // On passera a 'webgl2' et 'webgpu'
+  ctx.fillStyle = "#ff0000";
   ctx.fillRect(10, 10, 100, 100);
 </script>
 ```
@@ -158,7 +158,7 @@ Imaginez un **restaurant** :
 - **WebGL** = Vous etes le cuisinier, le serveur, et le plongeur. Vous gerez chaque état manuellement (quel couteau est actif, quel plat est en cours). C'est comme coder en JavaScript pur sans framework.
 - **WebGPU** = Vous avez un système de tickets modernes. Vous decrivez ce que vous voulez (un pipeline), et le système optimise l'exécution. C'est comme passer de jQuery à une approche declarative.
 - **Three.js** = Vous etes le chef qui donne des ordres : "je veux une scene avec une lumiere et un cube rouge". Les details sont geres automatiquement. C'est comme Vue.js : vous decrivez le quoi, pas le comment.
-:::
+  :::
 
 ---
 
@@ -195,9 +195,12 @@ Imaginez un **restaurant** :
 
 ```typescript
 // ── WebGL : creer et remplir un buffer ──────────────────
-function createWebGLBuffer(gl: WebGL2RenderingContext, data: Float32Array): WebGLBuffer {
+function createWebGLBuffer(
+  gl: WebGL2RenderingContext,
+  data: Float32Array,
+): WebGLBuffer {
   const buffer = gl.createBuffer();
-  if (!buffer) throw new Error('Failed to create buffer');
+  if (!buffer) throw new Error("Failed to create buffer");
 
   // Lier le buffer a un "slot" global
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -234,17 +237,17 @@ En WebGL, l'ordre des appels `gl.bindXxx()` / `gl.bindXxx(null)` est critique. U
 
 ### Tableau comparatif
 
-| Critere | WebGL 2.0 | WebGPU |
-|---------|-----------|--------|
-| API style | État global mutable | Descripteurs immutables |
-| Shader language | GLSL ES 3.0 | WGSL |
-| Compute shaders | Non | Oui |
-| Multi-thread | Non (un seul thread JS) | Oui (command buffers) |
-| Validation | Runtime (erreurs silencieuses) | Build-time (erreurs explicites) |
-| Support navigateur | Tous les navigateurs | Chrome 113+, Firefox 124+, Safari 18+ |
-| Maturite | 13 ans, stable | Nouveau, en evolution |
-| Abstraction | Bas-niveau | Moyen-niveau |
-| Inspiration | OpenGL ES 2.0 / 3.0 | Vulkan / Metal / D3D12 |
+| Critere            | WebGL 2.0                      | WebGPU                                |
+| ------------------ | ------------------------------ | ------------------------------------- |
+| API style          | État global mutable            | Descripteurs immutables               |
+| Shader language    | GLSL ES 3.0                    | WGSL                                  |
+| Compute shaders    | Non                            | Oui                                   |
+| Multi-thread       | Non (un seul thread JS)        | Oui (command buffers)                 |
+| Validation         | Runtime (erreurs silencieuses) | Build-time (erreurs explicites)       |
+| Support navigateur | Tous les navigateurs           | Chrome 113+, Firefox 124+, Safari 18+ |
+| Maturite           | 13 ans, stable                 | Nouveau, en evolution                 |
+| Abstraction        | Bas-niveau                     | Moyen-niveau                          |
+| Inspiration        | OpenGL ES 2.0 / 3.0            | Vulkan / Metal / D3D12                |
 
 ---
 
@@ -268,13 +271,18 @@ Three.js est a WebGL/WebGPU ce que Vue.js est au DOM : une abstraction qui vous 
 // ... facilement 200+ lignes
 
 // ── Avec Three.js : ~15 lignes pour le meme cube ──
-import * as THREE from 'three';
+import * as THREE from "three";
 
 // Scene = le "template" de votre composant 3D
 const scene = new THREE.Scene();
 
 // Camera = le "viewport" du navigateur
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000,
+);
 camera.position.z = 5;
 
 // Renderer = le "moteur de rendu" (comme le virtual DOM de Vue)
@@ -393,9 +401,10 @@ function cpuProcessPixels(pixels: Float32Array, brightness: number): void {
 
 :::tip Analogie web
 C'est comme la différence entre :
+
 - **CPU** : un serveur Express qui traite les requêtes une par une (même avec de l'async, un seul thread JS)
 - **GPU** : un load balancer qui distribue les requêtes sur 10,000 workers identiques en parallele
-:::
+  :::
 
 ---
 
@@ -702,7 +711,9 @@ function createRenderLoop(callback: RenderCallback): {
 const loop = createRenderLoop((ctx) => {
   // Animer un objet en fonction du temps (pas du framerate)
   const rotation = ctx.elapsed * Math.PI * 0.5; // 90 degres par seconde
-  console.log(`Frame ${ctx.frame} | dt=${ctx.deltaTime.toFixed(3)}s | rotation=${rotation.toFixed(2)}`);
+  console.log(
+    `Frame ${ctx.frame} | dt=${ctx.deltaTime.toFixed(3)}s | rotation=${rotation.toFixed(2)}`,
+  );
 });
 
 loop.start();
@@ -729,16 +740,16 @@ async function initWebGPU(canvasId: string): Promise<WebGPUContext> {
   // 1. Verifier le support WebGPU
   if (!navigator.gpu) {
     throw new Error(
-      'WebGPU non supporte. Utilisez Chrome 113+ ou Firefox 124+.',
+      "WebGPU non supporte. Utilisez Chrome 113+ ou Firefox 124+.",
     );
   }
 
   // 2. Obtenir l'adapter (= la carte graphique)
   const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: 'high-performance', // Preferer le GPU dedie
+    powerPreference: "high-performance", // Preferer le GPU dedie
   });
   if (!adapter) {
-    throw new Error('Aucun adapter GPU trouve.');
+    throw new Error("Aucun adapter GPU trouve.");
   }
 
   // 3. Obtenir le device (= la connexion logique au GPU)
@@ -748,14 +759,14 @@ async function initWebGPU(canvasId: string): Promise<WebGPUContext> {
   });
 
   // Log des capacites
-  console.log('GPU Adapter:', adapter.info);
-  console.log('Max texture size:', device.limits.maxTextureDimension2D);
-  console.log('Max buffer size:', device.limits.maxBufferSize);
+  console.log("GPU Adapter:", adapter.info);
+  console.log("Max texture size:", device.limits.maxTextureDimension2D);
+  console.log("Max buffer size:", device.limits.maxBufferSize);
 
   // 4. Gerer les erreurs GPU
   device.lost.then((info) => {
-    console.error('GPU device lost:', info.message);
-    if (info.reason !== 'destroyed') {
+    console.error("GPU device lost:", info.message);
+    if (info.reason !== "destroyed") {
       // Re-initialiser
       initWebGPU(canvasId);
     }
@@ -763,14 +774,14 @@ async function initWebGPU(canvasId: string): Promise<WebGPUContext> {
 
   // 5. Configurer le canvas
   const { canvas } = setupCanvas(canvasId);
-  const context = canvas.getContext('webgpu');
-  if (!context) throw new Error('Impossible d\'obtenir le contexte WebGPU');
+  const context = canvas.getContext("webgpu");
+  if (!context) throw new Error("Impossible d'obtenir le contexte WebGPU");
 
   const format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
     device,
     format,
-    alphaMode: 'premultiplied',
+    alphaMode: "premultiplied",
   });
 
   return { device, context, format, canvas };
@@ -784,6 +795,7 @@ async function initWebGPU(canvasId: string): Promise<WebGPUContext> {
 ### Enonce
 
 Creez une page HTML avec un canvas qui :
+
 1. S'initialise avec le bon device pixel ratio
 2. Affiche les informations du GPU dans la console
 3. Lance une boucle de rendu qui efface le canvas avec une couleur qui change dans le temps
@@ -796,10 +808,10 @@ Creez une page HTML avec un canvas qui :
 
 async function main(): Promise<void> {
   // Initialisation
-  const { device, context, format, canvas } = await initWebGPU('gl-canvas');
+  const { device, context, format, canvas } = await initWebGPU("gl-canvas");
 
-  console.log('Canvas size:', canvas.width, 'x', canvas.height);
-  console.log('Preferred format:', format);
+  console.log("Canvas size:", canvas.width, "x", canvas.height);
+  console.log("Preferred format:", format);
 
   // Boucle de rendu
   const loop = createRenderLoop((ctx) => {
@@ -816,12 +828,14 @@ async function main(): Promise<void> {
 
     // Creer un render pass qui efface le canvas
     const pass = encoder.beginRenderPass({
-      colorAttachments: [{
-        view: textureView,
-        clearValue: { r, g, b, a: 1.0 },
-        loadOp: 'clear',
-        storeOp: 'store',
-      }],
+      colorAttachments: [
+        {
+          view: textureView,
+          clearValue: { r, g, b, a: 1.0 },
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
     });
     pass.end();
 
@@ -833,7 +847,7 @@ async function main(): Promise<void> {
 
   // Gerer le redimensionnement
   handleResize(canvas, (width, height) => {
-    console.log('Resized to:', width, 'x', height);
+    console.log("Resized to:", width, "x", height);
   });
 }
 
@@ -846,20 +860,20 @@ main().catch(console.error);
 
 ## Résumé
 
-| Concept | Explication |
-|---------|-------------|
-| WebGL | API 3D web basee sur OpenGL ES, état global mutable, mature |
-| WebGPU | API 3D web moderne, descripteurs immutables, compute shaders |
-| Three.js | Abstraction haut-niveau (scene graph) au-dessus de WebGL/WebGPU |
-| GPU cores | Des milliers de cores simples, optimises pour le parallelisme |
-| SIMD | Une instruction executee sur des milliers de donnees en parallele |
-| Warp/Wavefront | Groupe de 32 threads GPU exécutant la même instruction |
-| VRAM | Mémoire dediee du GPU, rapide mais limitee (8-24 GB) |
-| Bus PCIe | Goulot d'etranglement pour les transferts CPU ↔ GPU |
-| Latence vs Throughput | CPU optimise la latence, GPU optimise le throughput |
-| Device Pixel Ratio | Rapport pixels CSS / pixels physiques (Retina = 2) |
-| requestAnimationFrame | Synchronise le rendu avec le taux de rafraichissement ecran |
-| deltaTime | Temps entre deux frames, crucial pour des animations fluides |
+| Concept               | Explication                                                       |
+| --------------------- | ----------------------------------------------------------------- |
+| WebGL                 | API 3D web basee sur OpenGL ES, état global mutable, mature       |
+| WebGPU                | API 3D web moderne, descripteurs immutables, compute shaders      |
+| Three.js              | Abstraction haut-niveau (scene graph) au-dessus de WebGL/WebGPU   |
+| GPU cores             | Des milliers de cores simples, optimises pour le parallelisme     |
+| SIMD                  | Une instruction executee sur des milliers de donnees en parallele |
+| Warp/Wavefront        | Groupe de 32 threads GPU exécutant la même instruction            |
+| VRAM                  | Mémoire dediee du GPU, rapide mais limitee (8-24 GB)              |
+| Bus PCIe              | Goulot d'etranglement pour les transferts CPU ↔ GPU               |
+| Latence vs Throughput | CPU optimise la latence, GPU optimise le throughput               |
+| Device Pixel Ratio    | Rapport pixels CSS / pixels physiques (Retina = 2)                |
+| requestAnimationFrame | Synchronise le rendu avec le taux de rafraichissement ecran       |
+| deltaTime             | Temps entre deux frames, crucial pour des animations fluides      |
 
 ---
 
@@ -876,7 +890,8 @@ main().catch(console.error);
 <!-- parcours-recommande -->
 
 ::: tip Parcours recommandé
+
 1. **Screencast** : [screencast 00 prérequis](../screencasts/screencast-00-prerequis.md)
 2. **Lab** : [lab-00-maths-prereq](../labs/lab-00-maths-prereq/README)
 3. **Quiz** : [quiz 00 prérequis](../quizzes/quiz-00-prerequis.html)
-:::
+   :::
