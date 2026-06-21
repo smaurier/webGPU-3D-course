@@ -1087,7 +1087,7 @@ async function initRenderer(canvas: HTMLCanvasElement) {
 |------------|--------|-------|
 | Chrome 113+ | Stable | Support complet, référence |
 | Edge 113+ | Stable | Même moteur que Chrome (Chromium) |
-| Firefox | Nightly / behind flag | Support en progression, quelques différences |
+| Firefox 121+ | Stable (depuis jan 2024) | Support complet, quelques différences mineures |
 | Safari 18+ | Stable (macOS/iOS) | Backend Metal, quelques limites |
 | Chrome Android | Stable | Support GPU variable selon l'appareil |
 | Safari iOS 18+ | Stable | WebGPU via Metal |
@@ -1230,7 +1230,7 @@ device.popErrorScope().then((error) => {
 |-------|-------|
 | **[webgpu-debugger](https://github.com/pissang/webgpu-devtools)** | Extension Chrome, capture de frames GPU |
 | **RenderDoc** | Capture de frames avancee (via Dawn/native) |
-| **Spector2** | Successeur de Spector.js, support WebGPU experimental |
+| **Chrome DevTools WebGPU Inspector** | Intégré Chrome DevTools (onglet GPU), recommandé en 2025+ |
 | **Tint (Dawn)** | Compilateur WGSL → SPIR-V/MSL/HLSL, utile pour diagnostiquer les erreurs shader |
 
 ### Bonnes pratiques debug

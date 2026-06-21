@@ -1177,7 +1177,7 @@ pnpm add @react-three/rapier
 | **Prototypage rapide** | Tres rapide grace a drei | Plus de boilerplate |
 | **Equipe React** | Courbe d'apprentissage douce | Necessite d'apprendre l'API imperative |
 | **Equipe non-React** | Pas pertinent | Choix naturel |
-| **WebGPU renderer** | Support experimental (r160+) | Support direct |
+| **WebGPU renderer** | Production-ready (r160+, stable r168+) | Support direct |
 | **Editeur / outil 3D complexe** | Possible mais limites | Plus adapte |
 
 > **Regle pratique** : si votre application est en React et que la 3D est une partie de l'UI (et pas l'UI entiere), R3F est presque toujours le bon choix.
