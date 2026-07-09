@@ -1,1088 +1,512 @@
-# Module 07 — Shaders, buffers et textures
-
-| Difficulte | Duree estimee | Lab | Quiz |
-|------------|---------------|-----|------|
-| 4/5        | 120 min       | [Lab 07](../labs/lab-07-shaders-buffers-textures/) | [Quiz 07](../quizzes/quiz-07-shaders-buffers-textures.html) |
-
-## Objectifs pedagogiques
-
-A la fin de ce module, vous serez capable de :
-
-- Créer et utiliser des Vertex Buffer Objects (VBO) et Vertex Array Objects (VAO)
-- Configurer `vertexAttribPointer` avec stride et offset pour des donnees entrelacees
-- Utiliser des index buffers (EBO) pour éviter la duplication de sommets
-- Passer des uniforms au shader (matrices, vecteurs, scalaires)
-- Comprendre les varyings et l'interpolation automatique
-- Charger et configurer des textures 2D
-- Gérer le filtrage (NEAREST, LINEAR, mipmaps) et le wrapping
-- Utiliser plusieurs textures simultanement (texture units)
-- Effectuer du render-to-texture avec les Framebuffer Objects (FBO)
-- Implementer un eclairage Phong complet en GLSL
-
+---
+titre: Shaders, buffers et textures
+cours: 20-webgpu-3d
+notions:
+  - "attributs entrelacés (position + UV dans un même VBO)"
+  - "vertexAttribPointer avec stride et offset en octets"
+  - "Vertex Array Object (VAO) — config d'attributs mémorisée"
+  - "Index buffer / EBO (drawElements, gl.ELEMENT_ARRAY_BUFFER)"
+  - "varyings (out vertex → in fragment, interpolation barycentrique)"
+  - "uniforms typés (uniform1f / uniform2f / uniformMatrix4fv)"
+  - "texture 2D (createTexture, texImage2D)"
+  - "sampling GLSL 300 (sampler2D, texture(sampler, uv))"
+  - "coordonnées UV (espace [0,1], attribut a_uv)"
+  - "filtrage (NEAREST / LINEAR / mipmaps) et wrapping (REPEAT / CLAMP_TO_EDGE)"
+outcomes:
+  - sait entrelacer position et UV dans un seul VBO et brancher deux attributs via stride/offset en octets
+  - sait enregistrer la config d'attributs dans un VAO et la restaurer d'un bindVertexArray
+  - sait dessiner un quad sans dupliquer de sommets via un index buffer et drawElements
+  - sait passer une valeur du vertex au fragment via un varying interpolé
+  - sait charger une texture 2D, régler filtrage/wrapping/mipmaps, et l'échantillonner en GLSL 300 avec texture()
+prerequis:
+  - "00-prerequis-et-introduction (GPU, aperçu pipeline)"
+  - "03-cameras-et-projections (clip space, NDC)"
+  - "04-pipeline-de-rendu (vertex/fragment, rasterisation, interpolation)"
+  - "05-lumiere-materiaux-et-pbr (shading dans le fragment shader)"
+  - "06-webgl-fondamentaux (contexte WebGL2, VBO, attribut simple, uniform, drawArrays)"
+next: 08-scene-webgl-complete
+libs: []
+tribuzen: "moteur de rendu 3D TribuZen — plaquer la photo d'une sortie comme texture sur un quad, la vignette réelle du feed 3D"
+last-reviewed: 2026-07
 ---
 
-<details>
-<summary>Rappel du module précédent — WebGL fondamentaux et GLSL</summary>
+# Shaders, buffers et textures
 
-Avant de continuer, vérifié que tu maitrises ces points :
+> **Outcomes — tu sauras FAIRE :** entrelacer plusieurs attributs dans un VBO, mémoriser leur config dans un VAO, dessiner un quad via un index buffer, passer une valeur par varying interpolé, et plaquer une texture 2D échantillonnée en GLSL ES 300.
+> **Difficulté :** :star::star::star::star:
+>
+> **Portée :** le module 06 a affiché **un** triangle monochrome (un seul attribut, une couleur en uniform). Ici on passe à **plusieurs attributs** (position + UV), au **VAO** qui range cette config, à l'**index buffer** pour ne pas dupliquer de sommets, aux **varyings** pour interpoler des données jusqu'au fragment, et aux **textures** pour habiller la géométrie d'une vraie image. L'assemblage en scène animée complète vient au module 08.
 
-1. **Comment obtient-on un contexte WebGL 2 ?**
-   `canvas.getContext('webgl2')` — retourne `null` si non supporte.
+## 1. Cas concret d'abord
 
-2. **Quelles sont les 2 étapes programmables du pipeline ?**
-   Le Vertex Shader (transforme les sommets) et le Fragment Shader (calcule la couleur de chaque pixel).
+Le module 06 a posé le premier pixel GPU de TribuZen : un triangle rouge, marqueur de sortie. Mais une sortie de la famille, c'est surtout une **photo** — la vignette de la rando du dimanche. L'objectif concret de ce module : afficher cette photo dans la scène 3D, plaquée sur un **quad** (rectangle = 2 triangles).
 
-3. **Quel est le système de coordonnees de sortie du vertex shader ?**
-   Le clip space : x, y, z dans [-1, +1]. Les positions sont ecrites dans `gl_Position`.
+Trois problèmes que le module 06 ne sait pas résoudre :
 
-4. **Comment compiler un shader ?**
-   `gl.createShader()` → `gl.shaderSource()` → `gl.compileShader()` → vérifier avec `gl.getShaderParameter(shader, gl.COMPILE_STATUS)`.
+1. **Un quad a 4 coins mais 2 triangles = 6 sommets.** Dupliquer deux coins est un gâchis ; il faut un **index buffer**.
+2. **Chaque coin porte deux données** : sa position ET sa coordonnée dans l'image (UV). Il faut donc **deux attributs** dans le même buffer.
+3. **La couleur ne vient plus d'un uniform** mais d'une image échantillonnée pixel par pixel : il faut une **texture** et un **varying** qui transporte l'UV du vertex jusqu'au fragment.
 
-5. **Pourquoi faut-il `precision highp float;` dans le fragment shader ?**
-   Parce que GLSL ES 3.00 n'a pas de précision par defaut pour les floats dans le fragment shader (contrairement au vertex shader ou `highp` est le defaut).
-
-</details>
-
----
-
-## 1. Analogie — VBO, VAO et EBO comme un tableur
-
-Si tu connais Excel ou Google Sheets, les buffers WebGL fonctionnent de manière similaire :
-
-```
-TABLEUR (Excel)                        WEBGL
-===============                        =====
-
-Classeur entier                        VAO (Vertex Array Object)
-  = configuration globale                = "memorise" comment lire les buffers
-
-Feuille de donnees                     VBO (Vertex Buffer Object)
-  = les cellules avec les valeurs        = les donnees brutes en memoire GPU
-
-Colonnes (A, B, C...)                  Attributs (position, normal, uv)
-  = chaque colonne a un type             = chaque attribut a un type et une taille
-
-Index de lignes (1, 2, 3...)           EBO (Element Buffer Object / Index Buffer)
-  = reference des lignes sans              = reference des sommets sans
-    dupliquer le contenu                     dupliquer les donnees
-
-Mise en forme conditionnelle           Uniforms
-  = appliquee globalement                = meme valeur pour tous les sommets
-    a toute la selection                   d'un draw call
-```
-
-:::tip Analogie clé
-Le **VAO** est comme un "profil de lecture" sauvegarde. Au lieu de reconfigurer les colonnes à chaque fois qu'on ouvre le fichier, le VAO memorise "la colonne A contient des positions vec3, la colonne B des couleurs vec4, etc."
-:::
-
----
-
-## 2. Vertex Buffer Objects (VBO)
-
-Un VBO est un bloc de mémoire sur le GPU qui contient les donnees des sommets.
-
-### 2.1 Créer et remplir un VBO
+Voici le réflexe naïf qui **ne marche pas** :
 
 ```typescript
-// Donnees d'un carre (4 sommets, chacun avec position XYZ et couleur RGB)
+// ❌ On croit pouvoir lire la photo directement dans le fragment shader
+// sans coordonnées UV ni sampler configuré
+const fragmentSrc = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main() {
+  fragColor = texture(u_photo, ???);  // avec QUOI échantillonner ? aucune UV !
+}`;
+```
+
+Le fragment shader n'a **aucune notion** de « où » dans l'image lire la couleur. Cette information — la coordonnée UV — doit être portée **par sommet** (attribut), transportée **jusqu'au fragment** (varying interpolé), puis utilisée pour **échantillonner** la texture. Ce module câble cette chaîne complète, du buffer à l'écran.
+
+---
+
+## 2. Théorie complète, concise
+
+### 2.1 Attributs entrelacés : plusieurs données par sommet
+
+Au module 06, chaque sommet ne portait qu'une position (`a_position`). Ici chaque sommet porte **position + UV**. Deux stratégies :
+
+- **buffers séparés** : un VBO pour les positions, un VBO pour les UV — simple, mais deux buffers à gérer ;
+- **buffer entrelacé (interleaved)** : un seul VBO où les données d'un sommet sont contiguës `[x, y, u, v, x, y, u, v, ...]` — plus performant (cache GPU) et standard.
+
+On adopte l'entrelacé :
+
+```typescript
+// 4 sommets d'un quad : position (x, y) puis UV (u, v) — 4 floats par sommet
 const vertices = new Float32Array([
-  // Position (x, y, z)   Couleur (r, g, b)
-  -0.5,  0.5,  0.0,       1.0, 0.0, 0.0,   // haut-gauche (rouge)
-   0.5,  0.5,  0.0,       0.0, 1.0, 0.0,   // haut-droit (vert)
-   0.5, -0.5,  0.0,       0.0, 0.0, 1.0,   // bas-droit (bleu)
-  -0.5, -0.5,  0.0,       1.0, 1.0, 0.0,   // bas-gauche (jaune)
+  // x     y      u    v
+  -0.5,  0.5,   0.0, 1.0,   // 0: haut-gauche
+   0.5,  0.5,   1.0, 1.0,   // 1: haut-droit
+   0.5, -0.5,   1.0, 0.0,   // 2: bas-droit
+  -0.5, -0.5,   0.0, 0.0,   // 3: bas-gauche
 ]);
-
-// Creer le buffer sur le GPU
-const vbo = gl.createBuffer();
-if (!vbo) throw new Error('Impossible de creer le VBO');
-
-// Binder le buffer (le rendre "actif" pour les prochaines operations)
-gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-
-// Envoyer les donnees du CPU vers le GPU
-gl.bufferData(
-  gl.ARRAY_BUFFER,    // cible : c'est un buffer de sommets
-  vertices,           // les donnees
-  gl.STATIC_DRAW,     // indice d'utilisation (aide le driver a optimiser)
-);
 ```
 
-### 2.2 Indices d'utilisation (usage hints)
+### 2.2 stride et offset : découper le buffer entrelacé
 
-| Usage | Signification | Quand l'utiliser |
-|-------|---------------|-----------------|
-| `gl.STATIC_DRAW` | Donnees ecrites une fois, lues souvent | Geometrie statique (la majorite des cas) |
-| `gl.DYNAMIC_DRAW` | Donnees modifiees regulierement | Particules, morphing, animations CPU |
-| `gl.STREAM_DRAW` | Donnees ecrites et lues une seule fois | Donnees temporaires |
+`vertexAttribPointer` décrit **où** chaque attribut se trouve dans le flot d'octets. Deux paramètres clés, **tous deux en OCTETS** (un float = 4 octets) :
 
-### 2.3 Sous-buffers avec bufferSubData
+- **stride** : distance d'un sommet au suivant. Ici 4 floats × 4 = **16 octets** ;
+- **offset** : position de l'attribut dans le sommet. Position à `0`, UV après 2 floats = **8 octets**.
 
 ```typescript
-// Mettre a jour une partie du buffer sans tout re-envoyer
-// Utile pour les objets dynamiques (particules, UI)
+const FLOAT = 4;
+const STRIDE = 4 * FLOAT;   // 16 octets par sommet
 
-const newPosition = new Float32Array([0.0, 0.8, 0.0]); // nouvelle position du sommet 0
-
-gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-gl.bufferSubData(
-  gl.ARRAY_BUFFER,
-  0,                // offset en bytes (debut du buffer)
-  newPosition,      // nouvelles donnees
-);
+// a_position : 2 floats, à l'offset 0
+gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, STRIDE, 0);
+// a_uv : 2 floats, à l'offset 8 (après les 2 floats de position)
+gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, STRIDE, 2 * FLOAT);
 ```
 
----
+```
+Buffer entrelacé (octets) :
 
-## 3. Vertex Array Objects (VAO)
+Byte:  0    4    8    12   16   20   24   28
+     ┌────┬────┬────┬────┬────┬────┬────┬────┐
+     │ x0 │ y0 │ u0 │ v0 │ x1 │ y1 │ u1 │ v1 │
+     └────┴────┴────┴────┴────┴────┴────┴────┘
+     │◄──── sommet 0 ────►│◄──── sommet 1 ───►│
+     │◄─── STRIDE = 16 ──►│
 
-Le VAO est un conteneur qui **enregistre** la configuration des attributs de sommets. Sans VAO, il faudrait reconfigurer `vertexAttribPointer` à chaque frame pour chaque objet.
+     a_position: size=2, offset=0     a_uv: size=2, offset=8
+```
 
-### 3.1 Créer et configurer un VAO
+### 2.3 Le VAO : mémoriser la config d'attributs
+
+Sans VAO, il faudrait rejouer `bindBuffer` + `enableVertexAttribArray` + `vertexAttribPointer` **à chaque frame, pour chaque objet**. Le **Vertex Array Object** enregistre toute cette config une fois pour toutes. Au rendu, un seul `bindVertexArray` la restaure.
 
 ```typescript
-// Creer le VAO
 const vao = gl.createVertexArray();
-if (!vao) throw new Error('Impossible de creer le VAO');
+gl.bindVertexArray(vao);           // tout ce qui suit est ENREGISTRÉ dans le VAO
 
-// Binder le VAO — tout ce qu'on configure ensuite sera "enregistre" dedans
-gl.bindVertexArray(vao);
-
-// Binder le VBO (les donnees)
 gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-
-// Configuration de l'attribut position
-const FLOAT_SIZE = 4;   // un float = 4 bytes
-const STRIDE = 6 * FLOAT_SIZE;  // 6 floats par sommet (3 pos + 3 color) = 24 bytes
-
-const posLoc = gl.getAttribLocation(program, 'a_position');
 gl.enableVertexAttribArray(posLoc);
-gl.vertexAttribPointer(
-  posLoc,       // index de l'attribut
-  3,            // nombre de composantes (vec3)
-  gl.FLOAT,     // type
-  false,        // normaliser ? (non pour les positions)
-  STRIDE,       // stride : distance entre 2 sommets consecutifs
-  0,            // offset : ou commence cet attribut dans le sommet
-);
+gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, STRIDE, 0);
+gl.enableVertexAttribArray(uvLoc);
+gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, STRIDE, 2 * FLOAT);
 
-// Configuration de l'attribut couleur
-const colorLoc = gl.getAttribLocation(program, 'a_color');
-gl.enableVertexAttribArray(colorLoc);
-gl.vertexAttribPointer(
-  colorLoc,
-  3,            // vec3 (r, g, b)
-  gl.FLOAT,
-  false,
-  STRIDE,
-  3 * FLOAT_SIZE,  // offset : apres les 3 floats de position = 12 bytes
-);
+gl.bindVertexArray(null);          // config sauvegardée
 
-// Debinder le VAO — la configuration est sauvegardee
-gl.bindVertexArray(null);
+// Plus tard, au rendu : une seule ligne restaure TOUT
+gl.bindVertexArray(vao);
 ```
 
-### 3.2 Visualisation du stride et de l'offset
+### 2.4 L'index buffer (EBO) : ne pas dupliquer de sommets
 
-```
-Buffer memoire (donnees entrelacees / interleaved) :
-
-Byte:  0    4    8    12   16   20   24   28   32   36   40   44
-     ┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐
-     │ x0 │ y0 │ z0 │ r0 │ g0 │ b0 │ x1 │ y1 │ z1 │ r1 │ g1 │ b1 │
-     └────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘
-     │◄──── Sommet 0 ────►│◄──── Sommet 1 ────►│
-     │◄─── STRIDE = 24 ──►│◄─── STRIDE = 24 ──►│
-
-     a_position: size=3, offset=0    a_color: size=3, offset=12
-              │                               │
-              ▼                               ▼
-     ┌────┬────┬────┐               ┌────┬────┬────┐
-     │ x0 │ y0 │ z0 │               │ r0 │ g0 │ b0 │
-     └────┴────┴────┘               └────┴────┴────┘
-
-Alternative : buffers SEPARES (non-interleaved) :
-
-Buffer position :  [x0, y0, z0, x1, y1, z1, ...]  stride=0
-Buffer couleur  :  [r0, g0, b0, r1, g1, b1, ...]  stride=0
-→ Plus simple mais moins cache-friendly sur le GPU
-```
-
-### 3.3 Le workflow au rendu
+Un quad = 2 triangles. Avec `drawArrays`, il faudrait 6 sommets (les 2 coins de la diagonale sont dupliqués). Avec un **index buffer** (Element Buffer Object), on garde **4 sommets uniques** et on liste des **indices** qui les référencent :
 
 ```typescript
-// A chaque frame, pour dessiner un objet :
-gl.useProgram(program);
-gl.bindVertexArray(vao);       // restaure toute la config des attributs
-gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
-gl.bindVertexArray(null);
-
-// Dessiner un autre objet = binder un autre VAO
-gl.bindVertexArray(vaoSphere);
-gl.drawArrays(gl.TRIANGLES, 0, sphereVertexCount);
-gl.bindVertexArray(null);
-```
-
----
-
-## 4. Index Buffers (EBO)
-
-### 4.1 Le problème : sommets dupliques
-
-Un carre est compose de 2 triangles. Sans index buffer, il faut 6 sommets (2 sont dupliques) :
-
-```
-Sans index buffer (6 sommets) :         Avec index buffer (4 sommets + 6 indices) :
-
-Triangle 1 : A, B, C                   Sommets : A(0), B(1), C(2), D(3)
-Triangle 2 : A, C, D                   Indices : [0, 1, 2,  0, 2, 3]
-                                                   ▲  ▲  ▲   ▲  ▲  ▲
-A ─────── B                                        │  │  │   │  │  │
-│ \       │                             Triangle 1:─┘  │  │   │  │  │
-│  \  T1  │                             Triangle 2:────────────┘  │  │
-│   \     │
-│ T2 \    │     6 sommets               4 sommets + 6 indices
-│     \   │     = 6 * 6 floats          = 4 * 6 floats + 6 ints
-│      \  │     = 144 bytes              = 96 + 12 = 108 bytes
-D ─────── C
-                                        Economie : 25% ici, jusqu'a 50-70%
-                                        sur des modeles complexes (un sommet
-                                        partage par 4-6 faces)
-```
-
-### 4.2 Implementation
-
-```typescript
-// Les 4 sommets uniques du carre
-const vertices = new Float32Array([
-  // Position (x, y, z)    Couleur (r, g, b)
-  -0.5,  0.5,  0.0,        1.0, 0.0, 0.0,   // 0: haut-gauche
-   0.5,  0.5,  0.0,        0.0, 1.0, 0.0,   // 1: haut-droit
-   0.5, -0.5,  0.0,        0.0, 0.0, 1.0,   // 2: bas-droit
-  -0.5, -0.5,  0.0,        1.0, 1.0, 0.0,   // 3: bas-gauche
-]);
-
-// Les indices : chaque groupe de 3 forme un triangle
+// 6 indices → 2 triangles, mais seulement 4 sommets stockés
 const indices = new Uint16Array([
   0, 1, 2,   // triangle 1 : haut-gauche, haut-droit, bas-droit
   0, 2, 3,   // triangle 2 : haut-gauche, bas-droit, bas-gauche
 ]);
 
-// Setup dans le VAO
-gl.bindVertexArray(vao);
-
-// VBO (meme qu'avant)
-gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-// ... vertexAttribPointer pour position et couleur ...
-
-// EBO (Element Buffer Object)
-const ebo = gl.createBuffer()!;
-gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+const ebo = gl.createBuffer();
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);   // cible ELEMENT_ARRAY_BUFFER (pas ARRAY_BUFFER)
 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+```
 
-gl.bindVertexArray(null);
+On dessine ensuite avec `drawElements` au lieu de `drawArrays` :
 
-// Dessiner avec les indices
-gl.bindVertexArray(vao);
+```typescript
 gl.drawElements(
   gl.TRIANGLES,       // mode
-  indices.length,     // nombre d'indices (6)
-  gl.UNSIGNED_SHORT,  // type des indices (Uint16Array)
-  0,                  // offset dans le buffer d'indices
+  6,                  // nombre d'INDICES (pas de sommets)
+  gl.UNSIGNED_SHORT,  // type des indices → Uint16Array
+  0,                  // offset en octets dans le buffer d'indices
 );
-gl.bindVertexArray(null);
 ```
 
-:::warning Le EBO est lie au VAO
-L'EBO binde avec `gl.ELEMENT_ARRAY_BUFFER` est enregistre dans le VAO. Ne le debindez pas avant de debinder le VAO, sinon il sera "oublie".
-:::
+> **Le EBO est enregistré dans le VAO.** Le bind `ELEMENT_ARRAY_BUFFER` fait partie de l'état du VAO courant. Il faut donc le binder **pendant** que le VAO est actif, et ne pas le débinder avant le VAO — sinon il est « oublié ».
 
----
+### 2.5 Varyings : transporter une valeur du vertex au fragment
 
-## 5. Uniforms
+Un **varying** est une sortie du vertex shader (`out`) devenue entrée du fragment shader (`in`, même nom, même type). Entre les deux, le rasteriseur **interpole** la valeur : chaque fragment reçoit une moyenne pondérée par sa position dans le triangle (coordonnées **barycentriques**, revues au module 04).
 
-Les uniforms sont des valeurs constantes pour l'ensemble d'un draw call. Ils servent a passer les matrices de transformation, les paramètres d'eclairage, les couleurs, etc.
-
-### 5.1 Types et fonctions
-
-```typescript
-// Recuperer la location d'un uniform (a faire une seule fois, cacher le resultat)
-const mvpLoc = gl.getUniformLocation(program, 'u_modelViewProjection');
-const colorLoc = gl.getUniformLocation(program, 'u_color');
-const timeLoc = gl.getUniformLocation(program, 'u_time');
-
-// Passer des valeurs (le programme doit etre actif avec gl.useProgram)
-gl.useProgram(program);
-
-// Scalaires
-gl.uniform1f(timeLoc, performance.now() / 1000);       // float
-gl.uniform1i(textureLoc, 0);                            // int (texture unit)
-
-// Vecteurs
-gl.uniform2f(resolutionLoc, canvas.width, canvas.height); // vec2
-gl.uniform3f(colorLoc, 1.0, 0.5, 0.0);                   // vec3
-gl.uniform4f(colorLoc, 1.0, 0.5, 0.0, 1.0);              // vec4
-
-// Matrices (le 2eme argument est "transpose" — toujours false en WebGL)
-gl.uniformMatrix3fv(normalMatLoc, false, normalMatrix);   // mat3
-gl.uniformMatrix4fv(mvpLoc, false, mvpMatrix);            // mat4
-
-// Vecteurs depuis un tableau
-gl.uniform3fv(lightPosLoc, new Float32Array([10, 20, 30])); // vec3 depuis array
-```
-
-### 5.2 Tableau récapitulatif
-
-| GLSL type | Fonction JS | Exemple |
-|-----------|------------|---------|
-| `float` | `gl.uniform1f(loc, v)` | Temps, intensite |
-| `int` | `gl.uniform1i(loc, v)` | Texture unit, index |
-| `vec2` | `gl.uniform2f(loc, x, y)` | Resolution, UV offset |
-| `vec3` | `gl.uniform3f(loc, x, y, z)` | Position, couleur RGB |
-| `vec4` | `gl.uniform4f(loc, x, y, z, w)` | Couleur RGBA |
-| `mat3` | `gl.uniformMatrix3fv(loc, false, m)` | Normal matrix |
-| `mat4` | `gl.uniformMatrix4fv(loc, false, m)` | MVP, model, view, projection |
-
----
-
-## 6. Varyings — interpolation entre vertex et fragment
-
-Les varyings sont des valeurs calculees par le vertex shader et **interpolees automatiquement** par le rasterizer avant d'arriver au fragment shader.
-
-### 6.1 Comment fonctionne l'interpolation
-
-```
-Vertex Shader produit :                Fragment Shader recoit :
-                                       (valeurs interpolees)
-Sommet A : v_color = (1, 0, 0)  rouge
-                                         ┌────────────────┐
-Sommet B : v_color = (0, 1, 0)  vert     │   Fragment au  │
-                                         │   centre du    │
-Sommet C : v_color = (0, 0, 1)  bleu     │   triangle :   │
-                                         │                │
-                                         │ v_color ≈      │
-                                         │ (0.33, 0.33,   │
-                                         │  0.33)         │
-                                         │                │
-                                         │ = moyenne      │
-                                         │   ponderee     │
-                                         │   par la       │
-                                         │   position     │
-                                         └────────────────┘
-
-L'interpolation est barycentrique :
-Pour un fragment a la position P dans le triangle ABC,
-la valeur interpolee = w_a * val_A + w_b * val_B + w_c * val_C
-ou w_a + w_b + w_c = 1 (coordonnees barycentriques)
-```
-
-### 6.2 Exemple : triangle avec gradient de couleurs
+C'est ainsi que l'UV — définie seulement aux 4 coins — devient disponible pour **chaque pixel** du quad :
 
 ```glsl
-// vertex.glsl
+// Vertex shader : reçoit l'UV en attribut, la RENVOIE en varying
 #version 300 es
-
-in vec3 a_position;
-in vec3 a_color;
-
-out vec3 v_color;   // "out" dans le vertex shader = varying
-
+in vec2 a_position;
+in vec2 a_uv;
+out vec2 v_uv;          // varying : sortie vers le fragment
 void main() {
-  gl_Position = vec4(a_position, 1.0);
-  v_color = a_color;  // passe tel quel au rasterizer
+  gl_Position = vec4(a_position, 0.0, 1.0);
+  v_uv = a_uv;          // transmise telle quelle, sera interpolée
 }
 ```
 
 ```glsl
-// fragment.glsl
+// Fragment shader : reçoit l'UV interpolée
 #version 300 es
 precision highp float;
-
-in vec3 v_color;    // "in" dans le fragment shader = varying interpole
-
+in vec2 v_uv;           // même nom, même type → varying interpolé
 out vec4 fragColor;
-
 void main() {
-  // v_color est ici une valeur INTERPOLEE entre les 3 sommets du triangle
-  fragColor = vec4(v_color, 1.0);
+  fragColor = vec4(v_uv, 0.0, 1.0);  // visualise l'UV comme un gradient
 }
 ```
 
-### 6.3 Interpolation `flat` (pas d'interpolation)
+> **Note GLSL 300 :** `in`/`out` remplacent les anciens `attribute`/`varying` de GLSL 100. Le mot-clé `flat` devant un varying désactive l'interpolation (le fragment reçoit la valeur d'un seul sommet) — utile pour un entier.
 
-```glsl
-// Pour passer un entier ou une valeur non-interpolee :
-flat out int v_instanceId;   // dans le vertex shader
-flat in int v_instanceId;    // dans le fragment shader
-// Le fragment recoit la valeur du PREMIER sommet du triangle (provoking vertex)
-```
+### 2.6 Uniforms typés : le rappel utile
 
----
-
-## 7. Textures 2D
-
-### 7.1 Charger une image comme texture
+Un uniform reste une constante par draw call (module 06). Ici on en utilisera plusieurs types. Le suffixe encode le type GLSL :
 
 ```typescript
-// texture-utils.ts — Chargement de texture depuis une image
+gl.useProgram(program);
+gl.uniform1f(gl.getUniformLocation(program, 'u_time'), t);        // float
+gl.uniform2f(gl.getUniformLocation(program, 'u_res'), w, h);      // vec2
+gl.uniform1i(gl.getUniformLocation(program, 'u_photo'), 0);       // sampler → texture unit 0
+gl.uniformMatrix4fv(mvpLoc, false, mvpMatrix);                    // mat4 (2e arg transpose = toujours false)
+```
 
-async function loadTexture(
-  gl: WebGL2RenderingContext,
-  url: string,
-): Promise<WebGLTexture> {
-  const texture = gl.createTexture();
-  if (!texture) throw new Error('Impossible de creer la texture');
+Note importante : **un `sampler2D` se règle avec `uniform1i`** — on lui passe le **numéro de la texture unit** (un entier), pas la texture elle-même (voir 2.8).
 
-  // Texture temporaire 1x1 rose (visible si l'image met du temps a charger)
+### 2.7 Textures 2D : charger une image sur le GPU
+
+Une texture est une image stockée en mémoire GPU. Le cycle : créer → binder → uploader les pixels → régler les paramètres.
+
+```typescript
+async function loadTexture(gl: WebGL2RenderingContext, url: string): Promise<WebGLTexture> {
+  const texture = gl.createTexture()!;
   gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Pixel provisoire (1×1 magenta) tant que l'image n'est pas chargée
   gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,                    // mip level
-    gl.RGBA,              // format interne
-    1, 1,                 // taille 1x1
-    0,                    // border (toujours 0)
-    gl.RGBA,              // format source
-    gl.UNSIGNED_BYTE,     // type des pixels
-    new Uint8Array([255, 0, 255, 255]),  // rose vif = "texture manquante"
+    gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0,      // target, mip, internalFormat, w, h, border
+    gl.RGBA, gl.UNSIGNED_BYTE,                // srcFormat, srcType
+    new Uint8Array([255, 0, 255, 255]),      // pixels
   );
 
-  // Charger l'image reelle
   const image = new Image();
-  image.crossOrigin = 'anonymous';
+  image.src = url;
+  await image.decode();                       // attend le décodage de l'image
 
-  await new Promise<void>((resolve, reject) => {
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error(`Echec chargement image: ${url}`));
-    image.src = url;
-  });
-
-  // Envoyer l'image au GPU
   gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,                    // mip level 0 (pleine resolution)
-    gl.RGBA,              // format interne GPU
-    gl.RGBA,              // format source
-    gl.UNSIGNED_BYTE,     // type des pixels source
-    image,                // source HTML Image
-  );
-
-  // Generer les mipmaps (versions reduites pour le LOD)
-  gl.generateMipmap(gl.TEXTURE_2D);
+  // Signature courte (source = Image) : target, mip, internalFormat, srcFormat, srcType, source
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.generateMipmap(gl.TEXTURE_2D);           // versions réduites pour le LOD
 
   return texture;
 }
 ```
 
-### 7.2 Parametres de texture
+`texImage2D` a **deux signatures** : longue (données brutes `Uint8Array`, avec `width/height/border`) et courte (source `Image`/`Canvas`/`Video`, sans dimensions). Le `border` de la version longue vaut **toujours 0**.
+
+> **UV inversé.** L'origine UV WebGL est en bas à gauche, mais les images HTML ont l'origine en haut à gauche → la texture apparaît retournée verticalement. Le correctif standard avant l'upload : `gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)`.
+
+### 2.8 Filtrage, wrapping, mipmaps
+
+Trois réglages via `texParameteri(gl.TEXTURE_2D, pname, valeur)` :
+
+**Filtrage** — comment échantillonner quand le pixel écran ne tombe pas pile sur un texel :
+
+- `gl.NEAREST` : le texel le plus proche → rendu pixelisé (look rétro) ;
+- `gl.LINEAR` : moyenne des 4 texels voisins → lissé ;
+- `gl.LINEAR_MIPMAP_LINEAR` : filtrage trilinéaire via mipmaps (uniquement en `MIN_FILTER`).
 
 ```typescript
-function configureTexture(gl: WebGL2RenderingContext): void {
-  // --- FILTRAGE ---
-
-  // Minification filter (texture plus grande que l'ecran → on reduit)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-
-  // Magnification filter (texture plus petite que l'ecran → on agrandit)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-  // --- WRAPPING ---
-
-  // Que faire quand les coordonnees UV sortent de [0, 1] ?
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);  // axe U (horizontal)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);  // axe V (vertical)
-}
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); // texture réduite
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);               // texture agrandie
 ```
 
-### 7.3 Filtrage : NEAREST vs LINEAR vs mipmaps
+**Mipmaps** : versions pré-réduites (256→128→64…→1) que le GPU choisit selon la distance. Évitent le scintillement (aliasing) sur les surfaces lointaines. `generateMipmap` les calcule automatiquement. En **WebGL2**, elles fonctionnent même sur des textures dont la taille n'est **pas** une puissance de 2 (restriction propre à WebGL1).
 
-```
-NEAREST (pixelise) :            LINEAR (lisse) :
-  Prend le pixel le plus          Moyenne ponderee des 4 pixels
-  proche → look "retro"          les plus proches → lisse
+**Wrapping** — que faire quand l'UV sort de `[0, 1]` :
 
-  ┌──┬──┬──┐                     ┌──┬──┬──┐
-  │  │██│  │  → ██                │  │██│  │  → valeur moyenne
-  ├──┼──┼──┤                     ├──┼──┼──┤    des 4 voisins
-  │  │  │  │                     │  │  │  │
-  └──┴──┴──┘                     └──┴──┴──┘
-
-MIPMAPS :
-  Versions pre-calculees de la texture a differentes resolutions.
-  Le GPU choisit le mip level le plus adapte a la distance.
-
-  Mip 0: 256x256  (original)
-  Mip 1: 128x128
-  Mip 2: 64x64
-  Mip 3: 32x32
-  ...
-  Mip 8: 1x1
-```
-
-| Filtre | Min | Mag | Qualite | Performance |
-|--------|-----|-----|---------|-------------|
-| `NEAREST` | Oui | Oui | Pixelise | Rapide |
-| `LINEAR` | Oui | Oui | Lisse | Moyen |
-| `NEAREST_MIPMAP_NEAREST` | Oui | Non | Moyen | Rapide |
-| `LINEAR_MIPMAP_LINEAR` | Oui | Non | Meilleur (trilineaire) | Lent |
-
-### 7.4 Modes de wrapping
-
-```
-UV = (1.3, 0.7) — que fait-on quand U > 1.0 ?
-
-REPEAT :                CLAMP_TO_EDGE :         MIRRORED_REPEAT :
-Repete la texture       Etire le dernier pixel  Repete en miroir
-
-┌───┬───┬───┐          ┌───┬────────┐          ┌───┬───┬───┐
-│ A │ A │ A │          │ A │ bord → │          │ A │ A'│ A │
-│   │   │   │          │   │ etire  │          │   │(m)│   │
-└───┴───┴───┘          └───┴────────┘          └───┴───┴───┘
-Tuile infinie          Pas de repetition       Pas de couture visible
-```
-
----
-
-## 8. Multiple textures — texture units
-
-Le GPU possede plusieurs "slots" appeles texture units. On peut en utiliser plusieurs simultanement dans un même shader.
+- `gl.REPEAT` : répète la texture (tuilage) ;
+- `gl.CLAMP_TO_EDGE` : étire le pixel du bord ;
+- `gl.MIRRORED_REPEAT` : répète en miroir (pas de couture visible).
 
 ```typescript
-// Charger 2 textures
-const diffuseTexture = await loadTexture(gl, 'diffuse.jpg');
-const normalTexture = await loadTexture(gl, 'normal.jpg');
-
-// Activer la texture unit 0 et y binder la diffuse map
-gl.activeTexture(gl.TEXTURE0);
-gl.bindTexture(gl.TEXTURE_2D, diffuseTexture);
-
-// Activer la texture unit 1 et y binder la normal map
-gl.activeTexture(gl.TEXTURE1);
-gl.bindTexture(gl.TEXTURE_2D, normalTexture);
-
-// Dire au shader quelle texture unit correspond a quel uniform sampler
-gl.useProgram(program);
-gl.uniform1i(gl.getUniformLocation(program, 'u_diffuseMap'), 0);  // unit 0
-gl.uniform1i(gl.getUniformLocation(program, 'u_normalMap'), 1);   // unit 1
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); // axe U (horizontal)
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); // axe V (vertical)
 ```
+
+### 2.9 Échantillonner en GLSL 300 et brancher la texture unit
+
+Côté shader, un `uniform sampler2D` représente la texture ; la fonction `texture(sampler, uv)` (GLSL 300 — remplace `texture2D` de GLSL 100) lit la couleur :
 
 ```glsl
-// fragment.glsl
 #version 300 es
 precision highp float;
-
-uniform sampler2D u_diffuseMap;   // connecte a la texture unit 0
-uniform sampler2D u_normalMap;    // connecte a la texture unit 1
-
-in vec2 v_texCoord;
+uniform sampler2D u_photo;   // la texture
+in vec2 v_uv;                // UV interpolée (varying)
 out vec4 fragColor;
-
 void main() {
-  vec4 diffuse = texture(u_diffuseMap, v_texCoord);
-  vec3 normal = texture(u_normalMap, v_texCoord).rgb * 2.0 - 1.0;
-  // ... utiliser les deux textures ...
-  fragColor = diffuse;
+  fragColor = texture(u_photo, v_uv);   // couleur lue dans l'image à la coord v_uv
 }
 ```
 
-:::tip Nombre de texture units
-WebGL 2 garantit au minimum **16 texture units** dans le fragment shader (`gl.MAX_TEXTURE_IMAGE_UNITS`). En pratique, la plupart des GPU en supportent 32.
-:::
-
----
-
-## 9. Framebuffer Objects (FBO) — render-to-texture
-
-Au lieu de dessiner directement a l'ecran, on peut dessiner dans une texture. C'est la base du post-processing, des ombres (shadow maps), des reflexions, etc.
-
-### 9.1 Principe
-
-```
-Rendu normal :                    Render-to-texture (FBO) :
-
-Vertex + Fragment Shader          Vertex + Fragment Shader
-        │                                 │
-        ▼                                 ▼
-┌──────────────┐                 ┌──────────────────┐
-│ Default      │                 │ Framebuffer      │
-│ Framebuffer  │                 │ personnalise     │
-│              │                 │                  │
-│ → ecran      │                 │ → texture        │
-└──────────────┘                 │ → renderbuffer   │
-                                 └──────────────────┘
-                                          │
-                                 On peut ensuite LIRE
-                                 cette texture dans un
-                                 autre shader (post-fx,
-                                 shadow map, reflet...)
-```
-
-### 9.2 Implementation complete
+Côté JS, on relie le sampler à une **texture unit** (un slot GPU numéroté). Trois étapes indissociables :
 
 ```typescript
-interface RenderTarget {
-  framebuffer: WebGLFramebuffer;
-  colorTexture: WebGLTexture;
-  depthRenderbuffer: WebGLRenderbuffer;
-  width: number;
-  height: number;
-}
-
-function createRenderTarget(
-  gl: WebGL2RenderingContext,
-  width: number,
-  height: number,
-): RenderTarget {
-  // 1. Creer la texture de couleur (ou on va dessiner)
-  const colorTexture = gl.createTexture()!;
-  gl.bindTexture(gl.TEXTURE_2D, colorTexture);
-  gl.texImage2D(
-    gl.TEXTURE_2D, 0, gl.RGBA,
-    width, height, 0,
-    gl.RGBA, gl.UNSIGNED_BYTE, null,  // null = pas de donnees initiales
-  );
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-  // 2. Creer un renderbuffer pour la profondeur (depth)
-  const depthRenderbuffer = gl.createRenderbuffer()!;
-  gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderbuffer);
-  gl.renderbufferStorage(
-    gl.RENDERBUFFER,
-    gl.DEPTH_COMPONENT24,   // 24 bits de profondeur
-    width, height,
-  );
-
-  // 3. Creer le framebuffer et y attacher la texture + le depth
-  const framebuffer = gl.createFramebuffer()!;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-  gl.framebufferTexture2D(
-    gl.FRAMEBUFFER,
-    gl.COLOR_ATTACHMENT0,     // point d'attache couleur
-    gl.TEXTURE_2D,
-    colorTexture,
-    0,                        // mip level
-  );
-  gl.framebufferRenderbuffer(
-    gl.FRAMEBUFFER,
-    gl.DEPTH_ATTACHMENT,      // point d'attache profondeur
-    gl.RENDERBUFFER,
-    depthRenderbuffer,
-  );
-
-  // 4. Verifier que le framebuffer est complet
-  const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-  if (status !== gl.FRAMEBUFFER_COMPLETE) {
-    throw new Error(`Framebuffer incomplet: ${status}`);
-  }
-
-  // Restaurer le framebuffer par defaut (ecran)
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-  return { framebuffer, colorTexture, depthRenderbuffer, width, height };
-}
-
-// Utilisation :
-// Pass 1 : dessiner la scene dans le FBO
-gl.bindFramebuffer(gl.FRAMEBUFFER, renderTarget.framebuffer);
-gl.viewport(0, 0, renderTarget.width, renderTarget.height);
-gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-drawScene(gl);
-
-// Pass 2 : dessiner un quad plein ecran avec la texture du FBO
-gl.bindFramebuffer(gl.FRAMEBUFFER, null);  // retour a l'ecran
-gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-gl.activeTexture(gl.TEXTURE0);
-gl.bindTexture(gl.TEXTURE_2D, renderTarget.colorTexture);
-drawFullscreenQuad(gl, postProcessProgram);
+gl.activeTexture(gl.TEXTURE0);              // 1. active l'unit 0
+gl.bindTexture(gl.TEXTURE_2D, texture);     // 2. y branche notre texture
+gl.uniform1i(u_photoLoc, 0);                // 3. dit au sampler : « lis dans l'unit 0 »
 ```
+
+WebGL2 garantit **au minimum 16** texture units dans le fragment shader — assez pour combiner diffuse map, normal map, etc. dans un même shader.
 
 ---
 
-## 10. GLSL avance — fonctions et patterns
+## 3. Worked examples
 
-### 10.1 Structs et arrays
+### Exemple 1 — Un quad texturé de A à Z (photo de sortie TribuZen)
 
-```glsl
-#version 300 es
-precision highp float;
+Objectif : plaquer une photo sur un quad, en cousant tout ce qui précède — VBO entrelacé, VAO, index buffer, varying UV, texture. On réutilise `createProgram` du module 06.
 
-// Struct personnalisee
-struct Light {
-  vec3 position;
-  vec3 color;
-  float intensity;
-  float radius;
-};
+```typescript
+import { createProgram } from './gl-utils';  // du module 06
 
-// Tableau de lumieres (taille fixe en GLSL)
-const int MAX_LIGHTS = 4;
-uniform Light u_lights[MAX_LIGHTS];
-uniform int u_numLights;
-
+const VERTEX_SRC = `#version 300 es
+in vec2 a_position;
+in vec2 a_uv;
+out vec2 v_uv;
 void main() {
-  vec3 totalLight = vec3(0.0);
-  for (int i = 0; i < MAX_LIGHTS; i++) {
-    if (i >= u_numLights) break;
-    // Utiliser u_lights[i].position, u_lights[i].color, etc.
-    totalLight += u_lights[i].color * u_lights[i].intensity;
-  }
-  // ...
-}
-```
+  gl_Position = vec4(a_position, 0.0, 1.0);
+  v_uv = a_uv;                 // UV transmise au fragment (interpolée)
+}`;
 
-:::warning Uniforms de struct
-Pour envoyer un struct array depuis JavaScript, il faut acceder à chaque membre individuellement :
-`gl.getUniformLocation(program, 'u_lights[0].position')`
-`gl.getUniformLocation(program, 'u_lights[1].color')`
-:::
-
-### 10.2 Fonctions built-in essentielles
-
-```glsl
-// --- Interpolation et clamping ---
-float a = mix(0.0, 1.0, 0.5);           // = 0.5  (interpolation lineaire)
-vec3 c = mix(rouge, bleu, 0.3);          // 70% rouge + 30% bleu
-float b = clamp(value, 0.0, 1.0);        // borne entre 0 et 1
-float s = smoothstep(0.2, 0.8, x);       // transition douce de 0 a 1
-
-// --- Vecteurs ---
-vec3 n = normalize(normal);               // vecteur unitaire (longueur 1)
-float d = dot(a, b);                      // produit scalaire
-vec3 c = cross(a, b);                     // produit vectoriel
-float l = length(v);                      // norme du vecteur
-float dist = distance(p1, p2);            // distance entre 2 points
-vec3 r = reflect(incident, normal);       // reflexion (pour specular)
-vec3 t = refract(incident, normal, eta);  // refraction (pour verre, eau)
-
-// --- Mathematiques ---
-float f = fract(x);                       // partie fractionnaire (x - floor(x))
-float a = abs(x);                         // valeur absolue
-float m = mod(x, y);                      // modulo
-float p = pow(base, exp);                 // puissance
-
-// --- Comparaison (sans branchement → plus rapide sur GPU) ---
-float s = step(edge, x);                  // 0 si x < edge, 1 sinon
-// step est comme un if/else mais sans branchement
-```
-
-### 10.3 Pattern complet : eclairage Phong en GLSL
-
-```glsl
-// phong-fragment.glsl
-#version 300 es
+const FRAGMENT_SRC = `#version 300 es
 precision highp float;
-
-// Entrees interpolees
-in vec3 v_worldPosition;   // position du fragment dans le monde
-in vec3 v_worldNormal;     // normale du fragment dans le monde
-in vec2 v_texCoord;
-
-// Uniforms
-uniform vec3 u_cameraPosition;
-uniform vec3 u_lightPosition;
-uniform vec3 u_lightColor;
-uniform float u_lightIntensity;
-
-uniform vec3 u_ambientColor;
-uniform float u_shininess;
-
-uniform sampler2D u_diffuseMap;
-
+uniform sampler2D u_photo;
+in vec2 v_uv;
 out vec4 fragColor;
-
 void main() {
-  // Vecteurs necessaires
-  vec3 N = normalize(v_worldNormal);                        // normale
-  vec3 L = normalize(u_lightPosition - v_worldPosition);    // vers la lumiere
-  vec3 V = normalize(u_cameraPosition - v_worldPosition);   // vers la camera
-  vec3 R = reflect(-L, N);                                  // reflexion de la lumiere
+  fragColor = texture(u_photo, v_uv);   // couleur lue dans la photo
+}`;
 
-  // Distance a la lumiere (pour l'attenuation)
-  float dist = length(u_lightPosition - v_worldPosition);
-  float attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+async function main(): Promise<void> {
+  const canvas = document.getElementById('gl-canvas') as HTMLCanvasElement;
+  const gl = canvas.getContext('webgl2');
+  if (!gl) throw new Error('WebGL2 non supporté.');
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
 
-  // Composante ambiante
-  vec3 ambient = u_ambientColor;
+  const program = createProgram(gl, VERTEX_SRC, FRAGMENT_SRC);
 
-  // Composante diffuse (Lambert)
-  float diff = max(dot(N, L), 0.0);
-  vec3 diffuse = diff * u_lightColor * u_lightIntensity;
-
-  // Composante speculaire (Blinn-Phong)
-  vec3 H = normalize(L + V);  // half vector (Blinn)
-  float spec = pow(max(dot(N, H), 0.0), u_shininess);
-  vec3 specular = spec * u_lightColor * u_lightIntensity;
-
-  // Couleur de la texture
-  vec4 texColor = texture(u_diffuseMap, v_texCoord);
-
-  // Combiner
-  vec3 result = (ambient + (diffuse + specular) * attenuation) * texColor.rgb;
-
-  fragColor = vec4(result, texColor.a);
-}
-```
-
-```glsl
-// phong-vertex.glsl
-#version 300 es
-
-in vec3 a_position;
-in vec3 a_normal;
-in vec2 a_texCoord;
-
-uniform mat4 u_model;
-uniform mat4 u_view;
-uniform mat4 u_projection;
-
-out vec3 v_worldPosition;
-out vec3 v_worldNormal;
-out vec2 v_texCoord;
-
-void main() {
-  // Position dans le monde (pour les calculs d'eclairage)
-  vec4 worldPos = u_model * vec4(a_position, 1.0);
-  v_worldPosition = worldPos.xyz;
-
-  // Normale dans le monde (utiliser mat3 du model pour ignorer la translation)
-  // Note : ceci ne fonctionne correctement que si le model n'a pas de scale non-uniforme
-  // Pour un scale non-uniforme, il faut la normal matrix : transpose(inverse(mat3(model)))
-  v_worldNormal = mat3(u_model) * a_normal;
-
-  // Coordonnees de texture
-  v_texCoord = a_texCoord;
-
-  // Position finale en clip space
-  gl_Position = u_projection * u_view * worldPos;
-}
-```
-
-### 10.4 Passer les uniforms Phong depuis TypeScript
-
-```typescript
-function setPhongUniforms(
-  gl: WebGL2RenderingContext,
-  info: ShaderProgramInfo,
-  camera: { position: Float32Array },
-  light: { position: Float32Array; color: Float32Array; intensity: number },
-  modelMatrix: Float32Array,
-  viewMatrix: Float32Array,
-  projectionMatrix: Float32Array,
-): void {
-  gl.useProgram(info.program);
-
-  // Matrices
-  gl.uniformMatrix4fv(info.uniforms.get('u_model')!, false, modelMatrix);
-  gl.uniformMatrix4fv(info.uniforms.get('u_view')!, false, viewMatrix);
-  gl.uniformMatrix4fv(info.uniforms.get('u_projection')!, false, projectionMatrix);
-
-  // Camera
-  gl.uniform3fv(info.uniforms.get('u_cameraPosition')!, camera.position);
-
-  // Lumiere
-  gl.uniform3fv(info.uniforms.get('u_lightPosition')!, light.position);
-  gl.uniform3fv(info.uniforms.get('u_lightColor')!, light.color);
-  gl.uniform1f(info.uniforms.get('u_lightIntensity')!, light.intensity);
-
-  // Materiau
-  gl.uniform3f(info.uniforms.get('u_ambientColor')!, 0.1, 0.1, 0.1);
-  gl.uniform1f(info.uniforms.get('u_shininess')!, 32.0);
-
-  // Texture
-  gl.uniform1i(info.uniforms.get('u_diffuseMap')!, 0);  // texture unit 0
-}
-```
-
----
-
-## 11. Exercice pratique
-
-### Enonce
-
-Creez un **carre texture** avec eclairage Phong. Le carre doit :
-
-1. Utiliser un **index buffer** (4 sommets, 6 indices)
-2. Avoir des **coordonnees de texture UV** en attribut
-3. Charger une texture depuis une URL (où utiliser un pattern procedural)
-4. Appliquer un eclairage **Phong** avec une lumiere ponctuelle
-5. Faire tourner le carre lentement avec `requestAnimationFrame`
-
-**Structure des attributs :**
-- `a_position` : vec3
-- `a_normal` : vec3 (tous les sommets ont la même normale : (0, 0, 1))
-- `a_texCoord` : vec2
-
-**Indices :**
-- Utilisez `gl.uniformMatrix4fv` pour passer la model matrix (rotation Y)
-- La view matrix peut etre une simple translation Z
-- La projection matrix peut etre une perspective matrix
-
-<details>
-<summary>Voir la solution</summary>
-
-```typescript
-// Donnees du carre
-const vertices = new Float32Array([
-  // pos (x,y,z)     normal (nx,ny,nz)   uv (u,v)
-  -0.5,  0.5, 0.0,   0.0, 0.0, 1.0,     0.0, 1.0,   // haut-gauche
-   0.5,  0.5, 0.0,   0.0, 0.0, 1.0,     1.0, 1.0,   // haut-droit
-   0.5, -0.5, 0.0,   0.0, 0.0, 1.0,     1.0, 0.0,   // bas-droit
-  -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,     0.0, 0.0,   // bas-gauche
-]);
-
-const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
-
-// Configuration des attributs
-const FLOAT_SIZE = 4;
-const STRIDE = 8 * FLOAT_SIZE; // 3 + 3 + 2 = 8 floats par sommet
-
-// a_position: 3 floats, offset 0
-gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, STRIDE, 0);
-// a_normal: 3 floats, offset 12
-gl.vertexAttribPointer(normLoc, 3, gl.FLOAT, false, STRIDE, 3 * FLOAT_SIZE);
-// a_texCoord: 2 floats, offset 24
-gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, STRIDE, 6 * FLOAT_SIZE);
-
-// Texture procedurale (damier 8x8)
-function createCheckerTexture(gl: WebGL2RenderingContext): WebGLTexture {
-  const size = 256;
-  const data = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      const checker = ((x >> 5) + (y >> 5)) % 2 === 0;
-      const val = checker ? 200 : 50;
-      data[idx]     = val;  // R
-      data[idx + 1] = val;  // G
-      data[idx + 2] = val;  // B
-      data[idx + 3] = 255;  // A
-    }
-  }
-  const tex = gl.createTexture()!;
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  return tex;
-}
-
-// Boucle de rendu avec rotation
-let lastTime = 0;
-let angle = 0;
-
-function frame(now: number): void {
-  const dt = (now - lastTime) / 1000;
-  lastTime = now;
-  angle += dt * 0.5; // 0.5 rad/s
-
-  // Model matrix : rotation Y
-  const c = Math.cos(angle);
-  const s = Math.sin(angle);
-  const modelMatrix = new Float32Array([
-     c, 0, s, 0,
-     0, 1, 0, 0,
-    -s, 0, c, 0,
-     0, 0, 0, 1,
+  // --- VBO entrelacé : position (x,y) + UV (u,v) ---
+  const FLOAT = 4;
+  const STRIDE = 4 * FLOAT;               // 16 octets par sommet
+  const vertices = new Float32Array([
+    -0.5,  0.5,  0.0, 1.0,   // 0 haut-gauche
+     0.5,  0.5,  1.0, 1.0,   // 1 haut-droit
+     0.5, -0.5,  1.0, 0.0,   // 2 bas-droit
+    -0.5, -0.5,  0.0, 0.0,   // 3 bas-gauche
   ]);
+  const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-  // View matrix : recul de 3 unites sur Z
-  const viewMatrix = new Float32Array([
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, -3, 1,
-  ]);
-
-  // Projection perspective simplifiee (FOV 60deg, aspect 1:1, near 0.1, far 100)
-  const fov = Math.PI / 3;
-  const aspect = gl.canvas.width / gl.canvas.height;
-  const near = 0.1;
-  const far = 100;
-  const f = 1 / Math.tan(fov / 2);
-  const projectionMatrix = new Float32Array([
-    f / aspect, 0, 0, 0,
-    0, f, 0, 0,
-    0, 0, (far + near) / (near - far), -1,
-    0, 0, (2 * far * near) / (near - far), 0,
-  ]);
-
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.useProgram(program);
-
-  gl.uniformMatrix4fv(modelLoc, false, modelMatrix);
-  gl.uniformMatrix4fv(viewLoc, false, viewMatrix);
-  gl.uniformMatrix4fv(projLoc, false, projectionMatrix);
-  gl.uniform3f(cameraLoc, 0, 0, 3);
-  gl.uniform3f(lightPosLoc, 2, 2, 4);
-  gl.uniform3f(lightColorLoc, 1, 1, 1);
-  gl.uniform1f(lightIntensityLoc, 1.0);
-  gl.uniform3f(ambientLoc, 0.15, 0.15, 0.15);
-  gl.uniform1f(shininessLoc, 32.0);
-  gl.uniform1i(diffuseMapLoc, 0);
-
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, checkerTex);
-
+  // --- VAO : enregistre buffers + attributs + EBO ---
+  const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
-  gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+  const posLoc = gl.getAttribLocation(program, 'a_position');
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, STRIDE, 0);           // offset 0
+
+  const uvLoc = gl.getAttribLocation(program, 'a_uv');
+  gl.enableVertexAttribArray(uvLoc);
+  gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, STRIDE, 2 * FLOAT);    // offset 8 octets
+
+  const ebo = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);   // enregistré dans le VAO
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
   gl.bindVertexArray(null);
 
-  requestAnimationFrame(frame);
+  // --- Texture : la photo de la sortie ---
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);  // corrige l'origine UV inversée
+  const texture = await loadTexture(gl, './sortie-rando.jpg');
+
+  // --- Rendu ---
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.clearColor(0.1, 0.1, 0.2, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  gl.useProgram(program);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.uniform1i(gl.getUniformLocation(program, 'u_photo'), 0);  // sampler → unit 0
+
+  gl.bindVertexArray(vao);
+  gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);      // 6 indices, 2 triangles
 }
 
-requestAnimationFrame(frame);
+main();
 ```
 
-**Points clés :**
-- Le stride de 32 bytes (8 floats) permet au GPU de sauter d'un sommet au suivant
-- La normal matrix n'est pas nécessaire ici car il n'y a pas de scale non-uniforme
-- La texture procedurale evite de dépendre d'un fichier image externe
-- `requestAnimationFrame` synchronise le rendu avec le taux de rafraichissement de l'ecran
+Résultat : la photo de la rando remplit le quad. Retirer une étape (l'`activeTexture`, le `uniform1i`, ou le varying `v_uv`) suffit à obtenir un quad noir ou magenta silencieux.
 
-</details>
+### Exemple 2 — Debugger l'UV sans texture (le réflexe qui sauve)
 
----
+Quand un quad texturé s'affiche noir ou de travers, la cause est presque toujours l'**UV**, pas la texture. Le réflexe : remplacer le sampling par une **visualisation directe de l'UV**, qui isole le problème.
 
-## Résumé
+```glsl
+// Fragment shader de debug : peint l'UV en gradient rouge/vert
+#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 fragColor;
+void main() {
+  // u → rouge, v → vert : le coin (0,0) est noir, (1,1) est jaune
+  fragColor = vec4(v_uv, 0.0, 1.0);
+}
+```
 
-| Concept | Role | API/Syntaxe clé |
-|---------|------|-----------------|
-| VBO | Stocke les donnees de sommets sur le GPU | `gl.createBuffer`, `gl.bufferData` |
-| VAO | Memorise la configuration des attributs | `gl.createVertexArray`, `gl.bindVertexArray` |
-| vertexAttribPointer | Decrit le format d'un attribut | `gl.vertexAttribPointer(loc, size, type, norm, stride, offset)` |
-| EBO / Index Buffer | Référence les sommets par index | `gl.ELEMENT_ARRAY_BUFFER`, `gl.drawElements` |
-| Uniforms | Valeurs constantes par draw call | `gl.uniform*`, `gl.uniformMatrix*fv` |
-| Varyings | Interpolation vertex → fragment | `out` (vertex) / `in` (fragment) |
-| Textures 2D | Image mappee sur la geometrie | `gl.texImage2D`, `texture()` en GLSL |
-| Filtrage | NEAREST, LINEAR, mipmaps | `gl.texParameteri(TEXTURE_MIN_FILTER, ...)` |
-| Wrapping | REPEAT, CLAMP_TO_EDGE, MIRRORED | `gl.texParameteri(TEXTURE_WRAP_S, ...)` |
-| Texture units | Plusieurs textures simultanees | `gl.activeTexture(gl.TEXTURE0)` |
-| FBO | Render-to-texture | `gl.createFramebuffer`, `gl.framebufferTexture2D` |
-| Renderbuffer | Depth/stencil attachment pour FBO | `gl.createRenderbuffer`, `gl.renderbufferStorage` |
-| Structs GLSL | Types personnalises | `struct Light { vec3 pos; float intensity; };` |
-| Built-in GLSL | mix, clamp, smoothstep, normalize, reflect | Pas de branchement → perf GPU |
-| Eclairage Phong | Ambient + diffuse + speculaire | `max(dot(N,L),0)`, `pow(max(dot(N,H),0), shin)` |
+Lecture du résultat :
+
+- **gradient propre** (noir en bas-gauche, jaune en haut-droit) → les UV sont correctes, le bug est côté texture (chargement, unit, sampler) ;
+- **couleur uniforme** → l'attribut `a_uv` n'est pas branché (offset/stride faux, ou `enableVertexAttribArray` oublié) ;
+- **gradient retourné verticalement** → il manque `UNPACK_FLIP_Y_WEBGL` ou les UV sont inversées dans le buffer.
+
+Cette technique — sortir une donnée intermédiaire comme couleur — est **le** debugger du shader (il n'y a pas de `console.log` sur le GPU).
 
 ---
 
-## Navigation
+## 4. Pièges & misconceptions
 
-| Précédent | Suivant |
-|:---------:|:-------:|
-| [06 — WebGL fondamentaux et GLSL](./06-webgl-fondamentaux.md) | [08 — Scene WebGL complete](./08-scene-webgl-complete.md) |
+### PIÈGE #1 — Croire que `stride`/`offset` sont en composantes
+
+`vertexAttribPointer(loc, size, type, norm, stride, offset)` : `stride` et `offset` sont **en OCTETS**, pas en floats. Pour un buffer `[x, y, u, v]`, l'offset de l'UV est `2 * 4 = 8` octets, pas `2`. Erreur classique : écrire `offset = 2` → l'UV est lue au mauvais endroit, texture décalée.
+
+### PIÈGE #2 — Passer la texture (au lieu de l'unit) à `uniform1i`
+
+Un `sampler2D` se règle avec `gl.uniform1i(loc, 0)` où `0` est le **numéro de la texture unit**, un entier. On ne passe **jamais** l'objet `WebGLTexture`. Le lien se fait via `activeTexture(gl.TEXTURE0)` + `bindTexture` : le sampler lit « ce qui est bindé dans l'unit qu'on lui a donnée ».
+
+### PIÈGE #3 — Débinder l'EBO avant le VAO
+
+Le bind `ELEMENT_ARRAY_BUFFER` fait partie de l'état du VAO. Si on appelle `gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)` **avant** `gl.bindVertexArray(null)`, le VAO oublie son index buffer → `drawElements` ne dessine rien. Ordre correct : binder l'EBO pendant que le VAO est actif, puis débinder le VAO en dernier.
+
+### PIÈGE #4 — `drawElements` vs `drawArrays` : le count change de sens
+
+`drawArrays(mode, first, count)` : `count` = nombre de **sommets**. `drawElements(mode, count, type, offset)` : `count` = nombre d'**indices**. Pour un quad : `drawArrays` voudrait 6 sommets, `drawElements` prend 6 indices sur 4 sommets. Et le `type` (`gl.UNSIGNED_SHORT`) doit matcher le `Uint16Array` des indices (`Uint32Array` → `gl.UNSIGNED_INT`).
+
+### PIÈGE #5 — Utiliser `texture2D()` en GLSL ES 300
+
+`texture2D(sampler, uv)` est la syntaxe **GLSL ES 100** (WebGL1). En GLSL ES 300 (`#version 300 es`), la fonction est simplement `texture(sampler, uv)`. Écrire `texture2D` fait échouer la compilation — et sans lire l'info log (module 06), c'est un quad noir inexpliqué.
+
+### PIÈGE #6 — Oublier `UNPACK_FLIP_Y_WEBGL` → texture à l'envers
+
+L'origine UV de WebGL est en bas-gauche ; celle des images HTML en haut-gauche. Sans `gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)` avant l'upload, la photo s'affiche **retournée verticalement**. C'est un bug visuel, pas une erreur — donc silencieux.
+
+### PIÈGE #7 — `LINEAR_MIPMAP_LINEAR` sans mipmaps générés
+
+Régler `TEXTURE_MIN_FILTER` sur un mode `*_MIPMAP_*` **sans** avoir appelé `generateMipmap` (ou uploadé les niveaux manuellement) rend la texture **noire** : le GPU cherche des mipmaps qui n'existent pas. Soit on génère les mipmaps, soit on reste sur `gl.LINEAR` / `gl.NEAREST` en min filter.
 
 ---
 
-<!-- parcours-recommande -->
+## 5. Ancrage TribuZen
 
-::: tip Parcours recommandé
-1. **Screencast** : [screencast 07 shaders](../screencasts/screencast-07-shaders.md)
-2. **Lab** : [lab-07-shaders-glsl](../labs/lab-07-shaders-glsl/README)
-3. **Visualisation** : [Shader Sandbox](../visualizations/shader-sandbox.html)
-4. **Quiz** : [quiz 07 shaders](../quizzes/quiz-07-shaders.html)
-:::
+Ce module fait passer TribuZen du marqueur monochrome à la **vignette photo** : chaque sortie de la famille affiche son image, plaquée sur un quad dans la scène 3D.
+
+**La photo de sortie comme texture.** Le feed 3D de TribuZen empile les sorties récentes ; chaque carte est un quad texturé par la photo de couverture de la sortie :
+
+- **position** (attribut) : place la carte dans la scène (calculée depuis le layout du feed) ;
+- **UV** (attribut entrelacé) : mappe la photo sur le quad, avec `CLAMP_TO_EDGE` pour éviter tout tuilage sur les bords ;
+- **texture** : la photo chargée depuis l'URL du storage, avec mipmaps pour que les cartes lointaines ne scintillent pas ;
+- **index buffer** : un seul VAO « quad » (4 sommets, 6 indices) réutilisé pour **toutes** les cartes — seules la texture et la matrice de position changent entre les draws.
+
+Fichiers cibles dans `smaurier/tribuzen` :
+
+```
+tribuzen/
+  src/
+    3d/
+      gl/
+        glUtils.ts          ← createProgram (module 06)
+        loadTexture.ts      ← chargement + filtrage/wrapping/mipmaps (§2.7-2.8)
+      feed/
+        QuadGeometry.ts     ← VBO entrelacé + VAO + index buffer du quad partagé
+        PhotoCard.ts        ← une carte = quad + texture d'une sortie
+      FeedCanvas.vue        ← <canvas> WebGL2 du feed 3D
+```
+
+> Le quad partagé ici (position + UV + index buffer) est **la** brique réutilisée partout ensuite : le module 08 l'anime et l'assemble en scène complète, le module 16 (post-processing) s'en sert pour le quad plein écran.
+
+---
+
+## 6. Points clés
+
+1. Un VBO **entrelacé** range plusieurs attributs par sommet `[x, y, u, v, ...]` ; `stride`/`offset` de `vertexAttribPointer` sont **en octets** (float = 4 octets).
+2. Le **VAO** enregistre buffers + config d'attributs + EBO ; au rendu un seul `bindVertexArray` restaure tout.
+3. L'**index buffer** (EBO, `ELEMENT_ARRAY_BUFFER`) évite de dupliquer les sommets ; on dessine avec `drawElements(mode, count, type, offset)` où `count` = nombre d'**indices**.
+4. L'EBO est mémorisé **dans** le VAO : le binder pendant que le VAO est actif, débinder le VAO en dernier.
+5. Un **varying** (`out` vertex → `in` fragment, même nom) est **interpolé** barycentriquement ; c'est ainsi que l'UV des 4 coins atteint chaque pixel.
+6. Une **texture 2D** se charge via `createTexture` → `bindTexture` → `texImage2D` (deux signatures : brute vs source Image) → `generateMipmap`.
+7. **Filtrage** (`NEAREST`/`LINEAR`/`*_MIPMAP_*` en min) et **wrapping** (`REPEAT`/`CLAMP_TO_EDGE`/`MIRRORED_REPEAT`) se règlent par `texParameteri` ; les mipmaps marchent sur toute taille en WebGL2.
+8. En GLSL 300 on échantillonne avec `texture(sampler, uv)` (pas `texture2D`) ; côté JS, `uniform1i(loc, N)` relie le sampler à la texture unit `N` activée via `activeTexture`.
+
+---
+
+## 7. Seeds Anki
+
+```
+En quelle unité sont stride et offset dans vertexAttribPointer ?|En OCTETS (pas en composantes). Pour un buffer entrelacé [x,y,u,v], stride = 4*4 = 16 octets, et l'offset de l'UV = 2*4 = 8 octets. Un float = 4 octets.
+À quoi sert un VAO (Vertex Array Object) ?|Il enregistre toute la config d'attributs (bindBuffer ARRAY_BUFFER, enableVertexAttribArray, vertexAttribPointer) ET le bind ELEMENT_ARRAY_BUFFER. Au rendu, un seul bindVertexArray(vao) restaure tout au lieu de tout rejouer par frame.
+Pourquoi utiliser un index buffer (EBO) plutôt que drawArrays pour un quad ?|Un quad = 2 triangles. Sans index, il faut 6 sommets (2 dupliqués). Avec un EBO on garde 4 sommets uniques + 6 indices [0,1,2, 0,2,3], et on dessine avec drawElements. Économie qui monte à 50-70% sur les modèles complexes.
+Dans drawElements(mode, count, type, offset), que valent count et type pour un quad ?|count = nombre d'INDICES (6 pour un quad, pas 4 sommets). type = le type du buffer d'indices : gl.UNSIGNED_SHORT pour un Uint16Array (ou gl.UNSIGNED_INT pour Uint32Array). offset en octets dans le buffer d'indices.
+Qu'est-ce qu'un varying et comment le déclare-t-on en GLSL 300 ?|Une valeur calculée par sommet dans le vertex shader (out vec2 v_uv) et reçue interpolée par le fragment shader (in vec2 v_uv, même nom/type). Le rasteriseur interpole barycentriquement. En GLSL 300 : in/out (plus attribute/varying de GLSL 100).
+Comment relie-t-on un uniform sampler2D à une texture ?|Trois étapes : gl.activeTexture(gl.TEXTURE0) active l'unit 0, gl.bindTexture(gl.TEXTURE_2D, tex) y branche la texture, gl.uniform1i(samplerLoc, 0) dit au sampler de lire dans l'unit 0. On passe le NUMÉRO d'unit (entier), jamais l'objet texture.
+Quelle fonction échantillonne une texture en GLSL ES 300 ?|texture(sampler, uv) — pas texture2D() qui est la syntaxe GLSL ES 100 (WebGL1). Écrire texture2D en #version 300 es fait échouer la compilation.
+Que fait TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR sans generateMipmap ?|La texture apparaît NOIRE : le filtre trilinéaire cherche des niveaux de mipmap inexistants. Il faut soit appeler generateMipmap(gl.TEXTURE_2D), soit rester sur gl.LINEAR/gl.NEAREST en min filter. En WebGL2 les mipmaps marchent sur toute taille (pas seulement puissances de 2).
+Pourquoi une photo apparaît-elle retournée verticalement en texture ?|L'origine UV de WebGL est en bas-gauche, celle des images HTML en haut-gauche. Correctif : gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) avant l'upload texImage2D. Bug visuel silencieux, aucune erreur levée.
+```
+
+---
+
+## Pont vers le lab
+
+> Lab associé : `labs/lab-07-shaders-buffers-textures/README.md`. Texturer un quad avec une photo et animer le shader en WebGL2 — VBO entrelacé, VAO, index buffer, varying UV, texture avec filtrage/wrapping, écrit de zéro dans le navigateur, corrigé HTML/TS commenté.

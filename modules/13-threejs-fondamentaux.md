@@ -1,1299 +1,536 @@
-# Module 13 — Three.js fondamentaux
+---
+titre: Three.js fondamentaux
+cours: 20-webgpu-3d
+notions:
+  - "le trio Scene / Camera / WebGLRenderer"
+  - "Mesh = Geometry + Material"
+  - "PerspectiveCamera (fov, aspect, near, far)"
+  - "boucle d'animation (setAnimationLoop vs requestAnimationFrame)"
+  - "OrbitControls (three/addons)"
+  - "gestion du resize (resizeRendererToDisplaySize)"
+  - "ESM moderne : import 'three' + 'three/addons/'"
+  - "ce que Three.js abstrait vs WebGL brut"
+outcomes:
+  - sait monter une scène Three.js complète (Scene, PerspectiveCamera, WebGLRenderer) et l'afficher dans un canvas
+  - sait créer un Mesh en combinant une Geometry et un Material et l'ajouter à la scène
+  - sait écrire une boucle d'animation avec setAnimationLoop et animer un objet
+  - sait ajouter OrbitControls depuis three/addons et gérer le damping dans la boucle
+  - sait gérer le redimensionnement (aspect + updateProjectionMatrix + setSize) sans déformer l'image
+  - sait expliquer ce que Three.js abstrait par rapport au code WebGL brut des modules 06-08
+prerequis:
+  - "06-webgl-fondamentaux (contexte, VBO, shaders, draw call)"
+  - "07-shaders-buffers-textures (GLSL, VBO/VAO, textures)"
+  - "08-scene-webgl-complete (assembler une scène WebGL animée à la main)"
+  - "03-cameras-et-projections (view/projection, perspective, frustum)"
+next: 14-materiaux-et-lumieres-threejs
+libs: ["three"]
+tribuzen: "moteur 3D TribuZen — le globe interactif des sorties de la famille, monté en Three.js (Scene + Camera + Renderer + OrbitControls) en une fraction du code WebGL brut du module 08"
+last-reviewed: 2026-07
+---
 
-| Difficulte | Duree estimee | Lab | Quiz |
-|:----------:|:-------------:|:---:|:----:|
-| 3/5        | 90 min        | [Lab 13](../labs/lab-13-threejs-fondamentaux/) | [Quiz 13](../quizzes/quiz-13-threejs-fondamentaux.html) |
+# Three.js fondamentaux
 
-## Objectifs pedagogiques
+> **Outcomes — tu sauras FAIRE :** monter une scène Three.js (Scene / PerspectiveCamera / WebGLRenderer), créer un `Mesh` (Geometry + Material), écrire une boucle d'animation, ajouter `OrbitControls`, et gérer le resize proprement.
+> **Difficulté :** :star::star::star:
+>
+> **Portée :** ce module est le **premier contact avec Three.js**, après trois modules de WebGL brut (06-08). On monte une scène minimale animée et contrôlable à la souris. Les matériaux/lumières/ombres en détail sont au **module 14**, les modèles glTF au **module 15**. Version de référence : **Three.js r185** (2026).
 
-A la fin de ce module, vous serez capable de :
+## 1. Cas concret d'abord
 
-- Expliquer ce qu'est Three.js et pourquoi il abstrait WebGL/WebGPU
-- Créer une scene 3D complete avec Scene, Camera et Renderer
-- Configurer une PerspectiveCamera avec les bons paramètres
-- Utiliser les geometries et materiaux de base
-- Mettre en place un render loop fluide avec `requestAnimationFrame`
-- Ajouter des controles interactifs avec OrbitControls
-- Gérer le redimensionnement du canvas proprement
-- Utiliser les helpers de debug (AxesHelper, GridHelper)
+Au module 08, tu as assemblé **à la main** une scène WebGL animée pour TribuZen : contexte `webgl2`, compilation de shaders, VBO/VAO, matrices model/view/projection calculées à la main, uniforms, boucle de rendu, gestion du depth test. Résultat concret mais **~250 lignes** pour afficher un cube qui tourne.
+
+La feature suivante du fil rouge : le **globe interactif des sorties de la famille** — une sphère 3D qu'on fait tourner à la souris, avec un marqueur par sortie. En WebGL brut, ce serait des centaines de lignes de plus (sphère générée à la main, contrôles souris câblés, gestion du resize, éclairage...).
+
+Voici le même objectif — un cube 3D qui tourne, contrôlable à la souris — écrit en Three.js :
+
+```typescript
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const canvas = document.querySelector('#app') as HTMLCanvasElement;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 100);
+camera.position.z = 3;
+
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0x00ff88 }),
+);
+scene.add(cube);
+scene.add(new THREE.DirectionalLight(0xffffff, 3));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+
+renderer.setAnimationLoop(() => {
+  cube.rotation.y += 0.01;
+  controls.update();
+  renderer.render(scene, camera);
+});
+```
+
+Environ **20 lignes** au lieu de 250. Three.js n'ajoute pas de magie : il **abstrait** exactement le protocole WebGL du module 08 (shaders, buffers, matrices, draw calls) derrière une API orientée objet. Ce module montre le trio fondamental, le `Mesh`, la boucle et les contrôles — et **ce que chaque objet remplace** du WebGL brut que tu connais déjà.
 
 ---
 
-<details>
-<summary>Rappel du cours précédent — Techniques avancees WebGPU (Module 12)</summary>
+## 2. Théorie complète, concise
 
-Au module 12, nous avons explore les techniques avancees de WebGPU :
+### 2.1 Ce que Three.js est (et n'est pas)
 
-- **Multi-pass rendering** : render passes multiples avec depth pre-pass et forward pass
-- **Compute shaders avances** : simulation de particules sur GPU, prefix sum
-- **Indirect drawing** : `drawIndirect` / `drawIndexedIndirect` pour le GPU-driven rendering
-- **Timestamp queries** : mesurer les temps GPU avec `GPUQuerySet`
-- **Render bundles** : `GPURenderBundle` pour pre-enregistrer des commandes
+Three.js est une bibliothèque JavaScript/TypeScript qui abstrait WebGL2 (et WebGPU depuis r160+, via `WebGPURenderer`) derrière une API orientée objet. Elle **ne remplace pas** ta compréhension du pipeline : elle l'automatise. Chaque concept WebGL des modules 06-08 a son équivalent Three.js :
 
-Ces techniques offrent un controle total mais demandent beaucoup de code boilerplate. Three.js va nous permettre d'obtenir des résultats similaires avec une fraction du code.
+| WebGL brut (modules 06-08) | Équivalent Three.js |
+|----------------------------|---------------------|
+| compiler vertex + fragment shaders | `new THREE.MeshStandardMaterial()` |
+| créer VBO / VAO / index buffer | `new THREE.BoxGeometry(1, 1, 1)` |
+| calculer les matrices model/view/projection | `camera` + `mesh.position/rotation` (auto) |
+| `gl.enable(gl.DEPTH_TEST)`, cull face, viewport | activés par défaut dans le renderer |
+| boucle `requestAnimationFrame` + clear + draw | `renderer.setAnimationLoop(...)` + `render()` |
 
-</details>
-
----
-
-## Qu'est-ce que Three.js ?
-
-### La couche d'abstraction
-
-Three.js est une bibliotheque JavaScript/TypeScript qui abstrait les API graphiques bas niveau (WebGL et WebGPU (depuis r160+)) derriere une API orientee objet intuitive.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Votre application                       │
-├─────────────────────────────────────────────────────────────┤
-│                        Three.js                             │
-│   Scene, Camera, Mesh, Material, Light, Renderer, ...       │
-├─────────────────────────────────────────────────────────────┤
-│              WebGLRenderer  │  WebGPURenderer               │
-├─────────────────────────────────────────────────────────────┤
-│                WebGL 2.0    │    WebGPU                     │
-├─────────────────────────────────────────────────────────────┤
-│                          GPU                                │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Analogie avec ce que vous connaissez déjà
-
-| Concept bas niveau (WebGL/WebGPU) | Equivalent Three.js | Effort |
-|-----------------------------------|---------------------|--------|
-| Compiler vertex + fragment shaders | `new MeshStandardMaterial()` | ~2 lignes vs ~80 |
-| Créer VAO, VBO, IBO manuellement | `new BoxGeometry(1, 1, 1)` | ~1 ligne vs ~40 |
-| Calculer matrices MVP à la main | `camera.projectionMatrix` automatique | 0 lignes vs ~20 |
-| Configurer le depth test, blending | Active par defaut dans le renderer | 0 lignes vs ~10 |
-| Écrire un render loop complet | `renderer.render(scene, camera)` | 1 ligne vs ~30 |
-
-:::tip Analogie Vue.js
-Si vous connaissez Vue.js, pensez a Three.js comme un framework similaire :
-- **Scene** = `App` (le conteneur racine)
-- **Mesh** = `Component` (un élément visible)
-- **Material** = `Style` (l'apparence)
-- **Camera** = `Viewport` (ce qu'on voit)
-- **Renderer** = le moteur Vue qui produit le DOM
-:::
-
-### Installation
+L'installation (r185) :
 
 ```bash
-# Avec npm
 npm install three
-
-# Avec pnpm
-pnpm add three
-
-# Types TypeScript (indispensable)
-pnpm add -D @types/three
+npm install -D @types/three   # types TypeScript, indispensable
 ```
 
+### 2.2 ESM moderne : imports `three` et `three/addons/`
+
+Depuis r150+, la **règle d'import** est stable et c'est celle à retenir :
+
 ```typescript
-// Import principal
+// Cœur de la bibliothèque
 import * as THREE from 'three';
 
-// Imports specifiques (tree-shakeable)
-import { Scene, PerspectiveCamera, WebGLRenderer } from 'three';
+// Ou imports nommés (tree-shakeable)
+import { Scene, PerspectiveCamera, WebGLRenderer, Mesh } from 'three';
 
-// Imports des addons (controles, loaders, effets)
+// Addons (contrôles, loaders, post-processing) : chemin 'three/addons/'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 ```
 
-:::warning Version et imports
-Depuis Three.js r150+, les addons utilisent le chemin `three/addons/` au lieu de `three/examples/jsm/`. Assurez-vous d'utiliser la bonne syntaxe pour votre version.
-:::
+> **Piège historique :** l'ancien chemin `three/examples/jsm/controls/OrbitControls.js` traîne dans beaucoup de tutoriels. Depuis r150, la forme canonique est `three/addons/...` (alias fourni par le package). Garder `three/addons/` pour tout code r185.
 
----
+Le cœur (Scene, Camera, Mesh, matériaux...) est dans `three`. Tout ce qui est **optionnel** (contrôles, loaders glTF, effets) est dans les **addons** — c'est ce découpage qui garde le bundle léger.
 
-## Le trio fondamental : Scene, Camera, Renderer
+### 2.3 Le trio fondamental : Scene, Camera, Renderer
 
-### Vue d'ensemble
-
-Toute application Three.js repose sur trois objets fondamentaux :
+Toute application Three.js repose sur trois objets. Le **renderer** dessine ce que la **camera** voit de la **scene** dans un canvas :
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                      Scene                           │
-│                                                      │
-│   ┌──────┐  ┌──────┐  ┌───────┐  ┌──────────────┐  │
-│   │ Mesh │  │ Mesh │  │ Light │  │ Camera (vue) │  │
-│   └──────┘  └──────┘  └───────┘  └──────────────┘  │
-│                                                      │
-└──────────────────────┬───────────────────────────────┘
-                       │
-                       ▼
-              ┌─────────────────┐
-              │    Renderer     │
-              │  render(scene,  │──────► Canvas HTML
-              │    camera)      │        (pixels a l'ecran)
-              └─────────────────┘
+   Scene (graphe d'objets : Mesh, Light, ...)
+        │
+        ▼
+   Camera (point de vue)  ──►  Renderer.render(scene, camera)  ──►  <canvas>
 ```
 
-### Scene : le conteneur racine
-
-La `Scene` est le graphe de scene — l'arbre hiérarchique qui contient tous les objets 3D.
+**Scene** — le conteneur racine, un graphe hiérarchique. On y ajoute tout ce qui doit être rendu avec `scene.add(...)` :
 
 ```typescript
 const scene = new THREE.Scene();
-
-// Couleur de fond
-scene.background = new THREE.Color(0x1a1a2e);
-
-// Brouillard (optionnel)
-scene.fog = new THREE.Fog(0x1a1a2e, 10, 50);
-// Fog(couleur, near, far) — lineaire
-// FogExp2(couleur, densite) — exponentiel
-
-// Environnement (pour les reflexions PBR)
-// scene.environment = cubeTexture; // on verra au module 14
+scene.background = new THREE.Color(0x1a1a2e);  // couleur de fond (optionnel)
 ```
 
-### Analogie avec WebGL/WebGPU
-
-<details>
-<summary>Comparaison : scene en WebGL brut vs Three.js</summary>
+**WebGLRenderer** — le moteur de rendu. Il crée et pilote le contexte WebGL2 (ce que tu faisais avec `getContext('webgl2')` au module 06), gère le depth test, le clear, les draw calls :
 
 ```typescript
-// ══════════════════════════════════════════════════
-// WebGL brut : ~50 lignes pour initialiser le contexte
-// ══════════════════════════════════════════════════
-const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const gl = canvas.getContext('webgl2')!;
-gl.enable(gl.DEPTH_TEST);
-gl.enable(gl.CULL_FACE);
-gl.clearColor(0.1, 0.1, 0.18, 1.0);
-gl.viewport(0, 0, canvas.width, canvas.height);
-// ... compiler shaders, creer programme, lier attributs ...
-
-// ══════════════════════════════════════════════════
-// Three.js : 3 lignes
-// ══════════════════════════════════════════════════
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
-// Depth test, cull face, viewport : geres automatiquement
+const canvas = document.querySelector('#app') as HTMLCanvasElement;
+const renderer = new THREE.WebGLRenderer({
+  canvas,             // canvas hôte (sinon Three.js en crée un)
+  antialias: true,    // lissage des bords (MSAA)
+});
+renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // écrans HiDPI, capé à 2
 ```
 
-</details>
+Le `false` de `setSize(w, h, false)` dit à Three.js de **ne pas** toucher au CSS du canvas — c'est le CSS qui pilote la taille affichée, `setSize` ne règle que la résolution du drawing buffer (le même distinguo taille CSS / drawing buffer qu'au module 06).
 
----
+### 2.4 PerspectiveCamera : fov, aspect, near, far
 
-## PerspectiveCamera
-
-### Les paramètres
-
-La camera perspective simule la vision humaine. Elle est definie par 4 paramètres que vous connaissez déjà du module 03 (Cameras et projections) :
+La caméra perspective simule la vision humaine — mêmes quatre paramètres que le frustum vu au module 03 :
 
 ```typescript
 const camera = new THREE.PerspectiveCamera(
-  75,           // fov : champ de vision vertical en degres
-  width / height, // aspect : ratio largeur / hauteur
-  0.1,          // near : plan de clipping proche
-  1000          // far : plan de clipping eloigne
+  75,                                   // fov : champ de vision vertical, en DEGRÉS
+  canvas.clientWidth / canvas.clientHeight, // aspect : largeur / hauteur
+  0.1,                                  // near : plan de clipping proche
+  100,                                  // far : plan de clipping éloigné
 );
-
-// Positionner la camera
-camera.position.set(0, 2, 5);   // x, y, z
-camera.lookAt(0, 0, 0);         // regarde le centre de la scene
+camera.position.set(0, 1, 3);   // x, y, z
+camera.lookAt(0, 0, 0);         // orienter la caméra vers un point
 ```
 
-### Comprendre le frustum
+Points de vigilance (hérités du module 03) :
 
-```
-         near                    far
-          ┌──┐                 ┌──────┐
-         /│  │\               /│      │\
-        / │  │ \             / │      │ \
-       /  │  │  \           /  │      │  \
-  oeil ── │  │ ──────────── │  │      │ ──── (pas rendu)
-       \  │  │  /           \  │      │  /
-        \ │  │ /             \ │      │ /
-         \│  │/               \│      │/
-          └──┘                 └──────┘
-     z = 0.1                  z = 1000
+- **`fov` est en degrés** dans Three.js (75 est une valeur classique ; 45-75 pour des scènes normales).
+- **`aspect` doit valoir `largeur / hauteur`** du canvas, sinon l'image est étirée.
+- **`near` jamais à 0** (ni très petit type `0.001`) : cela détruit la précision du depth buffer (z-fighting). `0.1` est un bon plancher.
+- **`far` aussi petit que possible** : plus l'intervalle `[near, far]` est large, moins le depth buffer est précis.
 
-  Seuls les objets DANS le frustum sont rendus.
-  near trop petit → z-fighting (artefacts visuels)
-  far trop grand → perte de precision du depth buffer
-```
+Toute modification de `fov`/`aspect`/`near`/`far` **après** construction exige `camera.updateProjectionMatrix()` (voir 2.7).
 
-:::tip Valeurs recommandees
-- **fov** : 45-75 pour des scenes classiques, 90+ pour un effet fish-eye
-- **near** : 0.1 minimum (ne jamais mettre 0.001, ça cause du z-fighting)
-- **far** : aussi petit que possible — 100 suffit souvent
-- **aspect** : toujours `canvas.width / canvas.height`
-:::
+### 2.5 Mesh = Geometry + Material
 
-### OrthographicCamera (alternative)
+Un `Mesh` est un objet **visible**. Il combine deux choses distinctes :
+
+- une **Geometry** — la *forme* : les sommets, normales, UV, indices (ce que tu mettais dans tes VBO/index buffer au module 07) ;
+- un **Material** — l'*apparence* : la façon de colorer chaque fragment (ce que faisaient tes shaders GLSL).
 
 ```typescript
-// Pour les jeux isometriques, interfaces 2D, ou rendu technique
-const orthoCamera = new THREE.OrthographicCamera(
-  -5,  // left
-   5,  // right
-   5,  // top
-  -5,  // bottom
-  0.1, // near
-  100  // far
-);
-```
-
----
-
-## WebGLRenderer
-
-### Configuration
-
-```typescript
-const renderer = new THREE.WebGLRenderer({
-  canvas: document.getElementById('canvas') as HTMLCanvasElement,
-  antialias: true,          // lissage des bords (MSAA)
-  alpha: false,             // fond transparent si true
-  powerPreference: 'high-performance', // GPU dedie si disponible
-  stencil: false,           // desactiver si pas besoin (gain perf)
-});
-
-// Taille du rendu
-renderer.setSize(window.innerWidth, window.innerHeight);
-
-// Pixel ratio : gerer les ecrans Retina/HiDPI
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-// On cap a 2 pour eviter de surcharger le GPU sur les ecrans 3x
-
-// Tone mapping : convertir HDR → LDR (voir module 14)
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
-
-// Output color space
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-// Ombres (voir module 14)
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-```
-
-### Analogie avec WebGPU
-
-<details>
-<summary>Comparaison : initialisation du renderer WebGPU vs Three.js</summary>
-
-```typescript
-// ══════════════════════════════════════════════════
-// WebGPU brut : ~30 lignes
-// ══════════════════════════════════════════════════
-const adapter = await navigator.gpu.requestAdapter({
-  powerPreference: 'high-performance',
-});
-const device = await adapter!.requestDevice();
-const context = canvas.getContext('webgpu')!;
-const format = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format,
-  alphaMode: 'premultiplied',
-});
-// Creer depth texture, configurer render pass descriptor...
-const depthTexture = device.createTexture({
-  size: [canvas.width, canvas.height],
-  format: 'depth24plus',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
-
-// ══════════════════════════════════════════════════
-// Three.js : ~5 lignes
-// ══════════════════════════════════════════════════
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-});
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-```
-
-</details>
-
----
-
-## Mesh = Geometry + Material
-
-### Le concept central
-
-Un `Mesh` est un objet visible dans la scene. Il combine une geometrie (la forme) et un materiau (l'apparence).
-
-```typescript
-// Creer un cube
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+const geometry = new THREE.BoxGeometry(1, 1, 1);       // width, height, depth
 const material = new THREE.MeshStandardMaterial({
   color: 0x00ff88,
-  metalness: 0.3,
-  roughness: 0.4,
+  metalness: 0.3,   // 0 = diélectrique, 1 = métal (PBR, module 05)
+  roughness: 0.4,   // 0 = miroir, 1 = mat
 });
 const cube = new THREE.Mesh(geometry, material);
 scene.add(cube);
 ```
 
-### Geometries integrees
+Trois matériaux à connaître d'emblée :
+
+- **`MeshBasicMaterial`** — couleur plate, **non affecté par les lumières**. Idéal pour du debug ou de l'UI.
+- **`MeshStandardMaterial`** — PBR metalness/roughness (module 05), **le matériau par défaut à utiliser** ; nécessite une lumière dans la scène.
+- **`MeshPhongMaterial`** — modèle spéculaire plus ancien, plus léger, encore utilisé.
+
+> **Conséquence à retenir :** un `MeshStandardMaterial` **sans aucune lumière** dans la scène apparaît **noir**. C'est la cause n°1 d'un "cube invisible" chez les débutants (piège #2). Ajoute une lumière (`DirectionalLight` + `AmbientLight`) ou passe à `MeshBasicMaterial` pour vérifier la géométrie.
+
+Les geometries primitives couvrent la plupart des besoins de départ : `BoxGeometry`, `SphereGeometry(radius, widthSeg, heightSeg)`, `PlaneGeometry(w, h)`, `CylinderGeometry`, `TorusGeometry`. Pour le globe TribuZen, ce sera une `SphereGeometry`.
+
+`position`, `rotation` et `scale` de tout `Object3D` (dont `Mesh`) remplacent la matrice model que tu calculais à la main :
 
 ```typescript
-// ─── Primitives de base ───────────────────────────────────
-const box = new THREE.BoxGeometry(
-  1, 1, 1,   // width, height, depth
-  2, 2, 2    // widthSegments, heightSegments, depthSegments
-);
-
-const sphere = new THREE.SphereGeometry(
-  1,     // radius
-  32,    // widthSegments (resolution horizontale)
-  16     // heightSegments (resolution verticale)
-);
-
-const plane = new THREE.PlaneGeometry(
-  10, 10,  // width, height
-  1, 1     // segments (pour deformation/displacement)
-);
-
-const cylinder = new THREE.CylinderGeometry(
-  0.5,   // radiusTop
-  0.5,   // radiusBottom
-  2,     // height
-  32     // radialSegments
-);
-
-const torus = new THREE.TorusGeometry(
-  1,     // radius
-  0.4,   // tube radius
-  16,    // radialSegments
-  100    // tubularSegments
-);
-
-const cone = new THREE.ConeGeometry(
-  0.5,   // radius
-  2,     // height
-  32     // radialSegments
-);
-
-// ─── Geometries avancees ──────────────────────────────────
-const torusKnot = new THREE.TorusKnotGeometry(1, 0.3, 128, 16);
-const icosahedron = new THREE.IcosahedronGeometry(1, 0); // 0 = pas de subdivision
-const dodecahedron = new THREE.DodecahedronGeometry(1, 0);
-const ring = new THREE.RingGeometry(0.5, 1, 32);
+cube.position.set(2, 0, 0);   // translation
+cube.rotation.y = Math.PI / 4; // rotation autour de Y (radians)
+cube.scale.setScalar(1.5);     // échelle uniforme
 ```
 
-### BufferGeometry personnalise
+### 2.6 La boucle d'animation : `setAnimationLoop`
 
-Vous avez déjà créé des buffers manuellement en WebGL (module 06) et WebGPU (module 09). Three.js utilise le même concept sous le capot :
+Pour animer, il faut redessiner à chaque frame. Three.js recommande **`renderer.setAnimationLoop(callback)`** : la méthode moderne, qui gère aussi correctement le contexte WebXR (VR/AR, module 25) là où `requestAnimationFrame` ne suffit pas.
 
 ```typescript
-// Triangle personnalise — meme logique que vos VBOs WebGL !
-const geometry = new THREE.BufferGeometry();
-
-// Positions (3 floats par vertex — comme votre Float32Array en WebGL)
-const positions = new Float32Array([
-  -1.0, -1.0,  0.0,  // vertex 0
-   1.0, -1.0,  0.0,  // vertex 1
-   0.0,  1.0,  0.0,  // vertex 2
-]);
-
-// Normales (3 floats par vertex)
-const normals = new Float32Array([
-  0.0, 0.0, 1.0,
-  0.0, 0.0, 1.0,
-  0.0, 0.0, 1.0,
-]);
-
-// UVs (2 floats par vertex)
-const uvs = new Float32Array([
-  0.0, 0.0,
-  1.0, 0.0,
-  0.5, 1.0,
-]);
-
-// Couleurs (3 floats par vertex)
-const colors = new Float32Array([
-  1.0, 0.0, 0.0,  // rouge
-  0.0, 1.0, 0.0,  // vert
-  0.0, 0.0, 1.0,  // bleu
-]);
-
-// Attacher les attributs — equivalent de gl.vertexAttribPointer
-geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-// Indices (optionnel — equivalent de votre IBO)
-const indices = new Uint16Array([0, 1, 2]);
-geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-
-// Calcul automatique des normales si pas fournies
-// geometry.computeVertexNormals();
-
-// Bounding box/sphere pour le frustum culling
-geometry.computeBoundingBox();
-geometry.computeBoundingSphere();
-```
-
-<details>
-<summary>Comparaison : BufferGeometry vs VBO WebGL brut</summary>
-
-```typescript
-// ══════════════════════════════════════════════════
-// WebGL brut : creer un buffer de positions
-// ══════════════════════════════════════════════════
-const vbo = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-const posLoc = gl.getAttribLocation(program, 'aPosition');
-gl.enableVertexAttribArray(posLoc);
-gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
-
-// ══════════════════════════════════════════════════
-// Three.js : une seule ligne
-// ══════════════════════════════════════════════════
-geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-```
-
-</details>
-
----
-
-## Materiaux de base
-
-### La hiérarchie des materiaux
-
-```
-              Material (base abstraite)
-                  │
-    ┌─────────────┼─────────────────────┐
-    │             │                     │
-MeshBasicMaterial │              ShaderMaterial
-(pas d'eclairage) │             (shaders custom)
-                  │
-    ┌─────────────┼──────────────┐
-    │             │              │
-MeshLambert   MeshPhong    MeshStandard
-Material      Material     Material (PBR)
-(diffus)    (specular)         │
-                          MeshPhysical
-                          Material (PBR+)
-```
-
-### MeshBasicMaterial — pas d'eclairage
-
-```typescript
-// Pas affecte par les lumieres — utile pour le debug et les UI
-const basic = new THREE.MeshBasicMaterial({
-  color: 0xff0000,
-  wireframe: false,        // afficher en fil de fer
-  transparent: false,      // activer la transparence
-  opacity: 1.0,            // 0 = invisible, 1 = opaque
-  side: THREE.FrontSide,   // FrontSide | BackSide | DoubleSide
-  map: null,               // texture diffuse (voir module 14)
+renderer.setAnimationLoop((time) => {
+  // time est en MILLISECONDES depuis le démarrage de la boucle
+  cube.rotation.y += 0.01;        // animation simple par frame
+  renderer.render(scene, camera); // dessine la frame
 });
 ```
 
-### MeshStandardMaterial — PBR
+Le manuel Three.js montre aussi le pattern historique avec `requestAnimationFrame`, strictement équivalent hors XR :
 
 ```typescript
-// Materiau PBR standard — base metalness/roughness
-// C'est le materiau que vous utiliserez 90% du temps
-const standard = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  metalness: 0.0,    // 0 = dielectrique, 1 = metal
-  roughness: 0.5,    // 0 = miroir, 1 = mat
-  envMapIntensity: 1.0,
-  // Textures (module 14 en detail)
-  // map, normalMap, roughnessMap, metalnessMap, aoMap, emissiveMap
-});
-```
-
-### MeshPhysicalMaterial — PBR avance
-
-```typescript
-// Extension de MeshStandardMaterial avec des proprietes physiques avancees
-const physical = new THREE.MeshPhysicalMaterial({
-  color: 0xffffff,
-  metalness: 0.0,
-  roughness: 0.1,
-
-  // Clearcoat — vernis (peinture de voiture)
-  clearcoat: 1.0,
-  clearcoatRoughness: 0.1,
-
-  // Transmission — verre, liquides
-  transmission: 0.9,     // 0 = opaque, 1 = transparent
-  ior: 1.5,              // indice de refraction (verre = 1.5, eau = 1.33)
-  thickness: 0.5,        // epaisseur du materiau transparent
-
-  // Sheen — tissu, velours
-  sheen: 1.0,
-  sheenRoughness: 0.75,
-  sheenColor: new THREE.Color(0xff8800),
-
-  // Iridescence — bulles de savon, ailes de papillon
-  iridescence: 1.0,
-  iridescenceIOR: 1.3,
-  iridescenceThicknessRange: [100, 400],
-});
-```
-
-:::info Rappel du module 05
-Ces propriétés PBR (metalness, roughness, clearcoat, transmission) correspondent directement aux concepts physiques que vous avez etudies au module 05 — Lumiere, materiaux et PBR. Three.js implemente le modèle Cook-Torrance avec GGX/Smith que vous avez vu en théorie.
-:::
-
----
-
-## Le render loop
-
-### Boucle d'animation
-
-```typescript
-// ─── Le pattern standard Three.js ─────────────────────────
-function animate(): void {
-  requestAnimationFrame(animate);
-
-  // Mettre a jour les objets
+function render(time: number): void {
   cube.rotation.y += 0.01;
-  cube.rotation.x += 0.005;
-
-  // Rendu
   renderer.render(scene, camera);
+  requestAnimationFrame(render);  // se re-planifie soi-même
 }
-
-animate();
+requestAnimationFrame(render);
 ```
 
-### Avec un Clock pour un temps constant
+Pour une animation **indépendante du framerate** (recommandé), utilise un `THREE.Clock` et multiplie par le delta :
 
 ```typescript
-// Clock fournit un deltaTime independant du framerate
 const clock = new THREE.Clock();
-
-function animate(): void {
-  requestAnimationFrame(animate);
-
-  const delta = clock.getDelta();     // temps depuis le dernier frame (secondes)
-  const elapsed = clock.getElapsedTime(); // temps total ecoule
-
-  // Animation independante du framerate
-  cube.rotation.y += 1.0 * delta;     // 1 radian par seconde
-  cube.position.y = Math.sin(elapsed) * 0.5; // oscillation
-
+renderer.setAnimationLoop(() => {
+  const delta = clock.getDelta();       // secondes depuis la dernière frame
+  cube.rotation.y += 1.0 * delta;       // 1 radian PAR SECONDE, quel que soit le FPS
   renderer.render(scene, camera);
-}
-
-animate();
+});
 ```
 
-### Comparaison avec votre render loop WebGL
+> **`setAnimationLoop(null)`** arrête la boucle proprement (utile au démontage d'un composant Vue/React).
 
-<details>
-<summary>Render loop WebGL brut vs Three.js</summary>
+### 2.7 OrbitControls : orbiter à la souris
 
-```typescript
-// ══════════════════════════════════════════════════
-// WebGL brut : ~20 lignes par frame
-// ══════════════════════════════════════════════════
-function renderWebGL(time: number): void {
-  requestAnimationFrame(renderWebGL);
-
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.useProgram(program);
-
-  // Mettre a jour la matrice model
-  mat4.rotateY(modelMatrix, modelMatrix, 0.01);
-
-  // Calculer MVP
-  mat4.multiply(mvpMatrix, viewMatrix, modelMatrix);
-  mat4.multiply(mvpMatrix, projectionMatrix, mvpMatrix);
-
-  // Envoyer les uniforms
-  gl.uniformMatrix4fv(mvpLoc, false, mvpMatrix);
-  gl.uniform3fv(lightDirLoc, lightDirection);
-
-  // Bind VAO et dessiner
-  gl.bindVertexArray(vao);
-  gl.drawElements(gl.TRIANGLES, indexCount, gl.UNSIGNED_SHORT, 0);
-}
-
-// ══════════════════════════════════════════════════
-// Three.js : 3 lignes significatives
-// ══════════════════════════════════════════════════
-function animate(): void {
-  requestAnimationFrame(animate);
-  cube.rotation.y += 0.01;
-  renderer.render(scene, camera); // MVP, uniforms, draw calls : tout est gere
-}
-```
-
-</details>
-
----
-
-## OrbitControls : interaction avec la scene
-
-### Configuration
+`OrbitControls` (dans les addons) fait tourner/zoomer/déplacer la caméra autour d'une cible à la souris — exactement ce qu'il faut pour inspecter le globe des sorties :
 
 ```typescript
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const controls = new OrbitControls(camera, renderer.domElement);
-
-// ─── Parametres de base ───────────────────────────────────
-controls.enableDamping = true;     // inertie (mouvement fluide)
-controls.dampingFactor = 0.05;     // force de l'inertie
-controls.enableZoom = true;        // molette = zoom
-controls.enablePan = true;         // clic droit = deplacement
-controls.enableRotate = true;      // clic gauche = rotation
-
-// ─── Limites ──────────────────────────────────────────────
-controls.minDistance = 2;          // zoom minimum
-controls.maxDistance = 20;         // zoom maximum
-controls.minPolarAngle = 0;       // rotation verticale min (0 = dessus)
-controls.maxPolarAngle = Math.PI / 2; // bloquer sous le sol
-
-// ─── Cible ────────────────────────────────────────────────
-controls.target.set(0, 1, 0);     // point autour duquel on orbite
-controls.update();                 // appliquer la cible initiale
-
-// ─── Auto-rotation ────────────────────────────────────────
-controls.autoRotate = true;
-controls.autoRotateSpeed = 2.0;    // tours par minute
+controls.enableDamping = true;   // inertie (mouvement fluide)
+controls.dampingFactor = 0.05;
+controls.minDistance = 2;        // limites de zoom
+controls.maxDistance = 10;
+controls.target.set(0, 0, 0);    // point autour duquel on orbite
+controls.update();               // appliquer la cible initiale
 ```
 
-:::warning Important
-Si `enableDamping` est `true`, vous **devez** appeler `controls.update()` dans votre render loop, sinon l'inertie ne fonctionnera pas.
-:::
+> **Règle critique :** si `enableDamping = true`, tu **dois** appeler `controls.update()` **à chaque frame** dans la boucle — sinon l'inertie ne s'applique jamais.
 
 ```typescript
-function animate(): void {
-  requestAnimationFrame(animate);
-
-  controls.update(); // OBLIGATOIRE avec damping
-
+renderer.setAnimationLoop(() => {
+  controls.update();              // OBLIGATOIRE avec damping
   renderer.render(scene, camera);
-}
+});
 ```
 
----
+### 2.8 Gérer le resize
 
-## Helpers de debug
-
-### AxesHelper
+Quand le canvas change de taille, deux choses doivent suivre : la **résolution du renderer** et l'**aspect de la caméra**. Le manuel Three.js recommande de tester la taille **dans la boucle** plutôt que d'écouter l'événement `resize` — cela couvre aussi les changements de layout sans event :
 
 ```typescript
-// Axes X (rouge), Y (vert), Z (bleu) — convention standard
-const axesHelper = new THREE.AxesHelper(5); // longueur des axes
-scene.add(axesHelper);
-```
-
-### GridHelper
-
-```typescript
-// Grille au sol
-const gridHelper = new THREE.GridHelper(
-  10,    // taille totale
-  10,    // nombre de divisions
-  0x444444, // couleur de la ligne centrale
-  0x222222  // couleur des autres lignes
-);
-scene.add(gridHelper);
-```
-
-### Autres helpers utiles
-
-```typescript
-// Visualiser la camera (utile pour debug une shadow camera)
-const cameraHelper = new THREE.CameraHelper(camera);
-scene.add(cameraHelper);
-
-// Visualiser une lumiere directionnelle
-const lightHelper = new THREE.DirectionalLightHelper(directionalLight, 1);
-scene.add(lightHelper);
-
-// Bounding box d'un objet
-const boxHelper = new THREE.BoxHelper(mesh, 0xffff00);
-scene.add(boxHelper);
-
-// Fleche pour visualiser un vecteur
-const arrow = new THREE.ArrowHelper(
-  new THREE.Vector3(0, 1, 0), // direction
-  new THREE.Vector3(0, 0, 0), // origin
-  2,                           // length
-  0xff0000                     // color
-);
-scene.add(arrow);
-```
-
----
-
-## Gestion du redimensionnement
-
-```typescript
-function onResize(): void {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-
-  // Mettre a jour la camera
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix(); // OBLIGATOIRE apres changement de fov/aspect/near/far
-
-  // Mettre a jour le renderer
-  renderer.setSize(width, height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+function resizeRendererToDisplaySize(renderer: THREE.WebGLRenderer): boolean {
+  const canvas = renderer.domElement;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const needResize = canvas.width !== width || canvas.height !== height;
+  if (needResize) {
+    renderer.setSize(width, height, false); // false : ne pas toucher au CSS
+  }
+  return needResize;
 }
 
-window.addEventListener('resize', onResize);
+renderer.setAnimationLoop(() => {
+  if (resizeRendererToDisplaySize(renderer)) {
+    const canvas = renderer.domElement;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();  // OBLIGATOIRE après changement d'aspect
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
 ```
 
-:::warning Erreur classique
-Oublier `camera.updateProjectionMatrix()` après avoir modifie `aspect`, `fov`, `near` ou `far` est l'erreur la plus courante chez les débutants Three.js. Sans cet appel, la matrice de projection n'est pas recalculee et l'image sera deformee.
-:::
+> **`camera.updateProjectionMatrix()` est l'appel oublié n°1.** Modifier `camera.aspect` (ou `fov`/`near`/`far`) sans le rappeler laisse l'ancienne matrice de projection → image déformée.
 
 ---
 
-## Application complete
+## 3. Worked examples
 
-Voici une application Three.js complete qui combine tous les concepts de ce module :
+### Exemple 1 — Scène minimale : un cube animé contrôlable (TribuZen)
+
+Le squelette complet du futur globe des sorties : un cube qui tourne, éclairé, orbitable, responsive. Deux fichiers.
+
+**`index.html`** — le canvas hôte (avec import map pour résoudre `three` et `three/addons/` sans bundler) :
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Globe TribuZen — squelette Three.js</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #app { display: block; width: 100vw; height: 100vh; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="app"></canvas>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
+```
+
+**`main.ts`** — le trio + Mesh + lumières + boucle + contrôles + resize :
 
 ```typescript
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ─── Renderer ─────────────────────────────────────────────
-const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-});
-renderer.setSize(window.innerWidth, window.innerHeight);
+// 1. Renderer : crée et pilote le contexte WebGL2 (remplace getContext + config du module 06)
+const canvas = document.querySelector('#app') as HTMLCanvasElement;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-// ─── Scene ────────────────────────────────────────────────
+// 2. Scene : le conteneur racine
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
 
-// ─── Camera ───────────────────────────────────────────────
+// 3. Camera : point de vue (fov en degrés, aspect, near, far)
 const camera = new THREE.PerspectiveCamera(
   75,
-  window.innerWidth / window.innerHeight,
+  canvas.clientWidth / canvas.clientHeight,
   0.1,
-  100
+  100,
 );
-camera.position.set(3, 2, 5);
+camera.position.set(0, 1, 3);
 
-// ─── Controles ────────────────────────────────────────────
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.target.set(0, 0.5, 0);
-controls.update();
-
-// ─── Lumieres ─────────────────────────────────────────────
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-directionalLight.position.set(5, 5, 5);
-scene.add(directionalLight);
-
-// ─── Objets ───────────────────────────────────────────────
-// Sol
-const floorGeometry = new THREE.PlaneGeometry(10, 10);
-const floorMaterial = new THREE.MeshStandardMaterial({
-  color: 0x333333,
-  roughness: 0.8,
-});
-const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-floor.rotation.x = -Math.PI / 2; // tourner pour etre horizontal
-scene.add(floor);
-
-// Cube
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-const cubeMaterial = new THREE.MeshStandardMaterial({
-  color: 0x00ff88,
-  metalness: 0.3,
-  roughness: 0.4,
-});
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-cube.position.set(-1.5, 0.5, 0);
+// 4. Mesh = Geometry (forme) + Material (apparence)
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0x00ff88, metalness: 0.3, roughness: 0.4 }),
+);
 scene.add(cube);
 
-// Sphere
-const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 16);
-const sphereMaterial = new THREE.MeshStandardMaterial({
-  color: 0xff4444,
-  metalness: 0.7,
-  roughness: 0.2,
-});
-const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.set(0, 0.5, 0);
-scene.add(sphere);
-
-// Torus knot
-const knotGeometry = new THREE.TorusKnotGeometry(0.4, 0.15, 100, 16);
-const knotMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0x4488ff,
-  metalness: 0.1,
-  roughness: 0.1,
-  clearcoat: 1.0,
-  clearcoatRoughness: 0.1,
-});
-const knot = new THREE.Mesh(knotGeometry, knotMaterial);
-knot.position.set(1.5, 0.8, 0);
-scene.add(knot);
-
-// ─── Helpers ──────────────────────────────────────────────
-const axesHelper = new THREE.AxesHelper(3);
-scene.add(axesHelper);
-
-const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-scene.add(gridHelper);
-
-// ─── Resize ───────────────────────────────────────────────
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
-
-// ─── Render loop ──────────────────────────────────────────
-const clock = new THREE.Clock();
-
-function animate(): void {
-  requestAnimationFrame(animate);
-
-  const elapsed = clock.getElapsedTime();
-
-  // Animations
-  cube.rotation.y = elapsed * 0.5;
-  sphere.position.y = 0.5 + Math.sin(elapsed * 2) * 0.3;
-  knot.rotation.y = elapsed * 0.3;
-  knot.rotation.x = elapsed * 0.2;
-
-  controls.update();
-  renderer.render(scene, camera);
-}
-
-animate();
-```
-
----
-
-## Le graphe de scene et la hiérarchie
-
-### Groupes et parent-enfant
-
-```typescript
-// Les objets peuvent etre imbriques — comme le DOM HTML
-const group = new THREE.Group();
-group.position.set(0, 1, 0);
-
-const body = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1.5, 0.5),
-  new THREE.MeshStandardMaterial({ color: 0x4488ff })
-);
-group.add(body);
-
-const head = new THREE.Mesh(
-  new THREE.SphereGeometry(0.3, 16, 16),
-  new THREE.MeshStandardMaterial({ color: 0xffcc88 })
-);
-head.position.y = 1.1; // relatif au groupe parent
-group.add(head);
-
-scene.add(group);
-
-// Bouger le groupe deplace tous les enfants
-group.position.x = 2;  // body ET head bougent ensemble
-group.rotation.y = 0.5; // body ET head tournent ensemble
-```
-
-### Traversal du graphe de scene
-
-```typescript
-// Parcourir tous les objets de la scene
-scene.traverse((object) => {
-  console.log(object.type, object.name);
-
-  // Exemple : rendre tous les meshes en wireframe
-  if (object instanceof THREE.Mesh) {
-    (object.material as THREE.MeshStandardMaterial).wireframe = true;
-  }
-});
-
-// Trouver un objet par nom
-const found = scene.getObjectByName('MonCube');
-if (found) {
-  found.visible = false;
-}
-```
-
----
-
-## Exercice pratique
-
-### Enonce
-
-Creez une scene Three.js qui affiche un système solaire simplifie :
-
-1. Un soleil (sphere jaune emissive) au centre
-2. Trois planetes qui orbitent autour du soleil a des vitesses différentes
-3. Une lune qui orbite autour de la deuxieme planete
-4. OrbitControls pour naviguer dans la scene
-5. Un sol avec GridHelper
-
-**Indices** :
-- Utilisez des `Group` pour la hiérarchie planete-lune
-- Utilisez `Math.sin()` et `Math.cos()` avec le temps pour les orbites
-- `MeshBasicMaterial` avec `emissive` pour le soleil (pas affecte par les lumieres)
-
-<details>
-<summary>Solution</summary>
-
-```typescript
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-// Setup
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-document.body.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000011);
-
-const camera = new THREE.PerspectiveCamera(
-  60, window.innerWidth / window.innerHeight, 0.1, 200
-);
-camera.position.set(0, 15, 25);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
-// Lumiere ambiante
-scene.add(new THREE.AmbientLight(0xffffff, 0.1));
-
-// Lumiere du soleil (PointLight au centre)
-const sunLight = new THREE.PointLight(0xffcc00, 2, 100);
-scene.add(sunLight);
-
-// Soleil
-const sunGeometry = new THREE.SphereGeometry(2, 32, 32);
-const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
-const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+// 5. Lumières : SANS lumière, un MeshStandardMaterial est NOIR (piège #2)
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const sun = new THREE.DirectionalLight(0xffffff, 3);
+sun.position.set(3, 4, 2);
 scene.add(sun);
 
-// Fonction utilitaire pour creer une planete
-function createPlanet(
-  radius: number,
-  color: number,
-  orbitRadius: number,
-  orbitSpeed: number,
-): { group: THREE.Group; mesh: THREE.Mesh; orbitRadius: number; orbitSpeed: number } {
-  const geometry = new THREE.SphereGeometry(radius, 32, 16);
-  const material = new THREE.MeshStandardMaterial({
-    color,
-    metalness: 0.3,
-    roughness: 0.7,
-  });
-  const mesh = new THREE.Mesh(geometry, material);
+// 6. Helpers de debug (axes X rouge / Y vert / Z bleu, grille au sol)
+scene.add(new THREE.AxesHelper(2));
+scene.add(new THREE.GridHelper(10, 10, 0x444444, 0x222222));
 
-  const group = new THREE.Group();
-  group.add(mesh);
-  mesh.position.x = orbitRadius;
+// 7. Contrôles souris (addon)
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 0, 0);
+controls.update();
 
-  scene.add(group);
-
-  return { group, mesh, orbitRadius, orbitSpeed };
+// 8. Resize : synchronise résolution + aspect (testé dans la boucle)
+function resizeRendererToDisplaySize(r: THREE.WebGLRenderer): boolean {
+  const c = r.domElement;
+  const needResize = c.width !== c.clientWidth || c.height !== c.clientHeight;
+  if (needResize) r.setSize(c.clientWidth, c.clientHeight, false);
+  return needResize;
 }
 
-// Planetes
-const planet1 = createPlanet(0.4, 0xaa4400, 5, 1.0);
-const planet2 = createPlanet(0.6, 0x0066ff, 9, 0.6);
-const planet3 = createPlanet(0.5, 0x00aa44, 14, 0.3);
-
-// Lune de planet2
-const moonGeometry = new THREE.SphereGeometry(0.15, 16, 16);
-const moonMaterial = new THREE.MeshStandardMaterial({
-  color: 0xcccccc,
-  roughness: 0.9,
-});
-const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-moon.position.x = 1.5; // distance relative a la planete
-planet2.group.children[0].add(moon); // ajouter au mesh de la planete
-
-// Orbites visibles (cercles)
-function createOrbitRing(radius: number): void {
-  const ringGeometry = new THREE.RingGeometry(radius - 0.02, radius + 0.02, 128);
-  const ringMaterial = new THREE.MeshBasicMaterial({
-    color: 0x333344,
-    side: THREE.DoubleSide,
-  });
-  const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-  ring.rotation.x = -Math.PI / 2;
-  scene.add(ring);
-}
-
-createOrbitRing(5);
-createOrbitRing(9);
-createOrbitRing(14);
-
-// Grid helper
-scene.add(new THREE.GridHelper(40, 40, 0x111122, 0x111122));
-
-// Axes helper
-scene.add(new THREE.AxesHelper(3));
-
-// Resize
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Render loop
+// 9. Boucle d'animation moderne
 const clock = new THREE.Clock();
-const planets = [planet1, planet2, planet3];
+renderer.setAnimationLoop(() => {
+  const delta = clock.getDelta();
 
-function animate(): void {
-  requestAnimationFrame(animate);
-  const elapsed = clock.getElapsedTime();
-
-  // Rotation du soleil
-  sun.rotation.y = elapsed * 0.1;
-
-  // Orbite des planetes
-  for (const planet of planets) {
-    const angle = elapsed * planet.orbitSpeed;
-    planet.mesh.position.x = Math.cos(angle) * planet.orbitRadius;
-    planet.mesh.position.z = Math.sin(angle) * planet.orbitRadius;
-    planet.mesh.rotation.y = elapsed * 2; // rotation sur elle-meme
+  if (resizeRendererToDisplaySize(renderer)) {
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix(); // sinon image déformée
   }
 
-  // Orbite de la lune
-  const moonAngle = elapsed * 3;
-  moon.position.x = Math.cos(moonAngle) * 1.5;
-  moon.position.z = Math.sin(moonAngle) * 1.5;
-
-  controls.update();
+  cube.rotation.y += 0.6 * delta;    // ~0.6 rad/s, indépendant du framerate
+  controls.update();                 // OBLIGATOIRE (damping)
   renderer.render(scene, camera);
-}
-
-animate();
+});
 ```
 
-</details>
+Résultat : un cube vert qui tourne lentement sur fond bleu nuit, orbitable à la souris, net sur écran Retina, correct après un redimensionnement de la fenêtre. Compare avec les ~250 lignes du module 08 : **le même résultat, sans une seule ligne de GLSL ni de calcul matriciel**.
+
+### Exemple 2 — Passer du cube au globe : une seule ligne change
+
+Tout le squelette de l'Exemple 1 est réutilisable tel quel pour le globe. La **seule** différence structurelle : remplacer la `BoxGeometry` par une `SphereGeometry`. C'est exactement la force de la séparation Geometry / Material :
+
+```typescript
+// Cube  →  Globe : on change la géométrie, PAS le matériau ni le reste
+const globe = new THREE.Mesh(
+  new THREE.SphereGeometry(
+    1,    // radius
+    48,   // widthSegments  (résolution horizontale — plus = plus lisse)
+    32,   // heightSegments (résolution verticale)
+  ),
+  new THREE.MeshStandardMaterial({ color: 0x2266cc, roughness: 0.6 }),
+);
+scene.add(globe);
+
+// La boucle, les lumières, OrbitControls, le resize : INCHANGÉS.
+// Le globe tourne, s'oriente à la souris, reste net — gratuitement.
+```
+
+Ajouter un marqueur de sortie devient trivial : un petit `Mesh` enfant du globe. Comme le graphe de scène est hiérarchique, l'ajouter **au globe** (et non à la scène) le fait tourner **avec** le globe :
+
+```typescript
+const marker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.04, 12, 12),
+  new THREE.MeshBasicMaterial({ color: 0xff5533 }), // Basic : visible même sans lumière
+);
+marker.position.set(0, 1, 0);  // sur le pôle nord, en coordonnées LOCALES au globe
+globe.add(marker);             // enfant du globe → tourne avec lui
+```
+
+C'est le principe qui portera tout le module suivant (matériaux/lumières) puis les marqueurs géolocalisés.
 
 ---
 
-## Résumé
+## 4. Pièges & misconceptions
 
-| Concept | API Three.js | Ce que ça remplace (WebGL/WebGPU) |
-|---------|-------------|-----------------------------------|
-| Conteneur racine | `new THREE.Scene()` | Gestion manuelle de listes d'objets |
-| Camera perspective | `new THREE.PerspectiveCamera(fov, aspect, near, far)` | Calcul matriciel de projection |
-| Moteur de rendu | `new THREE.WebGLRenderer({ antialias })` | `getContext('webgl2')` + configuration manuelle |
-| Forme 3D | `new THREE.BoxGeometry(1, 1, 1)` | VAO + VBO + IBO manuels |
-| Apparence | `new THREE.MeshStandardMaterial({ color })` | Vertex + fragment shaders GLSL |
-| Objet visible | `new THREE.Mesh(geometry, material)` | Bind buffers + draw call |
-| Rendu | `renderer.render(scene, camera)` | Clear + use program + uniforms + draw |
-| Controles utilisateur | `new OrbitControls(camera, canvas)` | EventListeners + calculs manuels |
-| Hiérarchie | `parent.add(child)` | Multiplication matricielle parent-enfant |
-| Animations | `THREE.Clock` + `requestAnimationFrame` | `performance.now()` + delta calcule |
-| Debug | `AxesHelper`, `GridHelper` | Dessiner des lignes manuellement |
-| Redimensionnement | `camera.updateProjectionMatrix()` | Recalculer la matrice + `gl.viewport()` |
+### PIÈGE #1 — Utiliser `three/examples/jsm/` au lieu de `three/addons/`
 
----
+Beaucoup de tutoriels antérieurs à r150 importent `OrbitControls` depuis `three/examples/jsm/controls/OrbitControls.js`. En r185, la forme canonique est **`three/addons/controls/OrbitControls.js`**. L'ancien chemin peut casser selon la config du bundler / de l'import map. Retenir `three/addons/`.
 
-## Pour aller plus loin
+### PIÈGE #2 — `MeshStandardMaterial` sans lumière → objet noir
 
-- [Documentation officielle Three.js](https://threejs.org/docs/)
-- [Three.js Fundamentals](https://threejs.org/manual/)
-- [Discover Three.js](https://discoverthreejs.com/)
-- [Three.js Journey](https://threejs-journey.com/) — cours video complet
-- [Three.js Examples](https://threejs.org/examples/) — centaines d'exemples interactifs
+`MeshStandardMaterial`, `MeshPhongMaterial`, `MeshLambertMaterial` **réagissent à la lumière**. Sans aucune lumière dans la scène, ils sont rendus **noirs** (aucune lumière reçue = aucune couleur renvoyée). Symptôme : "mon cube est là mais tout noir/invisible". Solution : ajouter une lumière (`DirectionalLight` + `AmbientLight`) — ou utiliser `MeshBasicMaterial` (non éclairé) le temps de vérifier la géométrie.
 
----
+### PIÈGE #3 — Oublier `camera.updateProjectionMatrix()` après un resize
 
-## React Three Fiber (R3F) — Three.js declaratif pour React
+Modifier `camera.aspect` (ou `fov`, `near`, `far`) ne recalcule **pas** la matrice de projection automatiquement. Sans `camera.updateProjectionMatrix()`, l'image reste projetée avec l'ancien aspect → étirée/écrasée après redimensionnement. C'est l'erreur la plus fréquente chez les débutants Three.js.
 
-### Qu'est-ce que React Three Fiber ?
+### PIÈGE #4 — Damping activé mais pas de `controls.update()` dans la boucle
 
-[React Three Fiber](https://docs.pmnd.rs/react-three-fiber) (R3F) est un **renderer React pour Three.js**. Il permet d'ecrire des scenes Three.js sous forme de composants React declaratifs, en utilisant JSX au lieu de code imperatif.
+`controls.enableDamping = true` sans `controls.update()` **à chaque frame** : l'inertie ne s'applique jamais, la caméra semble figée ou saccadée. Règle : dès que `enableDamping` (ou `autoRotate`) est actif, `controls.update()` est **obligatoire** dans la boucle d'animation.
 
-R3F n'est pas une surcouche qui simplifie Three.js — c'est une **integration profonde** qui mappe 1:1 chaque objet Three.js vers un composant JSX. Tout ce que vous savez de Three.js reste valide.
+### PIÈGE #5 — Confondre Geometry et Material
 
-```
-Three.js imperatif                    React Three Fiber (declaratif)
-────────────────────                  ────────────────────────────────
-const scene = new Scene()             <Canvas>
-const mesh = new Mesh(                  <mesh>
-  new BoxGeometry(1,1,1),                 <boxGeometry args={[1,1,1]} />
-  new MeshStandardMaterial({              <meshStandardMaterial color="orange" />
-    color: 'orange'                     </mesh>
-  })                                  </Canvas>
-)
-scene.add(mesh)
-```
+La **Geometry** est la forme (sommets, normales, UV) ; le **Material** est l'apparence (couleur, PBR, shaders). Une couleur se met sur le **Material**, pas la Geometry (`new BoxGeometry({ color })` n'existe pas). Corollaire utile : une même Geometry peut être partagée entre plusieurs `Mesh` avec des Materials différents (économie mémoire), et inversement.
 
-### Les packages principaux
+### PIÈGE #6 — Croire que Three.js "remplace" WebGL
 
-```bash
-# Package principal — le renderer React pour Three.js
-pnpm add @react-three/fiber three
+Three.js **n'est pas** un moteur boîte noire : il pilote WebGL2 avec exactement les concepts des modules 06-08 (buffers, shaders, matrices, draw calls). Ne pas comprendre ces bases rend le debug de performance (module 17) et les shaders custom (`ShaderMaterial`, module 19) impossibles. Three.js accélère l'écriture, il ne dispense pas de la théorie.
 
-# Types TypeScript
-pnpm add -D @types/three
+### PIÈGE #7 — `setSize(w, h)` sans le `false` et bataille avec le CSS
 
-# Drei — collection de helpers et abstractions utiles
-pnpm add @react-three/drei
-
-# Postprocessing (optionnel)
-pnpm add @react-three/postprocessing
-
-# Physique (optionnel)
-pnpm add @react-three/rapier
-```
-
-| Package | Role | Equivalent vanilla |
-|---------|------|--------------------|
-| `@react-three/fiber` | Renderer React → Three.js | Three.js core |
-| `@react-three/drei` | Helpers pre-construits (OrbitControls, Text, Environment...) | Three.js addons + code custom |
-| `@react-three/postprocessing` | Effets post-processing declaratifs | EffectComposer + passes manuelles |
-| `@react-three/rapier` | Physique 3D (Rapier WASM) | Cannon.js / Ammo.js manuels |
-
-### Quand utiliser R3F vs vanilla Three.js
-
-| Critere | R3F | Vanilla Three.js |
-|---------|-----|-------------------|
-| **Projet React existant** | Ideal — s'integre naturellement | Necessite un bridge imperatif |
-| **UI reactive liee a la 3D** | Excellent — state React = state 3D | Synchronisation manuelle penible |
-| **Performance critique** (jeux) | Bon, mais overhead React possible | Controle total, zero overhead |
-| **Prototypage rapide** | Tres rapide grace a drei | Plus de boilerplate |
-| **Equipe React** | Courbe d'apprentissage douce | Necessite d'apprendre l'API imperative |
-| **Equipe non-React** | Pas pertinent | Choix naturel |
-| **WebGPU renderer** | Production-ready (r160+, stable r168+) | Support direct |
-| **Editeur / outil 3D complexe** | Possible mais limites | Plus adapte |
-
-> **Regle pratique** : si votre application est en React et que la 3D est une partie de l'UI (et pas l'UI entiere), R3F est presque toujours le bon choix.
-
-### Exemple de base : `<Canvas>`, `<mesh>`, `useFrame`
-
-```tsx
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { useRef } from 'react';
-import type { Mesh } from 'three';
-
-// Composant 3D — un cube qui tourne
-function SpinningCube() {
-  const meshRef = useRef<Mesh>(null!);
-
-  // useFrame = requestAnimationFrame dans le monde R3F
-  // Appele a chaque frame (~60fps)
-  useFrame((state, delta) => {
-    meshRef.current.rotation.y += delta; // 1 radian par seconde
-    meshRef.current.rotation.x += delta * 0.5;
-  });
-
-  return (
-    <mesh ref={meshRef} position={[0, 0.5, 0]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="hotpink" metalness={0.3} roughness={0.4} />
-    </mesh>
-  );
-}
-
-// Composant principal
-export function Scene() {
-  return (
-    <Canvas camera={{ position: [3, 2, 5], fov: 75 }}>
-      {/* Lumieres */}
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
-
-      {/* Objets */}
-      <SpinningCube />
-
-      {/* Sol */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[10, 10]} />
-        <meshStandardMaterial color="#333" />
-      </mesh>
-
-      {/* Controles — equivalent de OrbitControls */}
-      <OrbitControls enableDamping />
-
-      {/* Helpers */}
-      <axesHelper args={[3]} />
-      <gridHelper args={[10, 10]} />
-    </Canvas>
-  );
-}
-```
-
-**Points cles a observer** :
-
-- `<Canvas>` cree automatiquement le `WebGLRenderer`, la `Scene` et gere le resize
-- Chaque composant Three.js est accessible en **camelCase** : `<meshStandardMaterial>`, `<boxGeometry>`, `<ambientLight>`
-- Les `args` correspondent aux arguments du constructeur Three.js : `new BoxGeometry(1, 1, 1)` → `args={[1, 1, 1]}`
-- Les props correspondent aux proprietes de l'objet : `material.color = "hotpink"` → `color="hotpink"`
-- `useFrame` remplace votre `requestAnimationFrame` + `renderer.render()` — il est appele a chaque frame
-
-### L'ecosysteme drei
-
-[Drei](https://github.com/pmndrs/drei) est une collection de helpers qui abstrait les patterns courants de Three.js :
-
-```tsx
-import {
-  OrbitControls,     // Controles camera
-  Environment,       // Environnement HDR (reflexions PBR)
-  Text,              // Texte 3D (base sur troika-three-text)
-  Html,              // Elements HTML dans la scene 3D
-  useGLTF,           // Charger des modeles .glb/.gltf
-  useTexture,        // Charger des textures
-  Float,             // Animation de flottement
-  MeshReflectorMaterial, // Sol reflechissant
-  Sky,               // Ciel procedural
-  Stars,             // Champ d'etoiles
-  ContactShadows,    // Ombres de contact (pas de shadow map)
-  Sparkles,          // Particules scintillantes
-} from '@react-three/drei';
-```
-
-**Exemple avec drei** :
-
-```tsx
-function Scene() {
-  return (
-    <Canvas>
-      <Environment preset="sunset" />
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-        <Text fontSize={1} color="white">
-          Hello 3D
-        </Text>
-      </Float>
-      <ContactShadows position={[0, -0.5, 0]} opacity={0.5} />
-      <OrbitControls />
-    </Canvas>
-  );
-}
-```
-
-En quelques lignes, vous obtenez un texte 3D flottant avec un environnement HDR, des ombres de contact et des controles camera. L'equivalent en Three.js vanilla demanderait facilement 80-100 lignes de code imperatif.
+`renderer.setSize(w, h)` (sans 3e argument) écrit aussi la **taille CSS** du canvas via des styles inline, ce qui peut entrer en conflit avec ta mise en page. Quand le canvas est dimensionné par CSS (cas courant), utiliser `renderer.setSize(w, h, false)` : Three.js ne règle alors que le drawing buffer et laisse le CSS piloter l'affichage.
 
 ---
 
-<!-- parcours-recommande -->
+## 5. Ancrage TribuZen
 
-::: tip Parcours recommandé
-1. **Screencast** : [screencast 13 threejs](../screencasts/screencast-13-threejs.md)
-2. **Lab** : [lab-13-threejs-fondamentaux](../labs/lab-13-threejs-fondamentaux/README)
-3. **Visualisation** : [Scene Graph](../visualizations/scene-graph.html)
-4. **Quiz** : [quiz 13 threejs](../quizzes/quiz-13-threejs.html)
-:::
+Three.js est le passage du **rendu 3D artisanal** (modules 06-08, WebGL brut) au **rendu 3D productif** dans TribuZen. La feature portée par ce module : le **globe interactif des sorties de la famille**.
+
+**Le globe des sorties.** Une sphère (`SphereGeometry`) représente la Terre ; chaque sortie de la famille (rando, week-end, voyage) est un petit marqueur `Mesh` positionné sur la surface. L'utilisateur fait tourner le globe à la souris (`OrbitControls`) pour explorer les sorties passées et prévues. Tout le squelette de l'Exemple 1 s'applique tel quel — c'est le socle sur lequel :
+
+- le **module 14** posera les matériaux/lumières réalistes (texture de la Terre, éclairage) ;
+- le **module 15** chargera d'éventuels modèles glTF (avatars de la famille) ;
+- le **module 17** optimisera l'affichage de centaines de marqueurs (instancing).
+
+Ce que ce module rend concret : monter la scène, l'animer, la rendre interactive et responsive — **en 20 lignes au lieu de 250**, sans réécrire de GLSL.
+
+Fichiers cibles dans `smaurier/tribuzen` :
+
+```
+tribuzen/
+  src/
+    3d/
+      three/
+        createScene.ts     ← Scene + Camera + WebGLRenderer + lumières (Exemple 1)
+        Globe.ts           ← SphereGeometry + OrbitControls + boucle setAnimationLoop
+        markers/
+          OutingMarker.ts  ← Mesh enfant du globe, un par sortie
+      GlobeCanvas.vue      ← <canvas> hôte, montage/démontage (setAnimationLoop(null))
+```
+
+> Le montage dans un composant Vue impose de **libérer** la boucle au démontage : `onUnmounted(() => renderer.setAnimationLoop(null))`, et de disposer les géométries/matériaux (`geometry.dispose()`, `material.dispose()`) — géré finement au module 17 (performance).
+
+---
+
+## 6. Points clés
+
+1. Three.js **abstrait** WebGL2 (et WebGPU via `WebGPURenderer`, r160+) : chaque concept des modules 06-08 a un équivalent objet, mais la théorie reste indispensable.
+2. Imports r185 : `import * as THREE from 'three'` pour le cœur, `import { X } from 'three/addons/...'` pour les addons (plus `three/examples/jsm/`).
+3. Le trio : **Scene** (conteneur) + **Camera** (point de vue) + **WebGLRenderer** (moteur) ; `renderer.render(scene, camera)` dessine une frame.
+4. **Mesh = Geometry (forme) + Material (apparence)** ; la couleur va sur le Material, pas la Geometry.
+5. `PerspectiveCamera(fov°, aspect, near, far)` : `fov` en degrés, `aspect = w/h`, `near > 0` (ex 0.1), `far` petit ; toute modif → `updateProjectionMatrix()`.
+6. Boucle moderne : `renderer.setAnimationLoop(cb)` (gère aussi WebXR) ; `Clock.getDelta()` pour une animation indépendante du framerate ; `setAnimationLoop(null)` arrête.
+7. `OrbitControls` (addon) : avec `enableDamping`, `controls.update()` est **obligatoire** dans la boucle.
+8. Resize : tester `clientWidth/Height`, `setSize(w, h, false)`, puis `camera.aspect = w/h` + `camera.updateProjectionMatrix()`.
+
+---
+
+## 7. Seeds Anki
+
+```
+Quels sont les trois objets fondamentaux de toute application Three.js ?|Scene (conteneur racine du graphe d'objets), Camera (point de vue, ex PerspectiveCamera), et WebGLRenderer (moteur qui pilote WebGL2). Le rendu se fait avec renderer.render(scene, camera).
+De quoi est composé un Mesh dans Three.js ?|Un Mesh = une Geometry (la forme : sommets, normales, UV, indices — l'équivalent de tes VBO/index buffer) + un Material (l'apparence : couleur, PBR — l'équivalent de tes shaders GLSL). La couleur se met sur le Material.
+Pourquoi un cube en MeshStandardMaterial peut-il apparaître totalement noir ?|Parce que MeshStandardMaterial (comme Phong/Lambert) réagit à la lumière. Sans aucune lumière dans la scène, il ne reçoit rien et est rendu noir. Solution : ajouter une DirectionalLight + AmbientLight, ou utiliser MeshBasicMaterial (non éclairé) pour vérifier la géométrie.
+Quels sont les 4 paramètres de PerspectiveCamera et une contrainte sur chacun ?|new PerspectiveCamera(fov, aspect, near, far) : fov en DEGRÉS (~75), aspect = largeur/hauteur du canvas, near > 0 (ex 0.1, jamais 0 sous peine de z-fighting), far aussi petit que possible pour la précision du depth buffer.
+Que faut-il appeler après avoir modifié camera.aspect (ou fov/near/far) ?|camera.updateProjectionMatrix(). Sans cet appel, la matrice de projection garde l'ancienne valeur et l'image est déformée après un resize. C'est l'oubli n°1 des débutants Three.js.
+Quelle est la méthode moderne pour la boucle d'animation et pourquoi la préférer à requestAnimationFrame ?|renderer.setAnimationLoop(callback). Elle est équivalente hors XR mais gère correctement le contexte WebXR (VR/AR). setAnimationLoop(null) arrête la boucle proprement. requestAnimationFrame reste valide hors XR.
+Quelle règle impérative accompagne OrbitControls avec enableDamping = true ?|Il faut appeler controls.update() À CHAQUE FRAME dans la boucle d'animation, sinon l'inertie (damping) ne s'applique jamais. Même règle avec autoRotate.
+Quel est le chemin d'import canonique d'OrbitControls en Three.js r185 ?|import { OrbitControls } from 'three/addons/controls/OrbitControls.js'. Le chemin three/examples/jsm/... est l'ancienne forme (avant r150) et ne doit plus être utilisé.
+Quel est le rôle du 3e argument false dans renderer.setSize(w, h, false) ?|Il empêche Three.js d'écrire la taille CSS du canvas (styles inline). Le drawing buffer est réglé à w×h mais l'affichage reste piloté par le CSS — indispensable quand le canvas est dimensionné par la mise en page.
+```
+
+---
+
+## Pont vers le lab
+
+> Lab associé : `labs/lab-13-threejs-fondamentaux/README.md`. Monter de zéro une scène Three.js (r185) avec un cube animé, `OrbitControls` et gestion du resize, qui tourne dans un vrai navigateur — corrigé HTML/TS commenté intégral.

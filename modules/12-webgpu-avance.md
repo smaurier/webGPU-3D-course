@@ -1,1652 +1,493 @@
-# Module 12 — Techniques avancees WebGPU
-
-| Difficulte | Duree estimee | Lab | Quiz |
-|------------|---------------|-----|------|
-| 5/5        | 150 min       | [Lab 12](../labs/lab-12-webgpu-avance/) | [Quiz 12](../quizzes/quiz-12-avance.html) |
-
-## Objectifs pedagogiques
-
-A la fin de ce module, vous serez capable de :
-
-- Utiliser l'instanced rendering en WebGPU avec `instance` step mode
-- Configurer le dessin indirect via `drawIndirect` et `drawIndexedIndirect`
-- Pre-enregistrer des commandes avec les render bundles
-- Mesurer le temps GPU avec les timestamp queries
-- Effectuer des occlusion queries pour la visibility testing
-- Écrire dans plusieurs textures simultanement (MRT)
-- Implementer un deferred rendering complet avec G-buffer et lighting pass
-- Travailler avec les texture arrays et les cubemaps en WebGPU
-- Générer des mipmaps avec un compute shader
-- Appliquer des stratégies de memory management (pooling, suballocation)
-- Connaître les bonnes pratiques WebGPU pour maximiser la performance
-- Comparer WebGL et WebGPU pour choisir la bonne technologie
-
+---
+titre: WebGPU avancé
+cours: 20-webgpu-3d
+notions:
+  - "instanced rendering (stepMode 'instance', @builtin(instance_index))"
+  - "buffer d'instances (arrayStride, attributs par instance)"
+  - "drawIndexedIndirect / drawIndirect (paramètres lus depuis un GPUBuffer)"
+  - "format du buffer indirect (5 u32 indexé, 4 u32 non indexé)"
+  - "render to texture (RENDER_ATTACHMENT + TEXTURE_BINDING)"
+  - "rendu multi-pass (passe A écrit une texture, passe B la lit)"
+  - "timestamp queries (timestampWrites, resolveQuerySet)"
+  - "feature 'timestamp-query' et lecture BigUint64Array"
+  - "MSAA (sampleCount > 1, resolveTarget)"
+  - "gestion mémoire GPU (buffer pooling, ring buffer d'uniforms, dynamic offsets)"
+outcomes:
+  - sait dessiner des milliers de copies d'un mesh en un seul draw call via l'instancing (stepMode 'instance')
+  - sait laisser le GPU décider du nombre d'objets à dessiner avec drawIndexedIndirect et un buffer indirect
+  - sait rendre dans une texture puis la relire dans une seconde passe (render to texture, multi-pass)
+  - sait mesurer le temps GPU d'une passe avec les timestamp queries et lire le résultat côté CPU
+  - sait activer le MSAA (sampleCount + resolveTarget) et réduire les allocations avec un buffer pool / ring buffer
+prerequis:
+  - "00-prerequis-et-introduction (GPU, aperçu pipeline)"
+  - "09-webgpu-architecture-et-wgsl (adapter/device, WGSL, GPUBuffer, usage flags)"
+  - "10-render-pipeline-et-bind-groups (render pipeline, bind groups, uniforms, command encoder, render pass)"
+  - "11-compute-shaders-et-gpgpu (compute pass, storage buffers, dispatchWorkgroups, staging buffer, mapAsync)"
+next: 13-threejs-fondamentaux
+libs: []
+tribuzen: "moteur 3D TribuZen — passage à l'échelle : rendre des milliers de marqueurs de sorties sur le globe en un seul draw call (instancing), et mesurer le coût GPU réel de la frame (timestamp queries)"
+last-reviewed: 2026-07
 ---
 
-<details>
-<summary>Rappel du module précédent — Compute shaders et GPGPU</summary>
+# WebGPU avancé
 
-Dans le module 11, nous avons decouvert :
+> **Outcomes — tu sauras FAIRE :** dessiner des milliers de copies d'un mesh en un draw call (instancing), laisser le GPU décider quoi dessiner (`drawIndexedIndirect`), rendre dans une texture puis la relire (multi-pass), mesurer le temps GPU d'une passe (timestamp queries), et activer le MSAA + réduire les allocations (buffer pool, ring buffer).
+> **Difficulté :** :star::star::star::star::star:
+>
+> **Portée :** ce module suppose acquis le pipeline WebGPU (module 10) et le compute (module 11). On assemble maintenant les **techniques qui font passer à l'échelle** : de « ça affiche » à « ça affiche 10 000 objets à 60 fps, et je sais combien de millisecondes GPU ça coûte ».
 
-1. **Qu'est-ce qu'un compute shader ?**
-   Un programme GPU pour du calcul général, sans pipeline graphique. Il lit/écrit des storage buffers et s'exécuté en workgroups de threads paralleles.
+## 1. Cas concret d'abord
 
-2. **Comment lancer un compute shader ?**
-   `encoder.beginComputePass()` → `pass.setPipeline()` → `pass.setBindGroup()` → `pass.dispatchWorkgroups(x, y, z)` → `pass.end()`.
+Depuis le module 06, TribuZen affiche des marqueurs de sorties. Au module 10 on a un vrai pipeline WebGPU : un marqueur = un mesh, une model matrix, une couleur. Ça marche… pour **quelques dizaines** de marqueurs.
 
-3. **Qu'est-ce qu'un workgroup ?**
-   Un groupe d'invocations (threads) qui partagent une mémoire locale (`var<workgroup>`) et peuvent se synchroniser via `workgroupBarrier()`.
-
-4. **Comment lire les résultats cote CPU ?**
-   Via un staging buffer (`MAP_READ | COPY_DST`), `mapAsync(GPUMapMode.READ)`, puis `getMappedRange()`.
-
-5. **Comment combiner compute et render ?**
-   Un même buffer peut avoir `STORAGE | VERTEX` usage. Le compute écrit les positions, le render les lit comme vertex buffer.
-
-</details>
-
----
-
-## 1. Analogie — Les techniques avancees comme un studio de post-production
-
-```
-STUDIO DE POST-PRODUCTION              TECHNIQUES AVANCEES WEBGPU
-==========================              =========================
-
-Tournage multi-camera                  Multiple Render Targets (MRT)
-  = filmer la meme scene                = ecrire position, normale, couleur
-    sous plusieurs angles                  dans des textures separees
-    simultanement                          simultanement
-
-Montage pre-enregistre                 Render Bundles
-  = sequence de coupes                   = commandes pre-enregistrees
-    toujours identique                     et rejouees a chaque frame
-    → copier/coller entre                  → elimine le cout CPU
-    episodes                                d'encodage
-
-Generiques (meme animation,           Instanced Rendering
- texte different)                        = meme mesh, donnees differentes
-                                           en un seul draw call
-
-Chronometre de scene                   Timestamp Queries
-  = mesurer la duree exacte              = mesurer le temps GPU
-    de chaque prise                        de chaque operation
-
-"Est-ce que l'acteur est               Occlusion Queries
- visible a l'ecran ?"                    = "est-ce que cet objet
-  → eviter de filmer un                    est visible ?"
-    acteur cache derriere                  → eviter de le dessiner
-    le decor                                si completement cache
-```
-
-:::tip Analogie clé
-Le **deferred rendering** est comme filmer chaque aspect de la scene separement (profondeur, couleurs, normales), puis assembler le tout en post-production (lighting pass). C'est plus complexe a mettre en place, mais cela permet de gérer un grand nombre de lumieres sans ralentissement.
-:::
-
----
-
-## 2. Instanced rendering en WebGPU
-
-### 2.1 Rappel du concept
-
-L'instanced rendering dessine le même mesh plusieurs fois en un seul draw call. Chaque instance peut avoir des donnees différentes (position, couleur, scale...).
-
-### 2.2 Instance step mode
+Mais le globe de TribuZen doit afficher **toutes les sorties de toutes les familles** : des milliers de points. Le réflexe naïf — une boucle CPU, un `setBindGroup` + un `draw` par marqueur — s'effondre :
 
 ```typescript
-// Vertex buffer layout avec un buffer par-instance
+// ❌ Un draw call PAR marqueur : le CPU s'écroule bien avant le GPU
+for (const sortie of sorties) {           // 5000 sorties
+  device.queue.writeBuffer(uboMarker, 0, sortie.modelMatrix);
+  pass.setBindGroup(0, sortie.bindGroup);
+  pass.setVertexBuffer(0, markerMesh);
+  pass.drawIndexed(markerIndexCount);      // 5000 draw calls → CPU-bound
+}
+```
 
+Le GPU est capable de dessiner ces milliers de marqueurs sans transpirer. Le goulot, c'est le **CPU** : 5000 fois par frame, encoder les commandes, lier un bind group, poser un draw call. Le thread principal sature, la frame dépasse 16 ms, ça saccade — alors que le GPU était presque inactif.
+
+La solution tient en un mot : **instancing**. Un seul mesh, un seul draw call, un buffer qui contient les 5000 positions/couleurs, et le GPU se débrouille. En plus, on veut **savoir** combien de temps la frame coûte réellement côté GPU (timestamp queries) pour décider où optimiser, laisser le GPU **filtrer** les marqueurs hors écran (`drawIndexedIndirect`), et lisser les bords (MSAA).
+
+Ce module pose ces techniques une par une, sur ce fil rouge : **rendre des milliers de marqueurs, et mesurer ce que ça coûte**.
+
+---
+
+## 2. Théorie complète, concise
+
+### 2.1 Instanced rendering : un draw call, N copies
+
+L'instancing dessine le **même mesh** plusieurs fois en **un seul draw call**. Chaque copie (instance) reçoit des données propres : position, couleur, échelle. Le dernier argument de `draw`/`drawIndexed` est le **nombre d'instances** :
+
+```typescript
+// drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance)
+pass.drawIndexed(markerIndexCount, 5000); // 1 appel → 5000 marqueurs
+```
+
+Deux façons d'alimenter les données par instance :
+
+1. **Vertex buffer avec `stepMode: 'instance'`** — un second buffer dont le curseur avance **une fois par instance** (au lieu d'une fois par sommet). C'est la voie détaillée ici.
+2. Un **storage buffer** indexé par `@builtin(instance_index)` dans le shader (utile quand les données par instance sont volumineuses ou calculées par un compute shader).
+
+### 2.2 Le layout du buffer d'instances (`stepMode: 'instance'`)
+
+Un pipeline peut déclarer **plusieurs vertex buffers**. Le buffer 0 porte la géométrie (par sommet), le buffer 1 les données par instance. La clé est `stepMode`:
+
+```typescript
 const pipeline = device.createRenderPipeline({
   layout: 'auto',
   vertex: {
-    module: shaderModule,
+    module,
     entryPoint: 'vs_main',
     buffers: [
-      // Buffer 0 : geometrie du mesh (par vertex)
+      // Buffer 0 — géométrie du mesh, avance PAR SOMMET
       {
-        arrayStride: 32, // 3 pos + 3 normal + 2 uv = 8 floats
+        arrayStride: 24,                 // 3 pos + 3 normal = 6 floats × 4 octets
         stepMode: 'vertex',
         attributes: [
-          { shaderLocation: 0, offset: 0,  format: 'float32x3' },  // position
-          { shaderLocation: 1, offset: 12, format: 'float32x3' },  // normal
-          { shaderLocation: 2, offset: 24, format: 'float32x2' },  // uv
+          { shaderLocation: 0, offset: 0,  format: 'float32x3' }, // position
+          { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
         ],
       },
-      // Buffer 1 : donnees par instance
+      // Buffer 1 — données par instance, avance PAR INSTANCE
       {
-        arrayStride: 80, // mat4 (64) + vec4 color (16) = 80 bytes
-        stepMode: 'instance',  // <-- avance par instance, pas par vertex
+        arrayStride: 32,                 // vec3 offset + f32 scale + vec4 color = 8 floats
+        stepMode: 'instance',            // ← le curseur avance à chaque instance
         attributes: [
-          // Passer une mat4 necessite 4 attributs vec4
-          { shaderLocation: 3, offset: 0,  format: 'float32x4' },  // model col 0
-          { shaderLocation: 4, offset: 16, format: 'float32x4' },  // model col 1
-          { shaderLocation: 5, offset: 32, format: 'float32x4' },  // model col 2
-          { shaderLocation: 6, offset: 48, format: 'float32x4' },  // model col 3
-          { shaderLocation: 7, offset: 64, format: 'float32x4' },  // color
+          { shaderLocation: 2, offset: 0,  format: 'float32x3' }, // offset monde
+          { shaderLocation: 3, offset: 12, format: 'float32'   }, // scale
+          { shaderLocation: 4, offset: 16, format: 'float32x4' }, // couleur RGBA
         ],
       },
     ],
   },
-  fragment: {
-    module: shaderModule,
-    entryPoint: 'fs_main',
-    targets: [{ format }],
-  },
-  primitive: { topology: 'triangle-list', cullMode: 'back' },
-  depthStencil: {
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  },
-});
-```
-
-### 2.3 Shader avec instance_index
-
-```wgsl
-struct VertexInput {
-  // Per-vertex
-  @location(0) position: vec3f,
-  @location(1) normal: vec3f,
-  @location(2) uv: vec2f,
-  // Per-instance (model matrix en 4 colonnes)
-  @location(3) model_col0: vec4f,
-  @location(4) model_col1: vec4f,
-  @location(5) model_col2: vec4f,
-  @location(6) model_col3: vec4f,
-  @location(7) inst_color: vec4f,
-}
-
-struct Uniforms {
-  view_proj: mat4x4f,
-}
-
-@group(0) @binding(0) var<uniform> u: Uniforms;
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) normal: vec3f,
-  @location(1) uv: vec2f,
-  @location(2) color: vec4f,
-}
-
-@vertex
-fn vs_main(
-  in: VertexInput,
-  @builtin(instance_index) instance_id: u32,
-) -> VertexOutput {
-  // Reconstruire la model matrix depuis les 4 colonnes
-  let model = mat4x4f(
-    in.model_col0,
-    in.model_col1,
-    in.model_col2,
-    in.model_col3,
-  );
-
-  let world_pos = model * vec4f(in.position, 1.0);
-
-  var out: VertexOutput;
-  out.position = u.view_proj * world_pos;
-  out.normal = (model * vec4f(in.normal, 0.0)).xyz;
-  out.uv = in.uv;
-  out.color = in.inst_color;
-  return out;
-}
-
-@fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-  let N = normalize(in.normal);
-  let L = normalize(vec3f(0.5, 1.0, 0.3));
-  let diffuse = max(dot(N, L), 0.0) * 0.8 + 0.2;
-  return vec4f(in.color.rgb * diffuse, in.color.a);
-}
-```
-
-### 2.4 Remplir le buffer d'instances et dessiner
-
-```typescript
-// Creer les donnees pour 1000 instances
-const INSTANCE_COUNT = 1000;
-const INSTANCE_STRIDE = 80; // 64 bytes (mat4) + 16 bytes (vec4 color)
-const instanceData = new Float32Array(INSTANCE_COUNT * 20); // 20 floats par instance
-
-for (let i = 0; i < INSTANCE_COUNT; i++) {
-  const base = i * 20;
-  const x = (i % 32 - 16) * 2.5;
-  const z = (Math.floor(i / 32) - 16) * 2.5;
-  const scale = 0.5 + Math.random() * 0.5;
-  const angle = Math.random() * Math.PI * 2;
-
-  // Model matrix (rotation Y + translation + scale)
-  const c = Math.cos(angle) * scale;
-  const s = Math.sin(angle) * scale;
-  // colonne 0
-  instanceData[base + 0] = c;
-  instanceData[base + 1] = 0;
-  instanceData[base + 2] = -s;
-  instanceData[base + 3] = 0;
-  // colonne 1
-  instanceData[base + 4] = 0;
-  instanceData[base + 5] = scale;
-  instanceData[base + 6] = 0;
-  instanceData[base + 7] = 0;
-  // colonne 2
-  instanceData[base + 8] = s;
-  instanceData[base + 9] = 0;
-  instanceData[base + 10] = c;
-  instanceData[base + 11] = 0;
-  // colonne 3 (translation)
-  instanceData[base + 12] = x;
-  instanceData[base + 13] = 0;
-  instanceData[base + 14] = z;
-  instanceData[base + 15] = 1;
-  // couleur
-  instanceData[base + 16] = Math.random();
-  instanceData[base + 17] = Math.random();
-  instanceData[base + 18] = Math.random();
-  instanceData[base + 19] = 1;
-}
-
-const instanceBuffer = device.createBuffer({
-  size: instanceData.byteLength,
-  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-});
-device.queue.writeBuffer(instanceBuffer, 0, instanceData);
-
-// Dessiner
-const pass = encoder.beginRenderPass(renderPassDesc);
-pass.setPipeline(pipeline);
-pass.setBindGroup(0, bindGroup);
-pass.setVertexBuffer(0, meshVertexBuffer);   // geometrie
-pass.setVertexBuffer(1, instanceBuffer);      // instances
-pass.setIndexBuffer(meshIndexBuffer, 'uint16');
-pass.drawIndexed(meshIndexCount, INSTANCE_COUNT); // 2eme arg = nombre d'instances
-pass.end();
-```
-
----
-
-## 3. Indirect draw
-
-### 3.1 Qu'est-ce que le dessin indirect ?
-
-Le dessin indirect lit les paramètres du draw call **depuis un buffer GPU** au lieu de les passer en argument JavaScript. Cela permet à un compute shader de decider combien d'objets dessiner sans intervention du CPU.
-
-```
-Dessin DIRECT (classique) :              Dessin INDIRECT :
-
-// Le CPU decide combien dessiner        // Le GPU decide combien dessiner
-pass.draw(vertexCount, instanceCount);   pass.drawIndirect(buffer, offset);
-
-CPU ──[params]──▶ Draw Call              GPU ──[compute]──▶ Buffer ──▶ Draw Call
-
-Cas d'usage :                            Cas d'usage :
-- Nombre d'objets connu d'avance         - Frustum culling sur GPU
-- Pas de filtrage GPU                    - LOD selection sur GPU
-                                         - Systeme de particules (vivantes seulement)
-```
-
-### 3.2 Format du buffer indirect
-
-```typescript
-// Pour drawIndirect, le buffer contient 4 uint32 :
-// [vertexCount, instanceCount, firstVertex, firstInstance]
-
-// Pour drawIndexedIndirect, 5 uint32 :
-// [indexCount, instanceCount, firstIndex, baseVertex, firstInstance]
-
-// Creer le buffer
-const indirectBuffer = device.createBuffer({
-  size: 20, // 5 * 4 bytes pour drawIndexedIndirect
-  usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-});
-
-// Un compute shader peut ecrire les parametres :
-// Exemple : culling shader qui decide du nombre d'instances visibles
-```
-
-### 3.3 Compute shader de frustum culling + draw indirect
-
-```wgsl
-// frustum-cull.wgsl
-
-struct DrawIndirectArgs {
-  vertex_count: u32,
-  instance_count: atomic<u32>,  // atomique car plusieurs threads l'incrementent
-  first_vertex: u32,
-  first_instance: u32,
-}
-
-struct BoundingSphere {
-  center: vec3f,
-  radius: f32,
-}
-
-@group(0) @binding(0) var<uniform> frustum_planes: array<vec4f, 6>;
-@group(0) @binding(1) var<storage, read> objects: array<BoundingSphere>;
-@group(0) @binding(2) var<storage, read_write> visible_indices: array<u32>;
-@group(0) @binding(3) var<storage, read_write> draw_args: DrawIndirectArgs;
-
-fn is_sphere_in_frustum(sphere: BoundingSphere) -> bool {
-  for (var i = 0u; i < 6u; i++) {
-    let plane = frustum_planes[i];
-    let dist = dot(plane.xyz, sphere.center) + plane.w;
-    if (dist < -sphere.radius) {
-      return false; // entierement en dehors de ce plan
-    }
-  }
-  return true;
-}
-
-@compute @workgroup_size(64)
-fn cull(@builtin(global_invocation_id) gid: vec3u) {
-  let i = gid.x;
-  if (i >= arrayLength(&objects)) { return; }
-
-  if (is_sphere_in_frustum(objects[i])) {
-    // Objet visible : ajouter son index a la liste
-    let slot = atomicAdd(&draw_args.instance_count, 1u);
-    visible_indices[slot] = i;
-  }
-}
-```
-
-```typescript
-// Cote TypeScript : reset du compteur, dispatch, puis draw indirect
-
-// Reset le compteur d'instances visibles a 0
-const resetData = new Uint32Array([36, 0, 0, 0, 0]); // indexCount=36, instanceCount=0
-device.queue.writeBuffer(indirectBuffer, 0, resetData);
-
-const encoder = device.createCommandEncoder();
-
-// Compute pass : frustum culling
-const computePass = encoder.beginComputePass();
-computePass.setPipeline(cullPipeline);
-computePass.setBindGroup(0, cullBindGroup);
-computePass.dispatchWorkgroups(Math.ceil(objectCount / 64));
-computePass.end();
-
-// Render pass : dessiner seulement les objets visibles
-const renderPass = encoder.beginRenderPass(renderPassDesc);
-renderPass.setPipeline(renderPipeline);
-renderPass.setBindGroup(0, renderBindGroup);
-renderPass.setVertexBuffer(0, meshBuffer);
-renderPass.setIndexBuffer(indexBuffer, 'uint16');
-renderPass.drawIndexedIndirect(indirectBuffer, 0); // parametres lus depuis le GPU
-renderPass.end();
-
-device.queue.submit([encoder.finish()]);
-```
-
----
-
-## 4. Render bundles
-
-### 4.1 Le problème : cout CPU de l'encodage
-
-```
-Sans render bundles :                  Avec render bundles :
-
-Chaque frame :                         Une seule fois (initialisation) :
-  encoder.beginRenderPass()              bundleEncoder = device.create...
-  for (chaque objet) {                  for (chaque objet) {
-    pass.setPipeline(...)                  bundle.setPipeline(...)
-    pass.setBindGroup(...)                 bundle.setBindGroup(...)
-    pass.setVertexBuffer(...)              bundle.setVertexBuffer(...)
-    pass.draw(...)                         bundle.draw(...)
-  }                                    }
-  pass.end()                           renderBundle = bundle.finish()
-
-CPU: ████████ (beaucoup de travail)    Chaque frame :
-                                         pass.executeBundles([renderBundle])
-                                       CPU: ██ (tres peu de travail)
-```
-
-### 4.2 Implementation
-
-```typescript
-// Creer le render bundle (une seule fois)
-function createSceneBundle(
-  device: GPUDevice,
-  pipeline: GPURenderPipeline,
-  objects: Array<{
-    bindGroup: GPUBindGroup;
-    vertexBuffer: GPUBuffer;
-    indexBuffer: GPUBuffer;
-    indexCount: number;
-  }>,
-  format: GPUTextureFormat,
-): GPURenderBundle {
-  const bundleEncoder = device.createRenderBundleEncoder({
-    colorFormats: [format],
-    depthStencilFormat: 'depth24plus',
-    sampleCount: 1,
-  });
-
-  bundleEncoder.setPipeline(pipeline);
-
-  for (const obj of objects) {
-    bundleEncoder.setBindGroup(0, obj.bindGroup);
-    bundleEncoder.setVertexBuffer(0, obj.vertexBuffer);
-    bundleEncoder.setIndexBuffer(obj.indexBuffer, 'uint16');
-    bundleEncoder.drawIndexed(obj.indexCount);
-  }
-
-  return bundleEncoder.finish();
-}
-
-// Utiliser le bundle a chaque frame
-function renderFrame(
-  device: GPUDevice,
-  context: GPUCanvasContext,
-  depthTexture: GPUTexture,
-  sceneBundle: GPURenderBundle,
-): void {
-  const encoder = device.createCommandEncoder();
-  const pass = encoder.beginRenderPass({
-    colorAttachments: [{
-      view: context.getCurrentTexture().createView(),
-      clearValue: { r: 0.1, g: 0.1, b: 0.15, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
-    }],
-    depthStencilAttachment: {
-      view: depthTexture.createView(),
-      depthClearValue: 1.0,
-      depthLoadOp: 'clear',
-      depthStoreOp: 'store',
-    },
-  });
-
-  // Execute le bundle pre-enregistre (tres rapide)
-  pass.executeBundles([sceneBundle]);
-
-  pass.end();
-  device.queue.submit([encoder.finish()]);
-}
-```
-
-:::warning Limites des render bundles
-Les render bundles sont **immutables**. Si la scene change (ajout/suppression d'objets, changement de pipeline), il faut en créer un nouveau. Ils sont plus utiles pour les parties statiques de la scene (decor, terrain) que pour les éléments dynamiques.
-:::
-
----
-
-## 5. Timestamp queries
-
-### 5.1 Mesurer le temps GPU
-
-```typescript
-// Verifier que l'adaptateur supporte les timestamp queries
-const adapter = await navigator.gpu!.requestAdapter();
-const hasTimestamps = adapter!.features.has('timestamp-query');
-
-const device = await adapter!.requestDevice({
-  requiredFeatures: hasTimestamps ? ['timestamp-query'] : [],
-});
-
-if (!hasTimestamps) {
-  console.warn('Timestamp queries non supportees');
-}
-```
-
-### 5.2 Implementation
-
-```typescript
-function createTimingSystem(device: GPUDevice): {
-  querySet: GPUQuerySet;
-  resolveBuffer: GPUBuffer;
-  readBuffer: GPUBuffer;
-} {
-  // Query set : contient les timestamps bruts
-  const querySet = device.createQuerySet({
-    type: 'timestamp',
-    count: 2, // debut et fin
-  });
-
-  // Buffer pour resoudre les queries (GPU → buffer)
-  const resolveBuffer = device.createBuffer({
-    size: 2 * 8, // 2 timestamps * 8 bytes (uint64)
-    usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-  });
-
-  // Staging buffer pour lire cote CPU
-  const readBuffer = device.createBuffer({
-    size: 2 * 8,
-    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-  });
-
-  return { querySet, resolveBuffer, readBuffer };
-}
-
-async function measureRenderPassTime(
-  device: GPUDevice,
-  timing: ReturnType<typeof createTimingSystem>,
-  renderPassDesc: GPURenderPassDescriptor,
-  drawCommands: (pass: GPURenderPassEncoder) => void,
-): Promise<number> {
-  // Ajouter les timestamps au render pass
-  const timedDesc = {
-    ...renderPassDesc,
-    timestampWrites: {
-      querySet: timing.querySet,
-      beginningOfPassWriteIndex: 0,
-      endOfPassWriteIndex: 1,
-    },
-  };
-
-  const encoder = device.createCommandEncoder();
-
-  const pass = encoder.beginRenderPass(timedDesc);
-  drawCommands(pass);
-  pass.end();
-
-  // Resoudre les queries (convertir en buffer lisible)
-  encoder.resolveQuerySet(timing.querySet, 0, 2, timing.resolveBuffer, 0);
-
-  // Copier vers le staging buffer
-  encoder.copyBufferToBuffer(
-    timing.resolveBuffer, 0,
-    timing.readBuffer, 0,
-    2 * 8,
-  );
-
-  device.queue.submit([encoder.finish()]);
-
-  // Lire les resultats
-  await timing.readBuffer.mapAsync(GPUMapMode.READ);
-  const times = new BigUint64Array(timing.readBuffer.getMappedRange());
-
-  const startNs = times[0];
-  const endNs = times[1];
-  const durationMs = Number(endNs - startNs) / 1_000_000;
-
-  timing.readBuffer.unmap();
-
-  return durationMs; // duree en millisecondes
-}
-
-// Utilisation
-const timing = createTimingSystem(device);
-const gpuTimeMs = await measureRenderPassTime(
-  device, timing, renderPassDesc,
-  (pass) => {
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.setVertexBuffer(0, vertexBuffer);
-    pass.drawIndexed(indexCount, instanceCount);
-  },
-);
-console.log(`GPU render time: ${gpuTimeMs.toFixed(2)} ms`);
-```
-
----
-
-## 6. Occlusion queries
-
-### 6.1 Principe
-
-Les occlusion queries permettent de savoir si des fragments d'un draw call ont passe le depth test. Si aucun fragment n'est visible, l'objet est complètement occlude (cache).
-
-```
-Camera ─────▶ [Mur] [Cube cache]
-
-Occlusion query pour le cube :
-  → "0 fragments passes" = completement cache
-  → On peut eviter de le dessiner en detail la frame suivante
-```
-
-### 6.2 Implementation
-
-```typescript
-// Creer le query set
-const occlusionQuerySet = device.createQuerySet({
-  type: 'occlusion',
-  count: 100, // max 100 objets a tester
-});
-
-const occlusionResolveBuffer = device.createBuffer({
-  size: 100 * 8, // 100 queries * 8 bytes (uint64)
-  usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-});
-
-// Dans le render pass
-const pass = encoder.beginRenderPass({
-  ...renderPassDesc,
-  occlusionQuerySet, // attacher le query set
-});
-
-// Dessiner un bounding box simplifie pour chaque objet
-for (let i = 0; i < objects.length; i++) {
-  pass.beginOcclusionQuery(i); // debut du test pour l'objet i
-  drawBoundingBox(pass, objects[i]); // dessine une boite simplifiee
-  pass.endOcclusionQuery();          // fin du test
-}
-
-pass.end();
-
-// Resoudre et lire les resultats
-encoder.resolveQuerySet(occlusionQuerySet, 0, objects.length, occlusionResolveBuffer, 0);
-// ... copier vers staging, mapAsync, lire les BigUint64Array ...
-// Si result[i] == 0n → l'objet i est completement cache
-```
-
----
-
-## 7. Multiple Render Targets (MRT)
-
-### 7.1 Écrire dans plusieurs textures simultanement
-
-```
-Render pass classique :               MRT (Multiple Render Targets) :
-
-Fragment shader ecrit                  Fragment shader ecrit dans
-dans 1 seule texture                   PLUSIEURS textures a la fois
-
-    ┌───────────┐                         ┌───────────┐
-    │ Fragment  │                         │ Fragment  │
-    │  Shader   │                         │  Shader   │
-    └─────┬─────┘                         └──┬──┬──┬──┘
-          │                                  │  │  │
-          ▼                                  ▼  ▼  ▼
-    ┌───────────┐                    ┌────┐┌────┐┌────┐
-    │  Couleur  │                    │Pos.││Norm││Alb.│
-    │  (ecran)  │                    │    ││    ││    │
-    └───────────┘                    └────┘└────┘└────┘
-
-                                     = G-Buffer pour deferred rendering
-```
-
-### 7.2 Configuration du pipeline MRT
-
-```typescript
-// Fragment shader avec plusieurs sorties
-const mrtShaderCode = `
-  struct GBufferOutput {
-    @location(0) position: vec4f,   // world position
-    @location(1) normal: vec4f,     // world normal
-    @location(2) albedo: vec4f,     // base color
-  }
-
-  @fragment
-  fn fs_gbuffer(in: VertexOutput) -> GBufferOutput {
-    var out: GBufferOutput;
-    out.position = vec4f(in.world_pos, 1.0);
-    out.normal = vec4f(normalize(in.world_normal), 0.0);
-    out.albedo = textureSample(t_diffuse, s_diffuse, in.uv);
-    return out;
-  }
-`;
-
-// Pipeline avec 3 targets
-const gbufferPipeline = device.createRenderPipeline({
-  layout: 'auto',
-  vertex: { module: shaderModule, entryPoint: 'vs_main', buffers: vertexBufferLayouts },
-  fragment: {
-    module: shaderModule,
-    entryPoint: 'fs_gbuffer',
-    targets: [
-      { format: 'rgba16float' },  // position (haute precision)
-      { format: 'rgba16float' },  // normal (haute precision)
-      { format: 'rgba8unorm' },   // albedo
-    ],
-  },
+  fragment: { module, entryPoint: 'fs_main', targets: [{ format }] },
   primitive: { topology: 'triangle-list', cullMode: 'back' },
   depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
 });
-
-// Creer les textures du G-buffer
-function createGBuffer(
-  device: GPUDevice,
-  width: number,
-  height: number,
-): { position: GPUTexture; normal: GPUTexture; albedo: GPUTexture; depth: GPUTexture } {
-  const createTarget = (format: GPUTextureFormat) =>
-    device.createTexture({
-      size: { width, height },
-      format,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-    });
-
-  return {
-    position: createTarget('rgba16float'),
-    normal: createTarget('rgba16float'),
-    albedo: createTarget('rgba8unorm'),
-    depth: device.createTexture({
-      size: { width, height },
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-    }),
-  };
-}
-
-// Render pass avec 3 color attachments
-const gbufferPass = encoder.beginRenderPass({
-  colorAttachments: [
-    {
-      view: gbuffer.position.createView(),
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      loadOp: 'clear',
-      storeOp: 'store',
-    },
-    {
-      view: gbuffer.normal.createView(),
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      loadOp: 'clear',
-      storeOp: 'store',
-    },
-    {
-      view: gbuffer.albedo.createView(),
-      clearValue: { r: 0, g: 0, b: 0, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
-    },
-  ],
-  depthStencilAttachment: {
-    view: gbuffer.depth.createView(),
-    depthClearValue: 1.0,
-    depthLoadOp: 'clear',
-    depthStoreOp: 'store',
-  },
-});
 ```
 
----
+`arrayStride` est **la taille d'un élément en octets** (piège classique : c'est en octets, pas en floats). Pour passer une `mat4x4` par instance, il faut **4 attributs `float32x4`** (un attribut ne peut pas dépasser un `vec4`).
 
-## 8. Deferred rendering complet
+### 2.3 Le shader : géométrie + instance dans le même vertex
 
-### 8.1 Architecture en 2 passes
-
-```
-PASSE 1 : G-Buffer                    PASSE 2 : Lighting
-(geometrie → textures)                 (textures → ecran)
-
-  Pour chaque objet :                   Quad plein ecran :
-  ┌──────────────────┐                  ┌──────────────────┐
-  │ Vertex shader    │                  │ Vertex shader    │
-  │ (MVP transform)  │                  │ (quad 2D)        │
-  └────────┬─────────┘                  └────────┬─────────┘
-           │                                     │
-  ┌────────▼─────────┐                  ┌────────▼─────────┐
-  │ Fragment shader  │                  │ Fragment shader  │
-  │ → position tex   │                  │ Lit les 3 textures│
-  │ → normal tex     │                  │ Boucle sur les   │
-  │ → albedo tex     │                  │ lumieres         │
-  └──────────────────┘                  │ → couleur finale │
-                                        └──────────────────┘
-
-Avantage : les calculs d'eclairage ne se font que pour les
-pixels VISIBLES. 100 lumieres → 1 passe geometrie + 1 passe lighting
-au lieu de 100 passes de rendu.
-```
-
-### 8.2 Lighting pass — shader WGSL
+Côté WGSL, les attributs par sommet et par instance arrivent **au même endroit** : le vertex shader les reçoit tous par `@location`. `@builtin(instance_index)` donne en plus l'indice de l'instance courante (utile pour indexer un storage buffer).
 
 ```wgsl
-// deferred-lighting.wgsl
-
-struct Light {
-  position: vec3f,
-  radius: f32,
-  color: vec3f,
-  intensity: f32,
+struct VertexInput {
+  @location(0) position: vec3f,   // par sommet
+  @location(1) normal:   vec3f,   // par sommet
+  @location(2) offset:   vec3f,   // par instance
+  @location(3) scale:    f32,     // par instance
+  @location(4) color:    vec4f,   // par instance
 }
 
-struct LightingUniforms {
-  camera_pos: vec3f,
-  num_lights: u32,
-  lights: array<Light, 64>,
-}
-
-@group(0) @binding(0) var t_position: texture_2d<f32>;
-@group(0) @binding(1) var t_normal: texture_2d<f32>;
-@group(0) @binding(2) var t_albedo: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> u: LightingUniforms;
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-}
-
-// Quad plein ecran genere sans vertex buffer
-@vertex
-fn vs_fullscreen(@builtin(vertex_index) vid: u32) -> VertexOutput {
-  // 3 vertices d'un triangle qui couvre tout l'ecran
-  var positions = array<vec2f, 3>(
-    vec2f(-1.0, -1.0),
-    vec2f( 3.0, -1.0),
-    vec2f(-1.0,  3.0),
-  );
-  var uvs = array<vec2f, 3>(
-    vec2f(0.0, 1.0),
-    vec2f(2.0, 1.0),
-    vec2f(0.0, -1.0),
-  );
-
-  var out: VertexOutput;
-  out.position = vec4f(positions[vid], 0.0, 1.0);
-  out.uv = uvs[vid];
-  return out;
-}
-
-@fragment
-fn fs_lighting(in: VertexOutput) -> @location(0) vec4f {
-  let coords = vec2i(in.position.xy);
-
-  // Lire les donnees du G-buffer
-  let position = textureLoad(t_position, coords, 0).xyz;
-  let normal = textureLoad(t_normal, coords, 0).xyz;
-  let albedo = textureLoad(t_albedo, coords, 0).rgb;
-
-  // Si la normale est nulle, c'est un pixel de fond (pas de geometrie)
-  if (length(normal) < 0.01) {
-    return vec4f(0.05, 0.05, 0.1, 1.0); // couleur de fond
-  }
-
-  let N = normalize(normal);
-  let V = normalize(u.camera_pos - position);
-
-  // Ambient
-  var result = albedo * 0.1;
-
-  // Accumuler l'eclairage de toutes les lumieres
-  for (var i = 0u; i < u.num_lights; i++) {
-    let light = u.lights[i];
-    let to_light = light.position - position;
-    let dist = length(to_light);
-
-    // Ignorer si hors du rayon d'influence
-    if (dist > light.radius) { continue; }
-
-    let L = normalize(to_light);
-
-    // Attenuation
-    let falloff = 1.0 - (dist / light.radius);
-    let attenuation = falloff * falloff;
-
-    // Diffuse
-    let diff = max(dot(N, L), 0.0);
-
-    // Specular (Blinn-Phong)
-    let H = normalize(L + V);
-    let spec = pow(max(dot(N, H), 0.0), 64.0);
-
-    result += (diff * albedo + spec * vec3f(0.5)) *
-              light.color * light.intensity * attenuation;
-  }
-
-  // Tone mapping HDR → LDR
-  result = result / (result + vec3f(1.0));
-
-  return vec4f(result, 1.0);
-}
-```
-
-### 8.3 Orchestration des deux passes
-
-```typescript
-function renderDeferred(
-  device: GPUDevice,
-  encoder: GPUCommandEncoder,
-  context: GPUCanvasContext,
-  gbuffer: GBuffer,
-  gbufferPipeline: GPURenderPipeline,
-  lightingPipeline: GPURenderPipeline,
-  sceneBindGroups: GPUBindGroup[],
-  lightingBindGroup: GPUBindGroup,
-  objects: RenderObject[],
-): void {
-  // === PASSE 1 : G-Buffer ===
-  const gbufferPass = encoder.beginRenderPass({
-    colorAttachments: [
-      { view: gbuffer.position.createView(), clearValue: { r:0,g:0,b:0,a:0 }, loadOp: 'clear', storeOp: 'store' },
-      { view: gbuffer.normal.createView(), clearValue: { r:0,g:0,b:0,a:0 }, loadOp: 'clear', storeOp: 'store' },
-      { view: gbuffer.albedo.createView(), clearValue: { r:0,g:0,b:0,a:1 }, loadOp: 'clear', storeOp: 'store' },
-    ],
-    depthStencilAttachment: {
-      view: gbuffer.depth.createView(),
-      depthClearValue: 1.0,
-      depthLoadOp: 'clear',
-      depthStoreOp: 'store',
-    },
-  });
-
-  gbufferPass.setPipeline(gbufferPipeline);
-  for (let i = 0; i < objects.length; i++) {
-    gbufferPass.setBindGroup(0, sceneBindGroups[i]);
-    gbufferPass.setVertexBuffer(0, objects[i].vertexBuffer);
-    gbufferPass.setIndexBuffer(objects[i].indexBuffer, 'uint16');
-    gbufferPass.drawIndexed(objects[i].indexCount);
-  }
-  gbufferPass.end();
-
-  // === PASSE 2 : Lighting ===
-  const lightingPass = encoder.beginRenderPass({
-    colorAttachments: [{
-      view: context.getCurrentTexture().createView(),
-      clearValue: { r: 0, g: 0, b: 0, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
-    }],
-  });
-
-  lightingPass.setPipeline(lightingPipeline);
-  lightingPass.setBindGroup(0, lightingBindGroup);
-  lightingPass.draw(3); // triangle plein ecran (3 vertices, pas de buffer)
-  lightingPass.end();
-}
-```
-
----
-
-## 9. Texture arrays et cubemaps en WebGPU
-
-### 9.1 Texture arrays
-
-```typescript
-// Creer un tableau de textures (meme taille, meme format)
-const textureArray = device.createTexture({
-  size: { width: 512, height: 512, depthOrArrayLayers: 8 }, // 8 layers
-  format: 'rgba8unorm',
-  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-});
-
-// Ecrire dans une layer specifique
-device.queue.writeTexture(
-  { texture: textureArray, origin: { x: 0, y: 0, z: 3 } }, // layer 3
-  imageData,
-  { bytesPerRow: 512 * 4, rowsPerImage: 512 },
-  { width: 512, height: 512, depthOrArrayLayers: 1 },
-);
-
-// Creer une vue sur tout le tableau
-const arrayView = textureArray.createView({
-  dimension: '2d-array',
-});
-```
-
-```wgsl
-// Dans le shader WGSL
-@group(0) @binding(0) var t_array: texture_2d_array<f32>;
-@group(0) @binding(1) var s: sampler;
-
-@fragment
-fn fs_main(@location(0) uv: vec2f, @location(1) layer: u32) -> @location(0) vec4f {
-  // Echantillonner une layer specifique du tableau
-  return textureSample(t_array, s, uv, layer);
-}
-```
-
-### 9.2 Cubemaps en WebGPU
-
-```typescript
-// Creer une cubemap (6 faces)
-const cubemapTexture = device.createTexture({
-  size: { width: 1024, height: 1024, depthOrArrayLayers: 6 }, // 6 faces
-  format: 'rgba8unorm',
-  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-});
-
-// Ecrire chaque face (z = index de la face)
-// 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
-for (let face = 0; face < 6; face++) {
-  device.queue.writeTexture(
-    { texture: cubemapTexture, origin: { x: 0, y: 0, z: face } },
-    faceData[face],
-    { bytesPerRow: 1024 * 4, rowsPerImage: 1024 },
-    { width: 1024, height: 1024, depthOrArrayLayers: 1 },
-  );
-}
-
-// Vue cubemap
-const cubemapView = cubemapTexture.createView({
-  dimension: 'cube',
-});
-```
-
-```wgsl
-// Shader pour skybox WebGPU
-@group(0) @binding(0) var t_skybox: texture_cube<f32>;
-@group(0) @binding(1) var s_skybox: sampler;
-
-@fragment
-fn fs_skybox(@location(0) direction: vec3f) -> @location(0) vec4f {
-  return textureSample(t_skybox, s_skybox, direction);
-}
-```
-
----
-
-## 10. Mipmap génération avec compute shader
-
-WebGPU ne fournit pas de `generateMipmaps()` comme WebGL. Il faut générer les mipmaps manuellement, typiquement avec un compute shader.
-
-### 10.1 Compute shader de génération de mipmaps
-
-```wgsl
-// mipmap-gen.wgsl
-
-@group(0) @binding(0) var src: texture_2d<f32>;
-@group(0) @binding(1) var dst: texture_storage_2d<rgba8unorm, write>;
-
-@compute @workgroup_size(8, 8)
-fn generate_mip(@builtin(global_invocation_id) gid: vec3u) {
-  let dst_dims = textureDimensions(dst);
-  if (gid.x >= dst_dims.x || gid.y >= dst_dims.y) { return; }
-
-  // Lire 4 texels du niveau source (2x2 block)
-  let src_coord = vec2i(gid.xy) * 2;
-  let a = textureLoad(src, src_coord + vec2i(0, 0), 0);
-  let b = textureLoad(src, src_coord + vec2i(1, 0), 0);
-  let c = textureLoad(src, src_coord + vec2i(0, 1), 0);
-  let d = textureLoad(src, src_coord + vec2i(1, 1), 0);
-
-  // Moyenne des 4 texels (box filter)
-  let result = (a + b + c + d) * 0.25;
-
-  textureStore(dst, gid.xy, result);
-}
-```
-
-### 10.2 Pipeline TypeScript pour générer tous les niveaux
-
-```typescript
-function generateMipmaps(
-  device: GPUDevice,
-  texture: GPUTexture,
-  width: number,
-  height: number,
-): void {
-  const mipLevelCount = Math.floor(Math.log2(Math.max(width, height))) + 1;
-
-  const pipeline = device.createComputePipeline({
-    layout: 'auto',
-    compute: {
-      module: device.createShaderModule({ code: mipmapShaderCode }),
-      entryPoint: 'generate_mip',
-    },
-  });
-
-  const encoder = device.createCommandEncoder();
-
-  for (let level = 1; level < mipLevelCount; level++) {
-    const srcView = texture.createView({
-      baseMipLevel: level - 1,
-      mipLevelCount: 1,
-    });
-    const dstView = texture.createView({
-      baseMipLevel: level,
-      mipLevelCount: 1,
-    });
-
-    const bindGroup = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: srcView },
-        { binding: 1, resource: dstView },
-      ],
-    });
-
-    const mipWidth = Math.max(1, width >> level);
-    const mipHeight = Math.max(1, height >> level);
-
-    const pass = encoder.beginComputePass();
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.dispatchWorkgroups(
-      Math.ceil(mipWidth / 8),
-      Math.ceil(mipHeight / 8),
-    );
-    pass.end();
-  }
-
-  device.queue.submit([encoder.finish()]);
-}
-
-// Utilisation : creer la texture avec assez de mip levels
-const mipLevelCount = Math.floor(Math.log2(Math.max(width, height))) + 1;
-const texture = device.createTexture({
-  size: { width, height },
-  format: 'rgba8unorm',
-  mipLevelCount,
-  usage: GPUTextureUsage.TEXTURE_BINDING
-       | GPUTextureUsage.STORAGE_BINDING
-       | GPUTextureUsage.COPY_DST,
-});
-// Ecrire le niveau 0, puis generer les mipmaps
-device.queue.writeTexture({ texture }, imageData, { bytesPerRow: width * 4 }, { width, height });
-generateMipmaps(device, texture, width, height);
-```
-
----
-
-## 11. Memory management
-
-### 11.1 Buffer pooling
-
-```typescript
-// Reutiliser des buffers au lieu d'en creer/detruire en permanence
-
-class BufferPool {
-  private available: Map<number, GPUBuffer[]> = new Map();
-  private inUse: Set<GPUBuffer> = new Set();
-
-  constructor(private device: GPUDevice) {}
-
-  acquire(size: number, usage: GPUBufferUsageFlags): GPUBuffer {
-    // Arrondir a la puissance de 2 superieure (reduit la fragmentation)
-    const alignedSize = this.nextPow2(size);
-
-    const pool = this.available.get(alignedSize);
-    if (pool && pool.length > 0) {
-      const buffer = pool.pop()!;
-      this.inUse.add(buffer);
-      return buffer;
-    }
-
-    // Pas de buffer disponible → en creer un nouveau
-    const buffer = this.device.createBuffer({ size: alignedSize, usage });
-    this.inUse.add(buffer);
-    return buffer;
-  }
-
-  release(buffer: GPUBuffer): void {
-    if (!this.inUse.has(buffer)) return;
-    this.inUse.delete(buffer);
-
-    const size = buffer.size;
-    if (!this.available.has(size)) {
-      this.available.set(size, []);
-    }
-    this.available.get(size)!.push(buffer);
-  }
-
-  destroy(): void {
-    for (const [, pool] of this.available) {
-      for (const buf of pool) buf.destroy();
-    }
-    for (const buf of this.inUse) buf.destroy();
-    this.available.clear();
-    this.inUse.clear();
-  }
-
-  private nextPow2(n: number): number {
-    let p = 256; // taille minimum
-    while (p < n) p *= 2;
-    return p;
-  }
-}
-```
-
-### 11.2 Suballocation — un gros buffer, plusieurs usages
-
-```typescript
-// Au lieu de creer 100 petits uniform buffers,
-// creer 1 gros buffer et utiliser des offsets dynamiques
-
-class UniformRingBuffer {
-  private buffer: GPUBuffer;
-  private offset = 0;
-  private readonly alignment: number;
-
-  constructor(
-    private device: GPUDevice,
-    private totalSize: number,
-  ) {
-    this.alignment = device.limits.minUniformBufferOffsetAlignment; // typiquement 256
-
-    this.buffer = device.createBuffer({
-      size: totalSize,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-  }
-
-  // Allouer un slot dans le ring buffer
-  allocate(data: Float32Array): { buffer: GPUBuffer; offset: number } {
-    // Aligner l'offset
-    const alignedOffset = Math.ceil(this.offset / this.alignment) * this.alignment;
-
-    if (alignedOffset + data.byteLength > this.totalSize) {
-      // Ring buffer plein → revenir au debut
-      this.offset = 0;
-      return this.allocate(data);
-    }
-
-    this.device.queue.writeBuffer(this.buffer, alignedOffset, data);
-    this.offset = alignedOffset + data.byteLength;
-
-    return { buffer: this.buffer, offset: alignedOffset };
-  }
-
-  // Reset en debut de frame
-  reset(): void {
-    this.offset = 0;
-  }
-
-  getBuffer(): GPUBuffer { return this.buffer; }
-}
-
-// Utilisation avec dynamic offsets dans le bind group
-const bindGroup = device.createBindGroup({
-  layout: pipelineLayout.getBindGroupLayout(0),
-  entries: [{
-    binding: 0,
-    resource: {
-      buffer: ringBuffer.getBuffer(),
-      offset: 0,          // offset de base (sera ajoute au dynamic offset)
-      size: 256,           // taille d'un slot
-    },
-  }],
-});
-
-// Au rendu, passer le dynamic offset
-for (const obj of objects) {
-  const { offset } = ringBuffer.allocate(obj.uniformData);
-  pass.setBindGroup(0, bindGroup, [offset]); // dynamic offset
-  pass.drawIndexed(obj.indexCount);
-}
-```
-
----
-
-## 12. WebGPU best practices
-
-### 12.1 Minimiser les changements de pipeline
-
-```typescript
-// MAUVAIS : alterner entre pipelines
-for (const obj of objects) {
-  pass.setPipeline(obj.pipeline);    // changement frequente
-  pass.draw(obj.count);
-}
-
-// BON : trier par pipeline, puis dessiner
-objects.sort((a, b) => a.pipelineId - b.pipelineId);
-
-let currentPipeline: GPURenderPipeline | null = null;
-for (const obj of objects) {
-  if (obj.pipeline !== currentPipeline) {
-    pass.setPipeline(obj.pipeline);
-    currentPipeline = obj.pipeline;
-  }
-  pass.setBindGroup(0, obj.bindGroup);
-  pass.setVertexBuffer(0, obj.vertexBuffer);
-  pass.draw(obj.count);
-}
-```
-
-### 12.2 Tableau des bonnes pratiques
-
-| Pratique | Impact | Recommandation |
-|----------|--------|----------------|
-| Tri par pipeline | Reduit les state changes | Trier les objets par materiau/pipeline |
-| Render bundles | Reduit le travail CPU | Pre-enregistrer les draw calls statiques |
-| Instanced draw | Reduit les draw calls | 1 call pour N copies du même mesh |
-| Indirect draw | Eliminle le readback GPU→CPU | Le GPU decide du nombre d'instances |
-| Buffer pooling | Reduit les allocations | Reutiliser les buffers entre frames |
-| Ring buffer | Reduit le nombre de buffers | 1 gros buffer uniforms avec dynamic offsets |
-| Taille des workgroups | Occupancy GPU | 64 ou 256, multiple de 32 |
-| `loadOp: 'clear'` | Evite un load mémoire | Toujours `clear` si on redessine tout |
-| `storeOp: 'discard'` | Evite un store mémoire | `discard` pour le depth si pas relu |
-| Mipmaps | Qualite + performance | Toujours générer des mipmaps pour les textures 3D |
-
----
-
-## 13. Comparaison finale WebGL vs WebGPU
-
-| Critere | WebGL 2 | WebGPU |
-|---------|---------|--------|
-| **Paradigme** | State machine (bind, enable, disable) | Command-based (objets immutables) |
-| **Langage shader** | GLSL ES 3.00 | WGSL |
-| **Compute shaders** | Non | Oui (`GPUComputePipeline`) |
-| **Validation** | Au draw call (tardive, parfois silencieuse) | A la création (fail-fast, explicite) |
-| **Multi-threading** | Non (tout sur le main thread) | Oui (encodage sur workers possible) |
-| **Draw indirect** | Via extension (`ANGLE_multi_draw`) | Natif (`drawIndirect`, `drawIndexedIndirect`) |
-| **Render bundles** | Non | Oui |
-| **Timestamp queries** | Via extension (limitee) | Feature standard |
-| **MRT** | Oui (jusqu'a 8 targets) | Oui (jusqu'a 8 targets) |
-| **Instanced rendering** | Oui (`drawArraysInstanced`) | Oui (instance step mode + `@builtin(instance_index)`) |
-| **Memory management** | Automatique (driver) | Explicite (usage flags, staging buffers) |
-| **Compatibilite** | Quasi universelle (98%+ des navigateurs) | Chrome 113+, Firefox 121+, Safari 18+ |
-| **Performance brute** | Bonne | Meilleure (moins d'overhead CPU, compute) |
-| **Courbe d'apprentissage** | Moderee | Raide (plus de concepts à maîtriser) |
-| **Ecosysteme** | Très mature (Three.js, Babylon.js) | En croissance (Three.js WebGPU backend, wgpu) |
-
-### Quand utiliser quoi ?
-
-```
-Choisir WebGL si :                      Choisir WebGPU si :
-
-✓ Compatibilite maximale requise        ✓ Beaucoup de draw calls (> 1000)
-  (anciens navigateurs, mobiles)        ✓ Besoin de compute shaders
-✓ Petit projet / prototype rapide      ✓ Scene complexe (deferred, MRT)
-✓ Equipe habituee a OpenGL             ✓ Performance CPU critique
-✓ Three.js suffit (abstraction)        ✓ Projet nouveau, cible moderne
-✓ Pas besoin de compute                ✓ Simulation GPU (particules, physique)
-
-→ La plupart des projets 3D web        → Projets ambitieux, jeux AAA web,
-  fonctionnent tres bien avec            outils de visualisation scientifique,
-  Three.js qui abstrait les deux.        applications GPU-intensive.
-```
-
----
-
-## 14. Exercice pratique
-
-### Enonce
-
-Implementez un **deferred renderer simple** en WebGPU :
-
-1. **G-Buffer pass** : dessinez 5 cubes avec des couleurs différentes. Ecrivez dans 3 textures (position, normal, albedo)
-2. **Lighting pass** : dessinez un quad plein ecran qui lit le G-buffer et calcule l'eclairage de 4 lumieres ponctuelles
-3. Ajoutez un **toggle** (touche espace) pour afficher chaque couche du G-buffer individuellement (debug view)
-4. Utilisez des **timestamp queries** pour mesurer le temps GPU de chaque passe
-
-**Bonus :**
-- Ajouter une lumiere qui suit la souris
-- Implementer un simple tone mapping (Reinhard)
-
-<details>
-<summary>Voir la solution</summary>
-
-```wgsl
-// gbuffer.wgsl — G-Buffer pass
-
-struct Uniforms {
-  model: mat4x4f,
-  view_proj: mat4x4f,
-  color: vec4f,
-}
-
+struct Uniforms { view_proj: mat4x4f }
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 struct VertexOutput {
   @builtin(position) clip_pos: vec4f,
-  @location(0) world_pos: vec3f,
-  @location(1) world_normal: vec3f,
+  @location(0) color: vec4f,
 }
 
 @vertex
-fn vs_gbuffer(
-  @location(0) pos: vec3f,
-  @location(1) normal: vec3f,
-) -> VertexOutput {
-  let world = u.model * vec4f(pos, 1.0);
+fn vs_main(in: VertexInput) -> VertexOutput {
+  // Position monde = sommet mis à l'échelle puis translaté par les données d'instance
+  let world = in.position * in.scale + in.offset;
   var out: VertexOutput;
-  out.clip_pos = u.view_proj * world;
-  out.world_pos = world.xyz;
-  out.world_normal = (u.model * vec4f(normal, 0.0)).xyz;
-  return out;
-}
-
-struct GBufferOutput {
-  @location(0) position: vec4f,
-  @location(1) normal: vec4f,
-  @location(2) albedo: vec4f,
-}
-
-@fragment
-fn fs_gbuffer(in: VertexOutput) -> GBufferOutput {
-  var out: GBufferOutput;
-  out.position = vec4f(in.world_pos, 1.0);
-  out.normal = vec4f(normalize(in.world_normal), 0.0);
-  out.albedo = u.color;
+  out.clip_pos = u.view_proj * vec4f(world, 1.0);
+  out.color = in.color;
   return out;
 }
 ```
 
-```wgsl
-// lighting.wgsl — Lighting pass + debug views
+### 2.4 Draw indirect : le GPU décide quoi dessiner
 
-struct Light {
-  position: vec3f,
-  radius: f32,
-  color: vec3f,
-  intensity: f32,
-}
-
-struct LightUniforms {
-  camera_pos: vec4f,
-  num_lights: u32,
-  debug_mode: u32,  // 0=final, 1=position, 2=normal, 3=albedo
-  _pad: vec2f,
-  lights: array<Light, 8>,
-}
-
-@group(0) @binding(0) var t_pos: texture_2d<f32>;
-@group(0) @binding(1) var t_norm: texture_2d<f32>;
-@group(0) @binding(2) var t_alb: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> u: LightUniforms;
-
-@vertex
-fn vs_quad(@builtin(vertex_index) vid: u32) -> @builtin(position) vec4f {
-  var pos = array<vec2f, 3>(
-    vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0),
-  );
-  return vec4f(pos[vid], 0.0, 1.0);
-}
-
-@fragment
-fn fs_lighting(@builtin(position) frag_pos: vec4f) -> @location(0) vec4f {
-  let coords = vec2i(frag_pos.xy);
-  let pos = textureLoad(t_pos, coords, 0).xyz;
-  let normal = textureLoad(t_norm, coords, 0).xyz;
-  let albedo = textureLoad(t_alb, coords, 0).rgb;
-
-  // Debug views
-  if (u.debug_mode == 1u) { return vec4f(pos * 0.2 + 0.5, 1.0); }
-  if (u.debug_mode == 2u) { return vec4f(normal * 0.5 + 0.5, 1.0); }
-  if (u.debug_mode == 3u) { return vec4f(albedo, 1.0); }
-
-  // Pas de geometrie → fond
-  if (length(normal) < 0.01) {
-    return vec4f(0.02, 0.02, 0.05, 1.0);
-  }
-
-  let N = normalize(normal);
-  let V = normalize(u.camera_pos.xyz - pos);
-  var result = albedo * 0.08; // ambient
-
-  for (var i = 0u; i < u.num_lights; i++) {
-    let light = u.lights[i];
-    let L_vec = light.position - pos;
-    let dist = length(L_vec);
-    if (dist > light.radius) { continue; }
-
-    let L = normalize(L_vec);
-    let falloff = 1.0 - dist / light.radius;
-    let atten = falloff * falloff;
-
-    let diff = max(dot(N, L), 0.0);
-    let H = normalize(L + V);
-    let spec = pow(max(dot(N, H), 0.0), 64.0);
-
-    result += (diff * albedo + spec * vec3f(0.3)) *
-              light.color * light.intensity * atten;
-  }
-
-  // Reinhard tone mapping
-  result = result / (result + vec3f(1.0));
-
-  return vec4f(result, 1.0);
-}
-```
+En dessin **direct**, le CPU passe les paramètres du draw (`drawIndexed(indexCount, instanceCount)`). En dessin **indirect**, ces paramètres sont **lus depuis un GPUBuffer** :
 
 ```typescript
-// main.ts — Deferred rendering orchestration
-
-async function main() {
-  // ... init device, context, format ...
-
-  const gbuffer = createGBuffer(device, canvas.width, canvas.height);
-
-  // 5 cubes avec couleurs differentes
-  const cubes = [
-    { pos: [-3, 0, 0], color: [1.0, 0.2, 0.2, 1.0] },
-    { pos: [-1.5, 0, 0], color: [0.2, 1.0, 0.2, 1.0] },
-    { pos: [0, 0, 0], color: [0.2, 0.2, 1.0, 1.0] },
-    { pos: [1.5, 0, 0], color: [1.0, 1.0, 0.2, 1.0] },
-    { pos: [3, 0, 0], color: [1.0, 0.2, 1.0, 1.0] },
-  ];
-
-  // 4 lumieres
-  const lights = [
-    { position: [2, 3, 2], radius: 10, color: [1, 1, 1], intensity: 1.5 },
-    { position: [-2, 2, -1], radius: 8, color: [1, 0.3, 0.3], intensity: 1.2 },
-    { position: [0, 1, 3], radius: 8, color: [0.3, 0.3, 1], intensity: 1.0 },
-    { position: [0, 4, 0], radius: 12, color: [0.3, 1, 0.3], intensity: 0.8 },
-  ];
-
-  let debugMode = 0; // 0=final, 1=position, 2=normal, 3=albedo
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
-      e.preventDefault();
-      debugMode = (debugMode + 1) % 4;
-      console.log(`Debug mode: ${['Final', 'Position', 'Normal', 'Albedo'][debugMode]}`);
-    }
-  });
-
-  // Timestamp queries (si supportees)
-  const hasTimestamps = device.features.has('timestamp-query');
-  let querySet: GPUQuerySet | null = null;
-  let resolveBuffer: GPUBuffer | null = null;
-
-  if (hasTimestamps) {
-    querySet = device.createQuerySet({ type: 'timestamp', count: 4 }); // 2 par passe
-    resolveBuffer = device.createBuffer({
-      size: 4 * 8,
-      usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-    });
-  }
-
-  function frame(): void {
-    const encoder = device.createCommandEncoder();
-
-    // G-Buffer pass
-    const gbufferPass = encoder.beginRenderPass({
-      colorAttachments: [
-        { view: gbuffer.position.createView(), clearValue: {r:0,g:0,b:0,a:0}, loadOp:'clear', storeOp:'store' },
-        { view: gbuffer.normal.createView(), clearValue: {r:0,g:0,b:0,a:0}, loadOp:'clear', storeOp:'store' },
-        { view: gbuffer.albedo.createView(), clearValue: {r:0,g:0,b:0,a:1}, loadOp:'clear', storeOp:'store' },
-      ],
-      depthStencilAttachment: {
-        view: gbuffer.depth.createView(),
-        depthClearValue: 1.0, depthLoadOp: 'clear', depthStoreOp: 'store',
-      },
-      ...(hasTimestamps ? {
-        timestampWrites: { querySet: querySet!, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 },
-      } : {}),
-    });
-
-    gbufferPass.setPipeline(gbufferPipeline);
-    for (const cube of cubes) {
-      // Mettre a jour les uniforms du cube (model matrix + couleur)
-      // ... writeBuffer ...
-      gbufferPass.setBindGroup(0, cube.bindGroup);
-      gbufferPass.setVertexBuffer(0, cubeVertexBuffer);
-      gbufferPass.setIndexBuffer(cubeIndexBuffer, 'uint16');
-      gbufferPass.drawIndexed(36);
-    }
-    gbufferPass.end();
-
-    // Lighting pass
-    // Mettre a jour les uniforms de lighting (lumieres + debug mode)
-    const lightData = new ArrayBuffer(288); // camera(16) + counts(16) + 8*lights(256)
-    const f32 = new Float32Array(lightData);
-    const u32 = new Uint32Array(lightData);
-    // camera_pos
-    f32[0] = 0; f32[1] = 3; f32[2] = 8; f32[3] = 1;
-    // num_lights, debug_mode
-    u32[4] = lights.length;
-    u32[5] = debugMode;
-    // lights data
-    for (let i = 0; i < lights.length; i++) {
-      const base = 8 + i * 8;
-      f32[base] = lights[i].position[0];
-      f32[base+1] = lights[i].position[1];
-      f32[base+2] = lights[i].position[2];
-      f32[base+3] = lights[i].radius;
-      f32[base+4] = lights[i].color[0];
-      f32[base+5] = lights[i].color[1];
-      f32[base+6] = lights[i].color[2];
-      f32[base+7] = lights[i].intensity;
-    }
-    device.queue.writeBuffer(lightUniformBuffer, 0, lightData);
-
-    const lightingPass = encoder.beginRenderPass({
-      colorAttachments: [{
-        view: context.getCurrentTexture().createView(),
-        clearValue: { r: 0, g: 0, b: 0, a: 1 },
-        loadOp: 'clear', storeOp: 'store',
-      }],
-      ...(hasTimestamps ? {
-        timestampWrites: { querySet: querySet!, beginningOfPassWriteIndex: 2, endOfPassWriteIndex: 3 },
-      } : {}),
-    });
-
-    lightingPass.setPipeline(lightingPipeline);
-    lightingPass.setBindGroup(0, lightingBindGroup);
-    lightingPass.draw(3);
-    lightingPass.end();
-
-    device.queue.submit([encoder.finish()]);
-    requestAnimationFrame(frame);
-  }
-
-  requestAnimationFrame(frame);
-}
-
-main();
+// drawIndexedIndirect(indirectBuffer, indirectOffset)  — offset multiple de 4
+pass.drawIndexedIndirect(indirectBuffer, 0);
 ```
 
-**Points clés :**
-- Le G-buffer utilise `rgba16float` pour la position et les normales (précision suffisante)
-- Le lighting pass utilise un triangle surdimensionne (3 vertices) au lieu d'un quad (6 vertices)
-- Le debug mode permet de visualiser chaque couche du G-buffer
-- Les timestamp queries mesurent le cout de chaque passe
-- Le Reinhard tone mapping `color / (color + 1)` convertit HDR en LDR de façon douce
+Intérêt : un **compute shader** peut écrire ces paramètres sans que le CPU les connaisse. Cas typique du globe TribuZen : un compute fait le **frustum culling** (ne garder que les marqueurs visibles à l'écran) et écrit lui-même le nombre d'instances à dessiner — le CPU n'a jamais la liste, tout reste sur le GPU (pas de readback coûteux).
 
-</details>
+Le format du buffer indirect est **fixe** (vérifié sur MDN) :
+
+```typescript
+// drawIndexedIndirect → 5 × u32 (20 octets) :
+//   [indexCount, instanceCount, firstIndex, baseVertex, firstInstance]
+// drawIndirect (non indexé) → 4 × u32 (16 octets) :
+//   [vertexCount, instanceCount, firstVertex, firstInstance]
+
+const indirectBuffer = device.createBuffer({
+  size: 20,                                       // 5 u32
+  usage: GPUBufferUsage.INDIRECT                  // ← flag OBLIGATOIRE
+       | GPUBufferUsage.STORAGE                   // pour qu'un compute l'écrive
+       | GPUBufferUsage.COPY_DST,
+});
+```
+
+Le flag `GPUBufferUsage.INDIRECT` est obligatoire. `instanceCount` initialisé à 0, incrémenté par le compute via `atomicAdd` (un `instance_count: atomic<u32>` dans le struct WGSL) — c'est exactement le pattern atomique vu au module 11.
+
+### 2.5 Render to texture & rendu multi-pass
+
+Jusqu'ici, une passe de rendu écrit dans la texture du canvas (l'écran). Mais un `colorAttachment` peut viser **n'importe quelle texture** créée avec l'usage `RENDER_ATTACHMENT`. Si on lui ajoute aussi `TEXTURE_BINDING`, une **seconde passe** peut la relire comme entrée :
+
+```typescript
+// Texture cible d'une première passe, relue par une seconde
+const sceneTexture = device.createTexture({
+  size: { width, height },
+  format: 'rgba8unorm',
+  usage: GPUTextureUsage.RENDER_ATTACHMENT   // passe A écrit dedans
+       | GPUTextureUsage.TEXTURE_BINDING,    // passe B la lit comme entrée
+});
+```
+
+Le schéma **multi-pass** :
+
+```
+PASSE A (rendu → texture)          PASSE B (texture → écran)
+  colorAttachment =                   colorAttachment = canvas
+    sceneTexture.createView()         bindGroup lit sceneTexture
+  dessine la scène                    quad plein écran (post-traitement)
+        │                                     ▲
+        └──── sceneTexture ───────────────────┘
+```
+
+C'est le socle de **tout** ce qui est post-traitement : bloom, flou, effets d'écran, mais aussi le **deferred rendering** (passe géométrie → G-buffer de plusieurs textures, puis passe lighting qui les lit). Le quad plein écran de la passe B se génère **sans vertex buffer**, avec un triangle surdimensionné indexé par `@builtin(vertex_index)`:
+
+```wgsl
+@vertex
+fn vs_fullscreen(@builtin(vertex_index) vid: u32) -> @builtin(position) vec4f {
+  // Un seul triangle qui déborde de l'écran couvre tout le viewport
+  var p = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+  return vec4f(p[vid], 0.0, 1.0);
+}
+```
+
+### 2.6 Timestamp queries : mesurer le temps GPU
+
+`console.time` mesure le temps **CPU** d'encodage, pas le temps **GPU** réel. Pour mesurer le GPU, WebGPU fournit les **timestamp queries**, derrière une feature à demander explicitement à la création du device :
+
+```typescript
+const adapter = await navigator.gpu.requestAdapter();
+const canTimestamp = adapter.features.has('timestamp-query');
+const device = await adapter.requestDevice({
+  requiredFeatures: canTimestamp ? ['timestamp-query'] : [],
+});
+```
+
+On attache deux écritures de timestamp (début/fin) à la passe via `timestampWrites`, puis on **résout** le query set vers un buffer, qu'on relit comme au module 11 (staging + `mapAsync`). Les valeurs sont en **nanosecondes**, stockées en `uint64` → on les lit en `BigUint64Array`:
+
+```typescript
+const querySet = device.createQuerySet({ type: 'timestamp', count: 2 }); // début + fin
+const resolve  = device.createBuffer({ size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC });
+const readback = device.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+const pass = encoder.beginRenderPass({
+  colorAttachments: [/* ... */],
+  timestampWrites: {
+    querySet,
+    beginningOfPassWriteIndex: 0,  // timestamp au début de la passe → index 0
+    endOfPassWriteIndex: 1,        // timestamp à la fin → index 1
+  },
+});
+// ... dessin ...
+pass.end();
+
+// Résoudre le query set (u64 bruts) → buffer, puis copier vers le staging
+encoder.resolveQuerySet(querySet, 0, 2, resolve, 0); // destinationOffset multiple de 256
+encoder.copyBufferToBuffer(resolve, 0, readback, 0, 16);
+device.queue.submit([encoder.finish()]);
+
+await readback.mapAsync(GPUMapMode.READ);
+const ts = new BigUint64Array(readback.getMappedRange());
+const durationMs = Number(ts[1] - ts[0]) / 1_000_000; // ns → ms
+readback.unmap();
+```
+
+> **FLAG :** ne jamais lire le même buffer que celui en cours de `mapAsync` (il est verrouillé le temps du mapping). Comme pour le compute, on relit une frame en retard, pas la frame courante.
+
+### 2.7 MSAA : lisser les bords
+
+Sans anti-aliasing, les bords des marqueurs « crénellent » (marches d'escalier). Le **MSAA** (Multi-Sample Anti-Aliasing) rend dans une texture **multi-échantillonnée** (`sampleCount: 4`), puis **résout** vers une texture mono-échantillon. Trois points à aligner (vérifiés sur MDN) :
+
+- le **pipeline** déclare `multisample: { count: 4 }` ;
+- la texture cible (`view`) a `sampleCount: 4` ;
+- le `colorAttachment` fournit un `resolveTarget` dont la texture a `sampleCount: 1` (souvent le canvas).
+
+```typescript
+const msaaTexture = device.createTexture({
+  size: { width, height },
+  sampleCount: 4,                                // multi-échantillon
+  format,
+  usage: GPUTextureUsage.RENDER_ATTACHMENT,
+});
+
+const pass = encoder.beginRenderPass({
+  colorAttachments: [{
+    view: msaaTexture.createView(),              // on dessine dans le multi-sample
+    resolveTarget: context.getCurrentTexture().createView(), // résolu vers le canvas (sampleCount 1)
+    clearValue: { r: 0.05, g: 0.05, b: 0.1, a: 1 },
+    loadOp: 'clear',
+    storeOp: 'store',
+  }],
+});
+```
+
+### 2.8 Gestion mémoire : buffer pool & ring buffer
+
+Créer/détruire des `GPUBuffer` à chaque frame fragmente la mémoire et coûte cher. Deux patterns clés :
+
+- **Buffer pooling** — recycler les buffers relâchés au lieu d'en recréer. On indexe un pool par taille (arrondie à la puissance de 2 supérieure pour limiter la fragmentation) ; `acquire()` réutilise un buffer libre ou en crée un, `release()` le rend au pool.
+- **Ring buffer d'uniforms + dynamic offsets** — au lieu de N petits uniform buffers, **un seul gros buffer** ; chaque objet écrit à un offset aligné sur `device.limits.minUniformBufferOffsetAlignment` (souvent 256). Le bind group est déclaré avec `hasDynamicOffset: true`, et on passe l'offset au moment du draw :
+
+```typescript
+// Un seul bind group, un offset dynamique par objet (offset multiple de 256)
+for (const obj of objects) {
+  const offset = ring.write(obj.uniformData); // écrit dans le gros buffer, renvoie l'offset aligné
+  pass.setBindGroup(0, bindGroup, [offset]);  // 3e arg = tableau des dynamic offsets
+  pass.drawIndexed(obj.indexCount);
+}
+```
+
+Règle générale de perf WebGPU : **minimiser les changements d'état** (trier les objets par pipeline pour éviter les `setPipeline` répétés) et **réduire le nombre d'objets GPU** (pooling, instancing).
 
 ---
 
-## Résumé
+## 3. Worked examples
 
-| Concept | Description |
-|---------|-------------|
-| Instanced rendering | `stepMode: 'instance'` + `drawIndexed(count, instanceCount)` |
-| `@builtin(instance_index)` | Index de l'instance courante dans le vertex shader |
-| Draw indirect | `drawIndirect(buffer, offset)` — paramètres lus depuis un GPUBuffer |
-| Frustum culling GPU | Compute shader écrit le nombre d'instances dans un indirect buffer |
-| Render bundles | Commandes pre-enregistrees via `GPURenderBundleEncoder` |
-| Timestamp queries | `timestampWrites` dans le render pass + `resolveQuerySet` |
-| Occlusion queries | `beginOcclusionQuery(i)` / `endOcclusionQuery()` dans un render pass |
-| MRT (Multiple Render Targets) | Fragment shader retourne plusieurs `@location(N)` |
-| G-Buffer | Textures separees pour position, normale, albedo |
-| Deferred rendering | G-buffer pass (geometrie) + lighting pass (eclairage) |
-| Texture arrays | `texture_2d_array<f32>`, `depthOrArrayLayers: N` |
-| Cubemaps WebGPU | `dimension: 'cube'`, `texture_cube<f32>` |
-| Mipmap génération | Compute shader avec box filter, 1 dispatch par level |
-| Buffer pooling | Reutiliser des buffers pour éviter les allocations |
-| Ring buffer | 1 gros uniform buffer avec dynamic offsets |
-| Tri par pipeline | Minimiser les `setPipeline` dans un render pass |
-| WebGL vs WebGPU | WebGL = compatible partout, WebGPU = performant + compute |
+### Exemple 1 — Instancing : 5000 marqueurs en un draw call (TribuZen)
+
+On rend 5000 marqueurs, chacun avec sa position/échelle/couleur, en **un seul** `drawIndexed`. Le mesh du marqueur (un quad) tient dans le buffer 0 ; les 5000 instances dans le buffer 1.
+
+```typescript
+const INSTANCE_COUNT = 5000;
+const FLOATS_PER_INSTANCE = 8;   // vec3 offset + f32 scale + vec4 color
+
+// 1. Générer les données d'instance (offset, scale, couleur par sortie)
+const data = new Float32Array(INSTANCE_COUNT * FLOATS_PER_INSTANCE);
+for (let i = 0; i < INSTANCE_COUNT; i++) {
+  const b = i * FLOATS_PER_INSTANCE;
+  data[b + 0] = (Math.random() - 0.5) * 40;   // offset.x
+  data[b + 1] = (Math.random() - 0.5) * 40;   // offset.y
+  data[b + 2] = (Math.random() - 0.5) * 40;   // offset.z
+  data[b + 3] = 0.2 + Math.random() * 0.3;    // scale
+  data[b + 4] = 0.1; data[b + 5] = 0.8;       // couleur (vert = sortie bouclée)
+  data[b + 6] = 0.3; data[b + 7] = 1.0;
+}
+
+// 2. Uploader le buffer d'instances (usage VERTEX)
+const instanceBuffer = device.createBuffer({
+  size: data.byteLength,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+device.queue.writeBuffer(instanceBuffer, 0, data);
+
+// 3. Dessiner : les DEUX vertex buffers, puis UN seul draw call instancié
+const pass = encoder.beginRenderPass(renderPassDesc);
+pass.setPipeline(pipeline);            // pipeline avec les 2 buffers (§2.2)
+pass.setBindGroup(0, bindGroup);       // view_proj
+pass.setVertexBuffer(0, markerMesh);   // buffer 0 : géométrie (stepMode 'vertex')
+pass.setVertexBuffer(1, instanceBuffer); // buffer 1 : instances (stepMode 'instance')
+pass.setIndexBuffer(markerIndex, 'uint16');
+pass.drawIndexed(markerIndexCount, INSTANCE_COUNT); // 5000 marqueurs, 1 appel CPU
+pass.end();
+```
+
+Le gain est structurel : **un** appel CPU au lieu de 5000. Le thread principal est libéré, la frame tient dans les 16 ms, et le GPU — qui n'était pas le goulot — dessine les 5000 marqueurs sans effort.
+
+### Exemple 2 — Mesurer le coût GPU de la passe d'instancing
+
+On veut savoir combien de **millisecondes GPU** coûtent réellement ces 5000 marqueurs, pour décider si l'optimisation suivante (culling indirect) vaut le coup.
+
+```typescript
+// Setup (une fois) — feature demandée à la création du device (§2.6)
+const querySet = device.createQuerySet({ type: 'timestamp', count: 2 });
+const resolve  = device.createBuffer({ size: 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC });
+const readback = device.createBuffer({ size: 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+async function renderAndMeasure(): Promise<number> {
+  const encoder = device.createCommandEncoder();
+
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [{
+      view: context.getCurrentTexture().createView(),
+      clearValue: { r: 0.05, g: 0.05, b: 0.1, a: 1 },
+      loadOp: 'clear',
+      storeOp: 'store',
+    }],
+    // Deux timestamps encadrent la passe
+    timestampWrites: { querySet, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 },
+  });
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, bindGroup);
+  pass.setVertexBuffer(0, markerMesh);
+  pass.setVertexBuffer(1, instanceBuffer);
+  pass.setIndexBuffer(markerIndex, 'uint16');
+  pass.drawIndexed(markerIndexCount, 5000);
+  pass.end();
+
+  // Résoudre (u64 bruts) → resolve → readback
+  encoder.resolveQuerySet(querySet, 0, 2, resolve, 0);
+  encoder.copyBufferToBuffer(resolve, 0, readback, 0, 16);
+  device.queue.submit([encoder.finish()]);
+
+  // Lire les deux timestamps (nanosecondes, uint64)
+  await readback.mapAsync(GPUMapMode.READ);
+  const ts = new BigUint64Array(readback.getMappedRange());
+  const ms = Number(ts[1] - ts[0]) / 1_000_000;
+  readback.unmap();                 // TOUJOURS unmap avant la frame suivante
+  return ms;
+}
+
+const gpuMs = await renderAndMeasure();
+console.log(`Passe marqueurs : ${gpuMs.toFixed(2)} ms GPU`);
+```
+
+Si `gpuMs` est déjà minuscule (ex. 0.3 ms), le culling GPU n'apportera rien de visible : le module vient d'éviter une optimisation inutile. C'est tout l'intérêt de **mesurer avant d'optimiser**.
 
 ---
 
-## Navigation
+## 4. Pièges & misconceptions
 
-| Précédent | Suivant |
-|:---------:|:-------:|
-| [11 — Compute shaders et GPGPU](./11-compute-shaders-gpgpu.md) | [13 — Three.js fondamentaux](./13-threejs-fondamentaux.md) |
+### PIÈGE #1 — Croire que `arrayStride` est en floats
+
+`arrayStride` et les `offset` d'attributs sont **en octets**, jamais en floats. Un `vec3` + `f32` + `vec4` par instance = 8 floats = **32 octets** de stride, l'offset de la couleur = `4 * 4 = 16` octets. Se tromper d'unité décale toutes les instances → géométrie explosée à l'écran, sans erreur.
+
+### PIÈGE #2 — Confondre `stepMode: 'vertex'` et `'instance'`
+
+`stepMode: 'vertex'` fait avancer le curseur **par sommet** (la géométrie) ; `'instance'` **par instance**. Mettre `'vertex'` sur le buffer d'instances relit les mêmes octets pour chaque sommet → toutes les instances se superposent. Le buffer par instance **doit** être `stepMode: 'instance'`.
+
+### PIÈGE #3 — Passer une `mat4x4` comme un seul attribut
+
+Un attribut de vertex buffer ne peut pas dépasser un `vec4` (`float32x4`). Une `mat4x4` par instance = **4 attributs `float32x4`** à des `shaderLocation` consécutifs, reconstruits en `mat4x4f(col0, col1, col2, col3)` dans le shader. Déclarer `format: 'float32x16'` n'existe pas.
+
+### PIÈGE #4 — Oublier `GPUBufferUsage.INDIRECT` sur le buffer indirect
+
+`drawIndexedIndirect` exige que le buffer ait le flag `INDIRECT`. Sans lui, validation error à l'appel. Et le format est **fixe** : `[indexCount, instanceCount, firstIndex, baseVertex, firstInstance]` (indexé) vs `[vertexCount, instanceCount, firstVertex, firstInstance]` (non indexé) — inverser les deux dessine n'importe quoi.
+
+### PIÈGE #5 — Mesurer le temps CPU au lieu du GPU
+
+`performance.now()` autour de `submit()` mesure le temps **d'encodage CPU**, qui n'a aucun rapport avec le travail GPU (asynchrone). Seules les **timestamp queries** mesurent le GPU. Et il faut la feature `'timestamp-query'` **demandée à la création du device** — sinon `timestampWrites` échoue.
+
+### PIÈGE #6 — MSAA sans `resolveTarget` (ou avec les sampleCount inversés)
+
+En MSAA, le `view` doit être **multi-échantillon** (`sampleCount: 4`) et le `resolveTarget` **mono-échantillon** (`sampleCount: 1`, typiquement le canvas). Oublier le `resolveTarget` laisse une texture multi-sample non résolue (rien à l'écran) ; inverser les sampleCount = validation error. Le pipeline doit aussi porter `multisample: { count: 4 }`.
+
+### PIÈGE #7 — Dynamic offset non aligné
+
+Les dynamic offsets d'un uniform buffer doivent être multiples de `device.limits.minUniformBufferOffsetAlignment` (souvent 256), pas de la taille réelle des données. Écrire des slots de 192 octets sans alignement → validation error. On aligne **toujours** l'offset vers le haut sur cette limite.
 
 ---
 
-<!-- parcours-recommande -->
+## 5. Ancrage TribuZen
 
-::: tip Parcours recommandé
-1. **Screencast** : [screencast 12 webgpu avance](../screencasts/screencast-12-webgpu-avance.md)
-2. **Lab** : [lab-12-webgpu-avance](../labs/lab-12-webgpu-avance/README)
-3. **Quiz** : [quiz 12 webgpu avance](../quizzes/quiz-12-webgpu-avance.html)
-:::
+Ces techniques font passer le moteur 3D de TribuZen **du prototype à l'échelle réelle**.
+
+**Globe des sorties — instancing.** Le globe affiche toutes les sorties de la communauté : des milliers de marqueurs. Un `MarkerInstancer` construit un `Float32Array` (offset géo → position monde, couleur selon l'état : vert bouclée, orange prévue, gris annulée) et dessine tout en **un** `drawIndexed(indexCount, N)`. Le CPU pose un seul draw call par frame.
+
+**Culling GPU — draw indirect.** Quand le globe tourne, la moitié des marqueurs est derrière l'horizon. Un compute shader (module 11) teste la visibilité de chaque marqueur, écrit les instances visibles et leur nombre dans un buffer `INDIRECT`, puis la passe de rendu fait `drawIndexedIndirect` : le CPU n'a jamais la liste des marqueurs visibles, tout reste sur le GPU.
+
+**Budget de frame — timestamp queries.** Le mode debug de TribuZen affiche « Passe marqueurs : X ms GPU / Passe globe : Y ms GPU », mesuré par timestamp queries. C'est ce qui permet de décider **où** optimiser au lieu de deviner.
+
+**Qualité & mémoire — MSAA + pooling.** Le MSAA (`sampleCount: 4`) lisse les bords des marqueurs et du globe. Un `BufferPool` recycle les buffers d'instances entre frames quand le nombre de sorties change, et un ring buffer d'uniforms sert les panneaux d'info par sortie via dynamic offsets.
+
+Fichiers cibles dans `smaurier/tribuzen` :
+
+```
+tribuzen/
+  src/
+    3d/
+      gpu/
+        MarkerInstancer.ts   ← buffer d'instances + drawIndexed instancié (Exemple 1)
+        GpuTimer.ts          ← timestamp queries + lecture ms (Exemple 2)
+        BufferPool.ts        ← pooling / ring buffer d'uniforms
+      culling/
+        frustumCull.wgsl     ← compute qui remplit le buffer INDIRECT
+      GlobeCanvas.vue        ← <canvas> WebGPU du globe, passe MSAA
+```
+
+> Le module 13 bascule ensuite sur **Three.js**, qui abstrait instancing (`InstancedMesh`) et MSAA — mais comprendre ces mécaniques bas niveau permet de savoir **ce que Three.js fait sous le capot** et de diagnostiquer une chute de fps.
+
+---
+
+## 6. Points clés
+
+1. L'instancing dessine N copies d'un mesh en **un draw call** ; le dernier argument de `drawIndexed(indexCount, instanceCount)` est le nombre d'instances.
+2. Les données par instance passent par un vertex buffer en `stepMode: 'instance'` ; `arrayStride`/`offset` sont **en octets**, et une `mat4x4` = 4 attributs `float32x4`.
+3. `drawIndexedIndirect(buffer, offset)` lit les paramètres depuis un `GPUBuffer` (flag `INDIRECT`) : le GPU décide combien dessiner (culling en compute).
+4. Le format indirect est fixe : `[indexCount, instanceCount, firstIndex, baseVertex, firstInstance]` (indexé, 20 octets).
+5. Render to texture (`RENDER_ATTACHMENT | TEXTURE_BINDING`) permet le **multi-pass** : passe A écrit une texture, passe B la relit — base du post-traitement et du deferred.
+6. Les **timestamp queries** (feature `'timestamp-query'`, `timestampWrites`, `resolveQuerySet`) mesurent le temps **GPU** en nanosecondes, lu en `BigUint64Array` ; le CPU ne le mesure pas.
+7. Le MSAA aligne trois choses : `multisample.count` du pipeline, `sampleCount` du `view`, et un `resolveTarget` mono-échantillon.
+8. Buffer pooling et ring buffer d'uniforms (dynamic offsets alignés sur `minUniformBufferOffsetAlignment`) réduisent allocations et changements d'état.
+
+---
+
+## 7. Seeds Anki
+
+```
+En WebGPU, comment dessine-t-on 5000 copies d'un mesh en un seul draw call ?|Instancing : le dernier argument de drawIndexed(indexCount, instanceCount) est le nombre d'instances. Les données par instance passent par un vertex buffer déclaré stepMode: 'instance' (le curseur avance une fois par instance, pas par sommet).
+Dans un vertex buffer layout, en quelle unité sont arrayStride et les offset d'attributs ?|En OCTETS, jamais en floats. vec3+f32+vec4 par instance = 8 floats = 32 octets de stride ; offset de la couleur = 4*4 = 16 octets. Se tromper d'unité décale toutes les instances sans erreur.
+Comment passe-t-on une mat4x4 comme donnée par instance dans un vertex buffer ?|En 4 attributs float32x4 à des shaderLocation consécutifs (un attribut ne peut pas dépasser un vec4), reconstruits dans le shader en mat4x4f(col0, col1, col2, col3). Le format float32x16 n'existe pas.
+À quoi sert drawIndexedIndirect et quel est le format de son buffer ?|Il lit les paramètres du draw depuis un GPUBuffer (flag GPUBufferUsage.INDIRECT) au lieu des arguments JS : un compute shader peut décider quoi dessiner (culling GPU). Format fixe = 5 u32 : [indexCount, instanceCount, firstIndex, baseVertex, firstInstance] (20 octets).
+Comment fait-on du rendu multi-pass (render to texture) en WebGPU ?|On crée une texture avec usage RENDER_ATTACHMENT | TEXTURE_BINDING : la passe A la vise comme colorAttachment (écrit dedans), la passe B la lit via un bind group. Base du post-traitement et du deferred rendering.
+Comment mesure-t-on le temps GPU réel d'une passe de rendu ?|Timestamp queries : demander la feature 'timestamp-query' à la création du device, ajouter timestampWrites {querySet, beginningOfPassWriteIndex, endOfPassWriteIndex} à la passe, puis resolveQuerySet → copyBufferToBuffer → mapAsync. Valeurs en nanosecondes (uint64), lues en BigUint64Array. performance.now() ne mesure que le CPU.
+Quelles trois choses doivent s'aligner pour activer le MSAA en WebGPU ?|(1) le pipeline déclare multisample: { count: 4 } ; (2) la texture du view a sampleCount: 4 (multi-échantillon) ; (3) le colorAttachment fournit un resolveTarget dont la texture a sampleCount: 1 (le canvas). Oublier le resolveTarget = rien à l'écran.
+Pourquoi utiliser un ring buffer d'uniforms avec dynamic offsets plutôt que N uniform buffers ?|Un seul gros buffer + un offset dynamique par objet évite de créer N petits buffers (moins d'allocations, moins de bind groups). Les dynamic offsets doivent être multiples de device.limits.minUniformBufferOffsetAlignment (souvent 256), pas de la taille réelle des données.
+```
+
+---
+
+## Pont vers le lab
+
+> Lab associé : `labs/lab-12-webgpu-avance/README.md`. Rendre des milliers de marqueurs instanciés dans un `<canvas>` WebGPU (Chrome) — buffer d'instances, `drawIndexed` instancié, et mesure du coût GPU par timestamp queries. Corrigé HTML/TS + WGSL commenté.

@@ -1,897 +1,380 @@
-# 00 — Prérequis & Introduction à la 3D Web
-
-<!-- nav-cours-précédent -->
-
-> **Cours précédent** : [React Native](../../19-react-native/modules/27-projet-final.md). Si tu arrives ici sans avoir fait les cours précédents, consulte le [guide de démarrage](../../GUIDE-DEMARRAGE.md).
-
-| Difficulte | Duree estimee | Lab |                     Quiz                     |
-| :--------: | :-----------: | :-: | :------------------------------------------: |
-|    1/5     |    60 min     | --  | [Quiz 00](../quizzes/quiz-00-prerequis.html) |
-
-## Objectifs pedagogiques
-
-A la fin de ce module, vous serez capable de :
-
-- Situer WebGL, WebGPU et Three.js dans l'ecosysteme 3D web
-- Expliquer pourquoi le GPU est utilise pour le rendu graphique (parallelisme massif)
-- Decrire l'architecture d'un GPU (cores, warps, mémoire)
-- Comparer la philosophie CPU (latence) vs GPU (throughput)
-- Configurer un projet de base avec un canvas HTML et `requestAnimationFrame`
-- Gérer le device pixel ratio pour un rendu net sur ecrans HiDPI
-
+---
+titre: Prérequis & introduction à la 3D temps réel
+cours: 20-webgpu-3d
+notions:
+  - "3D temps réel (60 fps, boucle de rendu)"
+  - "rôle du GPU (parallélisme SIMD, throughput vs latence)"
+  - "aperçu du pipeline de rendu (vertex → rasterisation → fragment)"
+  - "WebGL vs WebGPU vs Three.js"
+  - "feature-detection navigator.gpu"
+  - "canvas + requestAnimationFrame + devicePixelRatio"
+  - "prérequis JS/TS et maths pour la suite du cours"
+outcomes:
+  - sait expliquer pourquoi le GPU est utilisé pour le rendu 3D (throughput vs latence)
+  - sait situer WebGL, WebGPU et Three.js et choisir la bonne couche selon le besoin
+  - sait décrire les grandes étapes d'un pipeline de rendu
+  - sait détecter le support WebGPU d'un navigateur et initialiser un canvas
+  - connaît la carte du cours et les prérequis JS/TS + maths attendus
+prerequis: []
+next: 01-algebre-lineaire-pour-la-3d
+libs: []
+tribuzen: "feature 3D TribuZen — globe/carte interactif des sorties de la famille (fil rouge du cours)"
+last-reviewed: 2026-07
 ---
 
-## Prérequis techniques
+# Prérequis & introduction à la 3D temps réel
 
-### TypeScript (bases)
+> **Outcomes — tu sauras FAIRE :** expliquer pourquoi le rendu 3D passe par le GPU, situer WebGL/WebGPU/Three.js, décrire les étapes d'un pipeline de rendu, détecter le support WebGPU et initialiser un canvas.
+> **Difficulté :** :star:
+>
+> **Portée :** ce module est la porte d'entrée du cours. Il pose le vocabulaire (GPU, pipeline, temps réel) et l'écosystème, sans encore écrire de shader. L'algèbre linéaire est le **module 01**, le pipeline en détail le **module 04**, WebGPU/WGSL le **module 09**, Three.js le **module 13**.
 
-Vous devez etre a l'aise avec les memes fondamentaux que pour un projet Vue.js :
+## 1. Cas concret d'abord
 
-```typescript
-// Vous devez comprendre ce code sans difficulte
-interface Vertex {
-  position: [number, number, number];
-  color: [number, number, number, number];
-  uv: [number, number];
-}
+Le fil rouge de ce cours est une feature 3D pour **TribuZen** : un **globe interactif** qui affiche les sorties passées et à venir de la famille. Chaque sortie est un point sur le globe ; on peut faire tourner la sphère à la souris, survoler un point pour voir le titre de la sortie, et cliquer pour ouvrir le détail.
 
-type BufferUsage = "vertex" | "index" | "uniform";
-
-async function loadShader(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Shader not found: ${url}`);
-  return response.text();
-}
-
-// Generics — vous les connaissez deja avec Ref<T>, ComputedRef<T>
-class TypedBuffer<T extends Float32Array | Uint16Array> {
-  constructor(
-    public readonly data: T,
-    public readonly usage: BufferUsage,
-  ) {}
-
-  get byteLength(): number {
-    return this.data.byteLength;
-  }
-}
-```
-
-### HTML Canvas
+Voici le squelette qu'un collègue a posé dans la page `FamilyGlobe.vue` :
 
 ```html
-<!-- Vous devez savoir manipuler un canvas -->
-<canvas id="gl-canvas" width="800" height="600"></canvas>
+<!-- FamilyGlobe — on veut un globe 3D tournant ici -->
+<canvas id="family-globe" width="640" height="640"></canvas>
 
 <script>
-  const canvas = document.getElementById("gl-canvas");
-  const ctx = canvas.getContext("2d"); // On passera a 'webgl2' et 'webgpu'
-  ctx.fillStyle = "#ff0000";
-  ctx.fillRect(10, 10, 100, 100);
+  const canvas = document.getElementById('family-globe')
+  const ctx = canvas.getContext('2d') // ← contexte 2D : impossible d'afficher une sphère éclairée qui tourne à 60 fps
+  ctx.beginPath()
+  ctx.arc(320, 320, 200, 0, Math.PI * 2)
+  ctx.fill() // un simple disque plat — pas de 3D, pas de profondeur, pas de lumière
 </script>
 ```
 
-### Environnement
+**Trois problèmes que le contexte `2d` ne peut pas résoudre :**
 
-- **Node.js** >= 20.0.0
-- **pnpm** (gestionnaire de paquets)
-- **VS Code** avec les extensions : WGSL (WebGPU Shading Language), glsl-literal
-- **Navigateur** : Chrome 113+ (WebGPU) ou Firefox 141+
+1. **Pas de 3D.** Le contexte `2d` dessine des formes plates. Un globe demande de la profondeur (depth), de la perspective et une caméra — ça se calcule avec des matrices, sur le GPU.
+2. **Pas de parallélisme.** Éclairer chaque pixel du globe 60 fois par seconde, c'est des millions de calculs par frame. Le CPU seul ne tient pas le temps réel ; il faut le GPU.
+3. **Mauvaise couche.** Pour un globe interactif, on veut soit **Three.js** (rapide à écrire), soit **WebGPU** (contrôle bas niveau). Le choix dépend du besoin — c'est justement ce que ce module te permet de trancher.
 
----
-
-## Installation & Setup
-
-### 1. Cloner le depot
-
-```bash
-git clone https://github.com/votre-org/webgpu-3d-course.git
-cd webgpu-3d-course
-```
-
-### 2. Installer les dépendances
-
-```bash
-pnpm install
-```
-
-### 3. Vérifier l'installation
-
-```bash
-# Lancer la documentation interactive
-pnpm docs:dev
-
-# Lancer un lab de test
-pnpm tsx labs/test-utils.ts
-```
-
-### 4. Structure du projet
-
-```
-webgpu-3d-course/
-├── modules/          # Modules de cours (theorie)
-├── labs/             # Labs pratiques (exercice + solution)
-├── quizzes/          # Quiz d'auto-evaluation
-├── visualizations/   # Demos interactives HTML
-├── screencasts/      # Captures video
-├── scripts/          # Utilitaires de build
-├── package.json
-└── tsconfig.json
-```
+Ce module te donne la carte pour comprendre pourquoi, et par quelle porte entrer.
 
 ---
 
-## L'ecosysteme 3D Web : timeline
+## 2. Théorie complète, concise
+
+### 2.1 « Temps réel », concrètement
+
+Le rendu 3D temps réel signifie produire une nouvelle image (**frame**) assez vite pour que l'œil perçoive un mouvement fluide. La cible usuelle est **60 fps**, soit **une frame toutes les ~16,7 ms** (`1000 / 60`). Sur écran 120 Hz, la fenêtre tombe à ~8,3 ms.
+
+Chaque frame, on recommence tout : effacer l'écran, positionner les objets, les éclairer, les dessiner. C'est une **boucle** pilotée par `requestAnimationFrame`, synchronisée sur le rafraîchissement de l'écran.
+
+Conséquence directe : le budget par frame est minuscule. Tout ce qui coûte cher doit être fait sur le processeur adapté — le GPU — et préparé une seule fois quand c'est possible.
+
+### 2.2 Pourquoi le GPU : throughput vs latence
+
+Un écran Full HD, c'est **1920 × 1080 ≈ 2,07 millions de pixels**. À 60 fps, il faut calculer une couleur pour chacun ~60 fois par seconde. C'est un problème **massivement parallèle** : chaque pixel est indépendant.
+
+- Un **CPU** a peu de cœurs (4 à 16), très puissants, optimisés pour la **latence** : finir *une* tâche complexe le plus vite possible (branch prediction, gros caches, exécution dans le désordre).
+- Un **GPU** a des **milliers de cœurs simples**, optimisés pour le **throughput** : faire *beaucoup* de tâches identiques en même temps.
+
+Le GPU applique le modèle **SIMD** (*Single Instruction, Multiple Data*) : la **même** instruction s'exécute sur des milliers de données en parallèle. Multiplier 2 millions de nombres prend à peu près le même temps que d'en multiplier un seul, car ils partent tous ensemble.
 
 ```
-EVOLUTION DES APIs 3D WEB
-══════════════════════════════════════════════════════════════════
-
-2011 ──── WebGL 1.0 (basé sur OpenGL ES 2.0)
-│         → Premier acces GPU depuis le navigateur
-│         → API bas-niveau, verbose, a base d'etats globaux
-│
-2017 ──── WebGL 2.0 (basé sur OpenGL ES 3.0)
-│         → Instanced rendering, transform feedback
-│         → 3D textures, multiple render targets
-│         → Toujours la meme API a etats globaux
-│
-2018 ──── Three.js devient le standard de facto
-│         → Abstraction haut-niveau au-dessus de WebGL
-│         → Scene graph, materiaux, lumieres, chargeurs
-│
-2023 ──── WebGPU (W3C Specification)
-│         → API moderne inspiree de Vulkan / Metal / Direct3D 12
-│         → Compute shaders, pipeline explicite
-│         → Meilleure performance multi-thread
-│
-2024+ ─── Three.js WebGPURenderer (production-ready depuis r160+)
-          → Three.js supporte WebGL ET WebGPU comme backend
+CPU  →  peu de cœurs, chacun rapide      →  optimise la LATENCE (une tâche vite)
+GPU  →  des milliers de cœurs simples    →  optimise le THROUGHPUT (tout en parallèle)
 ```
+
+Idée à retenir : le rendu 3D est parfait pour le GPU parce que colorier des millions de pixels, c'est la même opération répétée des millions de fois.
+
+### 2.3 Aperçu du pipeline de rendu
+
+Transformer une liste de points 3D en pixels colorés à l'écran suit un enchaînement d'étapes appelé **pipeline de rendu**. Vue d'avion (le détail est au module 04) :
+
+1. **Vertex** — pour chaque sommet (vertex) de la géométrie, un **vertex shader** calcule sa position finale à l'écran (via les matrices modèle / vue / projection, cours 01 à 03).
+2. **Rasterisation** — le GPU découpe chaque triangle en **fragments** (candidats-pixels) couverts par ce triangle.
+3. **Fragment** — pour chaque fragment, un **fragment shader** calcule une couleur (lumière, texture, matériau — cours 05).
+4. **Tests & sortie** — le **depth test** garde le fragment le plus proche de la caméra ; le résultat est écrit dans l'image affichée.
+
+```
+Géométrie (sommets)
+   │  vertex shader  → position écran de chaque sommet
+   ▼
+Triangles → RASTERISATION → fragments (candidats-pixels)
+   │  fragment shader → couleur de chaque fragment
+   ▼
+Depth test → image finale (framebuffer) → écran
+```
+
+Un **shader** est un petit programme qui tourne sur le GPU, exécuté en parallèle sur chaque sommet puis chaque fragment. C'est le cœur de tout le cours.
+
+### 2.4 WebGL vs WebGPU vs Three.js
+
+Trois couches, trois niveaux d'abstraction. Elles ne s'opposent pas : Three.js s'appuie sur WebGL ou WebGPU.
+
+**WebGL** (2011, v2 en 2017) — l'API 3D historique du navigateur, basée sur OpenGL ES. Bas niveau, **à état global mutable** : on lie un buffer à un « slot » global, on le remplit, on le délie. L'ordre des appels compte, et un oubli corrompt le rendu en silence. Shaders en **GLSL**. Supportée partout.
+
+**WebGPU** (spécifiée par le W3C, déployée à partir de 2023) — l'API moderne, inspirée de Vulkan / Metal / Direct3D 12. Bas/moyen niveau, **à descripteurs immutables** : on décrit un objet (buffer, pipeline) à sa création, sans état global caché. Elle apporte les **compute shaders** (calcul GPU générique, GPGPU) et une validation plus stricte. Shaders en **WGSL**.
+
+**Three.js** — une bibliothèque haut niveau *par-dessus* WebGL/WebGPU. Elle fournit un *scene graph* : `Scene`, `Camera`, `Mesh`, `Light`, chargeurs de modèles. Un cube animé tient en ~15 lignes au lieu de ~200 en WebGPU brut.
+
+| Critère | WebGL 2 | WebGPU | Three.js |
+| --- | --- | --- | --- |
+| Niveau | bas | bas / moyen | haut |
+| Modèle d'API | état global mutable | descripteurs immutables | scene graph |
+| Langage shader | GLSL | WGSL | GLSL / WGSL (selon backend) |
+| Compute shaders | non | oui | via WebGPU |
+| Lignes pour un cube | ~200 | ~150 | ~15 |
+| Quand l'utiliser | legacy, compat maximale | contrôle & perf, GPGPU | prototypage rapide, apps produit |
+
+Analogie côté front : WebGL/WebGPU sont au rendu ce que le DOM est au web ; Three.js est au rendu ce que Vue est au DOM — tu décris *le quoi*, pas *le comment*.
+
+### 2.5 Support navigateur en 2026
+
+WebGPU exige un **contexte sécurisé (HTTPS)** — `localhost` compte comme sécurisé en développement.
+
+- **Chrome / Edge** : supporté par défaut depuis la **v113** (2023). <!-- FLAG-DOC: vérifié via MDN + caniuse au 2026-07 -->
+- **Safari** : support complet sur **iOS 26** ; support partiel sur Safari desktop (en cours de généralisation). <!-- FLAG-DOC: Safari desktop noté « partiel » sur caniuse au 2026-07 — revérifier -->
+- **Firefox** : encore **désactivé par défaut** dans les versions courantes (drapeau requis). <!-- FLAG-DOC: caniuse au 2026-07 indique Firefox non activé par défaut — revérifier -->
+
+Couverture mondiale ~84 % au moment de la rédaction. **Conclusion pratique :** développer WebGPU sous Chrome/Edge, et **toujours** feature-detecter `navigator.gpu` avec un message de repli propre. Ce cours cible Chrome/Edge pour la partie WebGPU.
+
+### 2.6 Détecter WebGPU et initialiser le canvas
+
+Le socle commun à tout ce cours : détecter le support, obtenir l'adapter puis le device, configurer le canvas.
+
+```ts
+// 1. Feature-detection — navigator.gpu n'existe que si WebGPU est disponible
+//    (et seulement en contexte sécurisé : HTTPS ou localhost)
+if (!navigator.gpu) {
+  throw new Error('WebGPU non supporté — utilise Chrome/Edge 113+ (ou active le drapeau).')
+}
+
+// 2. Adapter = un GPU physique exposé au navigateur
+const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
+if (!adapter) {
+  throw new Error('Aucun adapter GPU disponible.')
+}
+
+// 3. Device = la connexion logique au GPU, par laquelle passe tout le reste
+const device = await adapter.requestDevice()
+
+// 4. Canvas + contexte WebGPU
+const canvas = document.getElementById('family-globe') as HTMLCanvasElement
+const context = canvas.getContext('webgpu')!
+
+// 5. Format optimal pour l'écran de l'utilisateur (ne jamais coder en dur)
+const format = navigator.gpu.getPreferredCanvasFormat()
+context.configure({ device, format, alphaMode: 'premultiplied' })
+```
+
+Deux détails de canvas indépendants de WebGPU, mais essentiels :
+
+- **`devicePixelRatio`** : sur un écran Retina (DPR = 2), 1 pixel CSS = 2×2 pixels physiques. Il faut dimensionner le buffer interne du canvas (`canvas.width`) à `taille CSS × DPR`, sinon le rendu est flou.
+- **`requestAnimationFrame` + `deltaTime`** : anime en fonction du **temps écoulé**, pas du numéro de frame. Sinon l'animation va deux fois plus vite sur un écran 120 Hz que sur un 60 Hz.
+
+```ts
+// devicePixelRatio : buffer interne net sur écrans HiDPI
+const dpr = window.devicePixelRatio || 1
+canvas.width = canvas.clientWidth * dpr
+canvas.height = canvas.clientHeight * dpr
+
+// Boucle de rendu synchronisée sur l'écran, animation pilotée par le temps
+let last = performance.now()
+function frame(now: number): void {
+  const deltaTime = (now - last) / 1000 // secondes écoulées depuis la frame précédente
+  last = now
+  // ... rotation du globe = vitesse * deltaTime (indépendant du framerate) ...
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+```
+
+### 2.7 Prérequis JS/TS et maths pour la suite
+
+**JavaScript / TypeScript** attendus :
+- `async` / `await` (obtenir l'adapter et le device est asynchrone).
+- Interfaces, types union, génériques (`Float32Array`, types typés des buffers).
+- **Tableaux typés** : `Float32Array`, `Uint16Array` / `Uint32Array` — c'est le format des données envoyées au GPU.
+
+**Maths** (revues au module 01, aucune connaissance préalable exigée) :
+- Vecteurs 2D/3D/4D, produit scalaire, produit vectoriel.
+- Matrices 4×4 et coordonnées homogènes (transformations, caméra, projection).
+- Trigonométrie de base (`sin`, `cos`) pour les rotations.
+
+Si `async/await` et les tableaux typés te sont familiers, tu as le socle JS/TS. Les maths, on les (re)construit ensemble à partir du module 01.
+
+### Carte du cours (29 modules)
+
+- **Maths & théorie du rendu (01–05)** : algèbre linéaire, transformations & quaternions, caméras & projections, pipeline de rendu, lumière/matériaux/PBR.
+- **WebGL (06–08)** : fondamentaux, shaders/buffers/textures, scène complète.
+- **WebGPU & WGSL (09–12)** : architecture & WGSL, render pipeline & bind groups, compute shaders/GPGPU, WebGPU avancé.
+- **Three.js (13–17)** : fondamentaux, matériaux & lumières, modèles & animations, post-processing, performance.
+- **Rendu avancé & sujets experts (18–27)** : shadow mapping, shaders créatifs, physique, géométrie, ray tracing, GI/SSAO/SSR, volumétrique, WebXR, audio 3D, virtual textures.
+- **Capstone (28)** : une expérience 3D TribuZen complète.
 
 ---
 
-## Analogie : le restaurant 3D
+## 3. Worked examples
 
-:::tip Analogie pour développeurs Vue.js
-Imaginez un **restaurant** :
+### Exemple 1 — Vérifier le support et afficher un canvas coloré (TribuZen)
 
-- **WebGL** = Vous etes le cuisinier, le serveur, et le plongeur. Vous gerez chaque état manuellement (quel couteau est actif, quel plat est en cours). C'est comme coder en JavaScript pur sans framework.
-- **WebGPU** = Vous avez un système de tickets modernes. Vous decrivez ce que vous voulez (un pipeline), et le système optimise l'exécution. C'est comme passer de jQuery à une approche declarative.
-- **Three.js** = Vous etes le chef qui donne des ordres : "je veux une scene avec une lumiere et un cube rouge". Les details sont geres automatiquement. C'est comme Vue.js : vous decrivez le quoi, pas le comment.
-  :::
+Objectif : détecter WebGPU, et si tout va bien, effacer le canvas du globe avec une couleur — première preuve que le GPU dessine. Sinon, afficher un repli lisible.
 
----
+```ts
+// family-globe-check.ts — premier contact GPU pour FamilyGlobe
+async function initGlobeCanvas(canvasId: string): Promise<void> {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement
 
-## WebGL vs WebGPU : comparaison detaillee
-
-### Philosophie d'API
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      WebGL (etat global)                        │
-│                                                                 │
-│  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);     // Etat global    │
-│  gl.bufferData(gl.ARRAY_BUFFER, data, ...);  // Affecte l'etat │
-│  gl.bindBuffer(gl.ARRAY_BUFFER, null);       // Nettoyer       │
-│                                                                 │
-│  → Similaire a un "this" mutable geant                         │
-│  → L'ordre des appels compte enormement                        │
-│  → Bugs subtils si on oublie de restaurer l'etat               │
-├─────────────────────────────────────────────────────────────────┤
-│                      WebGPU (descripteurs)                      │
-│                                                                 │
-│  const buffer = device.createBuffer({                           │
-│    size: 256,                                                   │
-│    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,     │
-│  });                                                            │
-│                                                                 │
-│  → Objets immutables decrits a la creation                     │
-│  → Pas d'etat global, pas d'effets de bord                     │
-│  → Le driver peut optimiser en avance                          │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Comparaison technique
-
-```typescript
-// ── WebGL : creer et remplir un buffer ──────────────────
-function createWebGLBuffer(
-  gl: WebGL2RenderingContext,
-  data: Float32Array,
-): WebGLBuffer {
-  const buffer = gl.createBuffer();
-  if (!buffer) throw new Error("Failed to create buffer");
-
-  // Lier le buffer a un "slot" global
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-
-  // Ecrire les donnees dans le buffer lie
-  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-
-  // Bonne pratique : delier pour eviter les effets de bord
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-  return buffer;
-}
-
-// ── WebGPU : creer et remplir un buffer ─────────────────
-function createWebGPUBuffer(device: GPUDevice, data: Float32Array): GPUBuffer {
-  // Tout est declare dans un descripteur — pas d'etat global
-  const buffer = device.createBuffer({
-    size: data.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    mappedAtCreation: true,
-  });
-
-  // Ecrire les donnees
-  new Float32Array(buffer.getMappedRange()).set(data);
-  buffer.unmap();
-
-  return buffer;
-}
-```
-
-:::warning Point clé
-En WebGL, l'ordre des appels `gl.bindXxx()` / `gl.bindXxx(null)` est critique. Un oubli peut corrompre le rendu de façon silencieuse. WebGPU elimine cette classe entière de bugs.
-:::
-
-### Tableau comparatif
-
-| Critere            | WebGL 2.0                      | WebGPU                                |
-| ------------------ | ------------------------------ | ------------------------------------- |
-| API style          | État global mutable            | Descripteurs immutables               |
-| Shader language    | GLSL ES 3.0                    | WGSL                                  |
-| Compute shaders    | Non                            | Oui                                   |
-| Multi-thread       | Non (un seul thread JS)        | Oui (command buffers)                 |
-| Validation         | Runtime (erreurs silencieuses) | Build-time (erreurs explicites)       |
-| Support navigateur | Tous les navigateurs           | Chrome 113+, Firefox 124+, Safari 18+ |
-| Maturite           | 13 ans, stable                 | Nouveau, en evolution                 |
-| Abstraction        | Bas-niveau                     | Moyen-niveau                          |
-| Inspiration        | OpenGL ES 2.0 / 3.0            | Vulkan / Metal / D3D12                |
-
----
-
-## Three.js : la couche d'abstraction
-
-Three.js est a WebGL/WebGPU ce que Vue.js est au DOM : une abstraction qui vous permet de travailler avec des concepts haut-niveau.
-
-```typescript
-// ── Sans Three.js (WebGL brut) : ~200 lignes pour un cube ──
-
-// 1. Creer le contexte WebGL
-// 2. Compiler les shaders GLSL (vertex + fragment)
-// 3. Lier les shaders en un programme
-// 4. Definir les 36 vertices du cube (6 faces x 2 triangles x 3 vertices)
-// 5. Creer et remplir les buffers (position, couleur, normale)
-// 6. Configurer les attributs de vertex
-// 7. Creer les matrices (model, view, projection)
-// 8. Uploader les matrices comme uniforms
-// 9. Configurer depth test, backface culling
-// 10. Dessiner avec gl.drawArrays ou gl.drawElements
-// ... facilement 200+ lignes
-
-// ── Avec Three.js : ~15 lignes pour le meme cube ──
-import * as THREE from "three";
-
-// Scene = le "template" de votre composant 3D
-const scene = new THREE.Scene();
-
-// Camera = le "viewport" du navigateur
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000,
-);
-camera.position.z = 5;
-
-// Renderer = le "moteur de rendu" (comme le virtual DOM de Vue)
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// Mesh = Geometry + Material (comme un composant = template + style)
-const cube = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
-);
-scene.add(cube);
-
-// Lumiere — sans lumiere, les objets sont noirs
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(5, 5, 5);
-scene.add(light);
-
-// Boucle de rendu = le "render cycle" de Vue
-function animate() {
-  requestAnimationFrame(animate);
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
-  renderer.render(scene, camera);
-}
-animate();
-```
-
-:::tip Analogie Vue.js
-| Vue.js | Three.js |
-|--------|----------|
-| `createApp()` | `new THREE.WebGLRenderer()` |
-| Template HTML | `THREE.Scene` + `THREE.Mesh` |
-| Reactive data | Positions, rotations (mutables) |
-| `watch()` / `computed()` | `requestAnimationFrame` loop |
-| CSS styles | `THREE.Material` |
-| DOM éléments | `THREE.Mesh`, `THREE.Light` |
-| `v-for` rendering | Instanced rendering |
-:::
-
----
-
-## GPU vs CPU : pourquoi le GPU pour le rendu
-
-### Le problème fondamental
-
-Un ecran Full HD contient **1920 x 1080 = 2,073,600 pixels**. A 60 FPS, il faut calculer la couleur de chaque pixel **60 fois par seconde**, soit **~124 millions de calculs de couleur par seconde**.
-
-Un CPU moderne a **8 a 16 cores**. Un GPU a **des milliers de cores**.
-
-```
-CPU vs GPU : architecture
-═══════════════════════════════════════════════════════════
-
-CPU (optimise pour la latence)
-┌──────────────────────────────────────────────┐
-│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐    │
-│  │Core 1│  │Core 2│  │Core 3│  │Core 4│    │  4-16 cores puissants
-│  │ ALU  │  │ ALU  │  │ ALU  │  │ ALU  │    │
-│  │      │  │      │  │      │  │      │    │
-│  └──────┘  └──────┘  └──────┘  └──────┘    │
-│                                              │
-│  ┌──────────────────────────────────────┐    │
-│  │          Grande cache L1/L2/L3       │    │  Cache enorme pour
-│  │          (souvent > 50% de la puce)  │    │  predire et optimiser
-│  └──────────────────────────────────────┘    │
-│                                              │
-│  ┌──────────────────────────────────────┐    │
-│  │   Logique de controle complexe       │    │  Branch prediction,
-│  │   (branch prediction, speculation)   │    │  out-of-order exec
-│  └──────────────────────────────────────┘    │
-└──────────────────────────────────────────────┘
-
-GPU (optimise pour le throughput)
-┌──────────────────────────────────────────────┐
-│  ┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐ │
-│  │SM││SM││SM││SM││SM││SM││SM││SM││SM││SM│ │  Streaming
-│  └──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘ │  Multiprocessors
-│  ┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐ │
-│  │SM││SM││SM││SM││SM││SM││SM││SM││SM││SM│ │  Chaque SM contient
-│  └──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘ │  32-128 "cores"
-│  ┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐ │
-│  │SM││SM││SM││SM││SM││SM││SM││SM││SM││SM│ │  Total: 1000-16000+
-│  └──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘└──┘ │  cores simples
-│                                              │
-│  ┌────────┐  Petite cache, logique simple    │
-│  │ Cache  │  Pas de branch prediction        │
-│  └────────┘  Meme instruction sur N donnees  │
-└──────────────────────────────────────────────┘
-```
-
-### SIMD : Single Instruction, Multiple Data
-
-```typescript
-// Le GPU execute la MEME instruction sur des MILLIERS de donnees en parallele
-
-// ── Sur CPU : traiter les pixels un par un ──────
-function cpuProcessPixels(pixels: Float32Array, brightness: number): void {
-  for (let i = 0; i < pixels.length; i++) {
-    pixels[i] = pixels[i] * brightness; // Un pixel a la fois
-  }
-  // 2M pixels → 2M iterations sequentielles
-}
-
-// ── Sur GPU : traiter les pixels en parallele (pseudo-code) ──
-// Le GPU lance 2M "threads" qui executent TOUS la meme instruction :
-//
-//   @fragment
-//   fn main(@location(0) color: vec4f) -> @location(0) vec4f {
-//     return color * brightness;  // Chaque thread traite 1 pixel
-//   }
-//
-// 2M pixels → ~2M threads paralleles → termine en quelques microsecondes
-```
-
-:::tip Analogie web
-C'est comme la différence entre :
-
-- **CPU** : un serveur Express qui traite les requêtes une par une (même avec de l'async, un seul thread JS)
-- **GPU** : un load balancer qui distribue les requêtes sur 10,000 workers identiques en parallele
-  :::
-
----
-
-## Architecture GPU en detail
-
-### Hiérarchie de calcul
-
-```
-HIERARCHIE D'EXECUTION GPU
-═══════════════════════════════════════════════════════════
-
-GPU
-└── Streaming Multiprocessor (SM) x 30-80
-    └── Warp (NVIDIA) / Wavefront (AMD) = 32 threads
-        └── Thread (= 1 invocation de shader)
-
-Exemple concret (RTX 4070) :
-- 46 SM
-- Chaque SM execute plusieurs warps simultanement
-- Chaque warp = 32 threads en lockstep (SIMD)
-- Total : ~5888 "CUDA cores"
-
-Un fragment shader sur un ecran 1080p :
-- 1920 x 1080 = 2,073,600 fragments
-- Chaque fragment = 1 thread GPU
-- 2,073,600 / 32 = 64,800 warps
-- 64,800 / 46 SM = ~1,409 warps par SM
-- Le scheduler GPU alterne entre les warps pour masquer la latence memoire
-```
-
-### Hiérarchie mémoire GPU
-
-```
-HIERARCHIE MEMOIRE GPU
-═══════════════════════════════════════════════════════════
-
-Rapidite ▲
-         │  ┌─────────────────┐
-         │  │   Registres     │  ~1 cycle    Prive par thread
-         │  │   (32-64 KB/SM) │              Le plus rapide
-         │  └────────┬────────┘
-         │  ┌────────┴────────┐
-         │  │  Shared Memory  │  ~5 cycles   Partage par workgroup
-         │  │  (48-100 KB/SM) │              Programmable
-         │  └────────┬────────┘
-         │  ┌────────┴────────┐
-         │  │   L2 Cache      │  ~30 cycles  Partage par GPU
-         │  │   (4-6 MB)      │
-         │  └────────┬────────┘
-         │  ┌────────┴────────┐
-         │  │     VRAM        │  ~300 cycles Global, grande capacite
-         │  │  (8-24 GB)      │              (textures, buffers)
-         │  └────────┬────────┘
-         │  ┌────────┴────────┐
-         │  │  RAM systeme    │  ~1000+ cyc  Via bus PCIe
-         │  │  (via PCIe)     │              Le plus lent
-         │  └─────────────────┘
-         │
-         └─────────────────────────────────► Capacite
-```
-
-### Le bus PCIe : le goulot d'etranglement
-
-```typescript
-// Le transfert CPU ↔ GPU passe par le bus PCIe
-// PCIe 4.0 x16 : ~25 GB/s theorique, ~15-20 GB/s en pratique
-
-// ❌ Anti-pattern : transferer des donnees a chaque frame
-function renderBad(device: GPUDevice, vertices: Float32Array): void {
-  // A chaque frame, on re-uploade les vertices → bottleneck PCIe
-  const buffer = device.createBuffer({
-    size: vertices.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    mappedAtCreation: true,
-  });
-  new Float32Array(buffer.getMappedRange()).set(vertices);
-  buffer.unmap();
-  // ... draw ...
-}
-
-// ✅ Bonne pratique : uploader une fois, reutiliser
-class StaticMeshBuffer {
-  private buffer: GPUBuffer;
-
-  constructor(device: GPUDevice, vertices: Float32Array) {
-    // Upload une seule fois a l'initialisation
-    this.buffer = device.createBuffer({
-      size: vertices.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      mappedAtCreation: true,
-    });
-    new Float32Array(this.buffer.getMappedRange()).set(vertices);
-    this.buffer.unmap();
-  }
-
-  getBuffer(): GPUBuffer {
-    return this.buffer; // Reutilise a chaque frame — zero transfert PCIe
-  }
-
-  destroy(): void {
-    this.buffer.destroy();
-  }
-}
-```
-
-:::warning Regle d'or
-Minimisez les transferts CPU → GPU par frame. Uploadez les donnees statiques (geometrie, textures) une seule fois. Seules les donnees dynamiques (matrices de transformation, uniforms) doivent etre mises a jour à chaque frame — et elles sont petites (quelques centaines d'octets).
-:::
-
----
-
-## Latence vs Throughput
-
-```
-LATENCE vs THROUGHPUT
-═══════════════════════════════════════════════════════════
-
-CPU : optimise la LATENCE (temps pour UNE tache)
-┌──────────────────────────────────────────────┐
-│                                              │
-│  Tache 1 ████████░░░░░░░░░░░░░░░░░░░░░░░░  │  Rapide pour
-│  Tache 2 ░░░░░░░░████████░░░░░░░░░░░░░░░░  │  UNE tache
-│  Tache 3 ░░░░░░░░░░░░░░░░████████░░░░░░░░  │
-│  Tache 4 ░░░░░░░░░░░░░░░░░░░░░░░░████████  │
-│                                              │
-│  4 taches = 4 unites de temps                │
-└──────────────────────────────────────────────┘
-
-GPU : optimise le THROUGHPUT (nombre de taches par seconde)
-┌──────────────────────────────────────────────┐
-│                                              │
-│  Tache 1    ████████████████████████████████ │  Plus lent pour
-│  Tache 2    ████████████████████████████████ │  UNE tache, mais
-│  Tache 3    ████████████████████████████████ │  toutes en parallele
-│  Tache 4    ████████████████████████████████ │
-│  ...                                         │
-│  Tache 1000 ████████████████████████████████ │
-│                                              │
-│  1000 taches = 1-2 unites de temps           │
-└──────────────────────────────────────────────┘
-```
-
-```typescript
-// Demonstration de la difference latence vs throughput
-
-// CPU : une multiplication est instantanee (~1 nanoseconde)
-function cpuMultiply(a: number, b: number): number {
-  return a * b; // 1 ns
-}
-
-// Mais multiplier 2 millions de nombres prend 2 ms :
-function cpuMultiplyAll(data: Float32Array, factor: number): Float32Array {
-  const result = new Float32Array(data.length);
-  for (let i = 0; i < data.length; i++) {
-    result[i] = data[i] * factor;
-  }
-  return result; // ~2 ms pour 2M elements
-}
-
-// GPU : une multiplication prend ~10 ns (pipeline overhead)
-// Mais multiplier 2 millions de nombres prend aussi ~10 ns
-// car les 2M multiplications s'executent en parallele !
-
-// En WGSL (WebGPU Shading Language) :
-// @compute @workgroup_size(256)
-// fn main(@builtin(global_invocation_id) id: vec3u) {
-//   data[id.x] = data[id.x] * factor;
-// }
-// → 2M threads lances simultanement
-```
-
----
-
-## Setup du projet : le canvas 3D
-
-### Canvas HTML et contexte WebGPU
-
-```typescript
-// ── setup-canvas.ts ─────────────────────────────────────
-
-/**
- * Initialise un canvas avec le bon device pixel ratio.
- *
- * Le device pixel ratio (DPR) est le rapport entre pixels CSS et pixels physiques.
- * - Ecran standard : DPR = 1 (1 pixel CSS = 1 pixel physique)
- * - Ecran Retina : DPR = 2 (1 pixel CSS = 4 pixels physiques)
- * - Smartphones : DPR = 2.5 a 3
- */
-function setupCanvas(canvasId: string): {
-  canvas: HTMLCanvasElement;
-  width: number;
-  height: number;
-} {
-  const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-  if (!canvas) throw new Error(`Canvas #${canvasId} not found`);
-
-  const dpr = window.devicePixelRatio || 1;
-
-  // Taille CSS (ce que l'utilisateur voit)
-  const displayWidth = canvas.clientWidth;
-  const displayHeight = canvas.clientHeight;
-
-  // Taille du buffer interne (pixels reels)
-  canvas.width = displayWidth * dpr;
-  canvas.height = displayHeight * dpr;
-
-  return {
-    canvas,
-    width: canvas.width,
-    height: canvas.height,
-  };
-}
-
-/**
- * Gere le redimensionnement du canvas.
- * Comme un composant Vue avec un watcher sur la taille de la fenetre.
- */
-function handleResize(
-  canvas: HTMLCanvasElement,
-  onResize: (width: number, height: number) => void,
-): () => void {
-  const observer = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      const dpr = window.devicePixelRatio || 1;
-      const width = entry.contentRect.width * dpr;
-      const height = entry.contentRect.height * dpr;
-
-      canvas.width = width;
-      canvas.height = height;
-      onResize(width, height);
-    }
-  });
-
-  observer.observe(canvas);
-
-  // Retourne une fonction de cleanup (comme onUnmounted en Vue)
-  return () => observer.disconnect();
-}
-```
-
-### requestAnimationFrame : la boucle de rendu
-
-```typescript
-// ── render-loop.ts ──────────────────────────────────────
-
-/**
- * Boucle de rendu avec delta time.
- *
- * Analogue au "reactive system" de Vue :
- * - Vue re-rend quand les donnees changent (reactif)
- * - La 3D re-rend a chaque frame (60 FPS = toutes les 16.67ms)
- */
-interface RenderContext {
-  /** Temps ecoule depuis le dernier frame (en secondes) */
-  deltaTime: number;
-  /** Temps total depuis le debut (en secondes) */
-  elapsed: number;
-  /** Numero du frame */
-  frame: number;
-}
-
-type RenderCallback = (ctx: RenderContext) => void;
-
-function createRenderLoop(callback: RenderCallback): {
-  start: () => void;
-  stop: () => void;
-} {
-  let animationId: number | null = null;
-  let lastTime = 0;
-  let startTime = 0;
-  let frame = 0;
-
-  function loop(currentTime: number): void {
-    if (startTime === 0) {
-      startTime = currentTime;
-      lastTime = currentTime;
-    }
-
-    const deltaTime = (currentTime - lastTime) / 1000; // ms → secondes
-    const elapsed = (currentTime - startTime) / 1000;
-    lastTime = currentTime;
-    frame++;
-
-    callback({ deltaTime, elapsed, frame });
-
-    animationId = requestAnimationFrame(loop);
-  }
-
-  return {
-    start() {
-      if (animationId !== null) return; // Deja en cours
-      animationId = requestAnimationFrame(loop);
-    },
-    stop() {
-      if (animationId !== null) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-    },
-  };
-}
-
-// ── Utilisation ──────────────────────────────────────────
-const loop = createRenderLoop((ctx) => {
-  // Animer un objet en fonction du temps (pas du framerate)
-  const rotation = ctx.elapsed * Math.PI * 0.5; // 90 degres par seconde
-  console.log(
-    `Frame ${ctx.frame} | dt=${ctx.deltaTime.toFixed(3)}s | rotation=${rotation.toFixed(2)}`,
-  );
-});
-
-loop.start();
-// loop.stop(); // Appeler pour arreter
-```
-
-:::tip Pourquoi deltaTime ?
-Sans deltaTime, votre animation tournerait 2x plus vite sur un ecran 120 Hz que sur un ecran 60 Hz. Toujours multiplier vos vitesses par `deltaTime` pour un mouvement independant du framerate.
-:::
-
-### Initialisation WebGPU complete
-
-```typescript
-// ── init-webgpu.ts ──────────────────────────────────────
-
-interface WebGPUContext {
-  device: GPUDevice;
-  context: GPUCanvasContext;
-  format: GPUTextureFormat;
-  canvas: HTMLCanvasElement;
-}
-
-async function initWebGPU(canvasId: string): Promise<WebGPUContext> {
-  // 1. Verifier le support WebGPU
+  // (1) Feature-detection : sortie propre si WebGPU absent
   if (!navigator.gpu) {
-    throw new Error(
-      "WebGPU non supporte. Utilisez Chrome 113+ ou Firefox 124+.",
-    );
+    canvas.replaceWith(
+      Object.assign(document.createElement('p'), {
+        textContent: 'Globe 3D indisponible : WebGPU non supporté (essaie Chrome/Edge 113+).',
+      }),
+    )
+    return
   }
 
-  // 2. Obtenir l'adapter (= la carte graphique)
-  const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: "high-performance", // Preferer le GPU dedie
-  });
-  if (!adapter) {
-    throw new Error("Aucun adapter GPU trouve.");
-  }
+  // (2) Adapter puis device
+  const adapter = await navigator.gpu.requestAdapter()
+  if (!adapter) throw new Error('Aucun adapter GPU.')
+  const device = await adapter.requestDevice()
 
-  // 3. Obtenir le device (= la connexion logique au GPU)
-  const device = await adapter.requestDevice({
-    requiredFeatures: [],
-    requiredLimits: {},
-  });
+  // (3) Canvas net sur HiDPI
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = canvas.clientWidth * dpr
+  canvas.height = canvas.clientHeight * dpr
 
-  // Log des capacites
-  console.log("GPU Adapter:", adapter.info);
-  console.log("Max texture size:", device.limits.maxTextureDimension2D);
-  console.log("Max buffer size:", device.limits.maxBufferSize);
+  // (4) Contexte + format
+  const context = canvas.getContext('webgpu')!
+  const format = navigator.gpu.getPreferredCanvasFormat()
+  context.configure({ device, format, alphaMode: 'premultiplied' })
 
-  // 4. Gerer les erreurs GPU
-  device.lost.then((info) => {
-    console.error("GPU device lost:", info.message);
-    if (info.reason !== "destroyed") {
-      // Re-initialiser
-      initWebGPU(canvasId);
-    }
-  });
-
-  // 5. Configurer le canvas
-  const { canvas } = setupCanvas(canvasId);
-  const context = canvas.getContext("webgpu");
-  if (!context) throw new Error("Impossible d'obtenir le contexte WebGPU");
-
-  const format = navigator.gpu.getPreferredCanvasFormat();
-  context.configure({
-    device,
-    format,
-    alphaMode: "premultiplied",
-  });
-
-  return { device, context, format, canvas };
+  // (5) Effacer l'écran avec un bleu « globe » via un render pass
+  const encoder = device.createCommandEncoder()
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: { r: 0.05, g: 0.12, b: 0.28, a: 1 }, // bleu nuit
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+  })
+  pass.end()
+  device.queue.submit([encoder.finish()]) // envoi des commandes au GPU
 }
+
+initGlobeCanvas('family-globe').catch(console.error)
+```
+
+Ce qu'on a prouvé : le navigateur supporte WebGPU, on a un device, et le GPU a effacé le canvas avec une couleur. C'est le « Hello World » du rendu — le triangle et la sphère viendront aux modules 09+.
+
+### Exemple 2 — Choisir la couche pour le globe TribuZen
+
+On a trois besoins de globe possibles. Quelle couche pour chacun ?
+
+| Besoin | Couche recommandée | Pourquoi |
+| --- | --- | --- |
+| Prototype rapide, sphère texturée + points cliquables | **Three.js** | scene graph, chargeurs, raycasting prêts à l'emploi — ~30 lignes |
+| Effet visuel signature (atmosphère, halo custom) | **WebGPU** (ou shader Three.js) | contrôle du fragment shader, WGSL |
+| Simulation des trajets de sorties (des milliers de points animés) | **WebGPU compute** | GPGPU : calcul des positions sur le GPU, hors de portée de WebGL |
+
+Décision produit pour TribuZen : commencer le globe en **Three.js** (rapidité de mise en prod), puis descendre en **WebGPU** pour les effets et la simulation quand le besoin apparaît. C'est exactement l'ordre du cours.
+
+---
+
+## 4. Pièges & misconceptions
+
+### PIÈGE #1 — « WebGPU remplace WebGL, donc j'ignore WebGL »
+
+Faux en 2026 : WebGPU n'est pas activé par défaut partout (Firefox, Safari desktop). WebGL reste le socle de compatibilité maximale, et ses concepts (buffers, shaders, draw calls) se transposent à WebGPU. On apprend **les deux** — WebGL d'abord (06–08) pour les fondamentaux, WebGPU ensuite (09+).
+
+### PIÈGE #2 — « Three.js, c'est de la triche / pas de la vraie 3D »
+
+Three.js *est* de la vraie 3D : il produit exactement les mêmes appels WebGL/WebGPU que tu écrirais à la main. Mais l'utiliser sans comprendre la couche en dessous mène à des bugs de perf et de rendu qu'on ne sait pas diagnostiquer. D'où l'ordre du cours : la couche basse d'abord, l'abstraction ensuite.
+
+### PIÈGE #3 — Oublier la feature-detection `navigator.gpu`
+
+```ts
+// ❌ Plante avec "Cannot read properties of undefined" si WebGPU absent
+const adapter = await navigator.gpu.requestAdapter()
+
+// ✅ Détecter d'abord, prévoir un repli
+if (!navigator.gpu) {
+  showFallback() // message, image statique, ou bascule WebGL
+  return
+}
+const adapter = await navigator.gpu.requestAdapter()
+```
+
+`navigator.gpu` est `undefined` si le navigateur ne supporte pas WebGPU **ou** si la page n'est pas en HTTPS/localhost. Toujours tester avant d'appeler `requestAdapter`.
+
+### PIÈGE #4 — Confondre `adapter` et `device`
+
+L'**adapter** représente un GPU physique disponible (`requestAdapter`). Le **device** est la connexion logique par laquelle on crée buffers, pipelines et on soumet des commandes (`adapter.requestDevice()`). On demande l'adapter *une fois*, puis le device *à partir de l'adapter* — jamais l'inverse. Tout le reste du travail passe par le `device`.
+
+### PIÈGE #5 — Canvas flou : ignorer `devicePixelRatio`
+
+Dimensionner le canvas uniquement en CSS (ou via les attributs `width`/`height` fixes) donne un rendu flou sur écran Retina. Le buffer interne (`canvas.width`) doit valoir `taille CSS × devicePixelRatio`. La taille CSS reste, elle, en pixels logiques.
+
+### PIÈGE #6 — Animer sans `deltaTime`
+
+Incrémenter une rotation d'une constante par frame (`rotation += 0.01`) fait tourner l'objet **deux fois plus vite** sur un écran 120 Hz que sur un 60 Hz. Il faut multiplier la vitesse par `deltaTime` (temps écoulé depuis la frame précédente) pour un mouvement indépendant du framerate.
+
+---
+
+## 5. Ancrage TribuZen
+
+Le fil rouge de ce cours est le **globe interactif des sorties de la famille** dans TribuZen : `FamilyGlobe.vue`. Chaque module ajoute une couche à cette feature.
+
+- **Ce module** pose la fondation : détecter WebGPU, initialiser le canvas du globe, choisir la couche (Three.js pour démarrer, WebGPU pour les effets).
+- Les **maths (01–03)** serviront à positionner les points de sortie sur la sphère et à faire tourner la caméra.
+- Le **pipeline & la lumière (04–05)** donneront au globe son relief et son éclairage.
+- **Three.js (13+)** construira la première version jouable ; **WebGPU (09+)** l'atmosphère et la simulation des trajets.
+
+Fichiers cibles dans `smaurier/tribuzen` :
+
+```
+tribuzen/
+  src/
+    components/
+      globe/
+        FamilyGlobe.vue        ← le canvas + la boucle de rendu (ce module)
+        useWebGPUSupport.ts     ← composable de feature-detection navigator.gpu
+```
+
+> Le globe restera un **composant Vue** dont le `<template>` contient un `<canvas>` ; toute la 3D vit dans le `<script setup>` et se branche sur le cycle de vie (`onMounted` pour démarrer la boucle, `onUnmounted` pour l'arrêter).
+
+---
+
+## 6. Points clés
+
+1. **Temps réel** = produire une frame toutes les ~16,7 ms (60 fps), dans une boucle `requestAnimationFrame`.
+2. Le **GPU** est choisi pour son **throughput** (des milliers de cœurs, modèle SIMD), là où le CPU optimise la **latence**.
+3. Le **pipeline de rendu** enchaîne : vertex shader → rasterisation → fragment shader → depth test → image.
+4. **WebGL** (état global, GLSL) < **WebGPU** (descripteurs immutables, WGSL, compute) < **Three.js** (scene graph haut niveau).
+5. En 2026, WebGPU est par défaut sur **Chrome/Edge 113+** ; Firefox et Safari desktop restent partiels — **feature-detecter `navigator.gpu`** et prévoir un repli.
+6. Initialisation WebGPU : `navigator.gpu` → `requestAdapter` → `requestDevice` → `canvas.getContext('webgpu')` → `configure({ device, format })`.
+7. **`devicePixelRatio`** pour un canvas net, **`deltaTime`** pour une animation indépendante du framerate.
+8. Prérequis : `async/await`, tableaux typés (`Float32Array`), et les maths 3D revues au module 01.
+
+---
+
+## 7. Seeds Anki
+
+```
+Pourquoi utilise-t-on le GPU plutôt que le CPU pour le rendu 3D ?|Le rendu est massivement parallèle (millions de pixels indépendants). Le GPU a des milliers de cœurs simples optimisés pour le throughput (modèle SIMD), là où le CPU optimise la latence avec peu de cœurs puissants.
+Que signifie "temps réel" en 3D et quel est le budget par frame à 60 fps ?|Produire une nouvelle image assez vite pour un mouvement fluide. À 60 fps, le budget est de ~16,7 ms par frame (1000/60), dans une boucle requestAnimationFrame.
+Quelles sont les grandes étapes du pipeline de rendu ?|Vertex shader (position écran de chaque sommet) → rasterisation (triangles en fragments) → fragment shader (couleur de chaque fragment) → depth test → écriture dans l'image finale.
+Différence entre WebGL, WebGPU et Three.js ?|WebGL : API bas niveau à état global mutable (GLSL). WebGPU : API moderne à descripteurs immutables, avec compute shaders (WGSL). Three.js : bibliothèque haut niveau (scene graph) par-dessus WebGL/WebGPU.
+Comment détecter le support WebGPU d'un navigateur ?|Tester if (!navigator.gpu) — navigator.gpu est undefined si WebGPU absent ou si la page n'est pas en contexte sécurisé (HTTPS/localhost). Puis requestAdapter peut aussi renvoyer null.
+Quelle est la différence entre un adapter et un device en WebGPU ?|L'adapter représente un GPU physique (navigator.gpu.requestAdapter). Le device est la connexion logique obtenue via adapter.requestDevice() ; tout le travail (buffers, pipelines, commandes) passe par le device.
+Pourquoi tenir compte de devicePixelRatio pour un canvas ?|Sur écran HiDPI/Retina (DPR ≥ 2), 1 pixel CSS = plusieurs pixels physiques. Le buffer interne (canvas.width) doit valoir taille CSS × devicePixelRatio, sinon le rendu est flou.
+Pourquoi multiplier les vitesses d'animation par deltaTime ?|Pour rendre le mouvement indépendant du framerate. Sans deltaTime, l'animation va deux fois plus vite sur un écran 120 Hz que sur un 60 Hz.
 ```
 
 ---
 
-## Exercice pratique
+## Pont vers le lab
 
-### Enonce
-
-Creez une page HTML avec un canvas qui :
-
-1. S'initialise avec le bon device pixel ratio
-2. Affiche les informations du GPU dans la console
-3. Lance une boucle de rendu qui efface le canvas avec une couleur qui change dans le temps
-
-<details>
-<summary>Voir la solution</summary>
-
-```typescript
-// ── exercice-00-solution.ts ─────────────────────────────
-
-async function main(): Promise<void> {
-  // Initialisation
-  const { device, context, format, canvas } = await initWebGPU("gl-canvas");
-
-  console.log("Canvas size:", canvas.width, "x", canvas.height);
-  console.log("Preferred format:", format);
-
-  // Boucle de rendu
-  const loop = createRenderLoop((ctx) => {
-    // Couleur qui oscille dans le temps
-    const r = Math.sin(ctx.elapsed * 0.5) * 0.5 + 0.5;
-    const g = Math.sin(ctx.elapsed * 0.7 + 1.0) * 0.5 + 0.5;
-    const b = Math.sin(ctx.elapsed * 0.3 + 2.0) * 0.5 + 0.5;
-
-    // Obtenir la texture de sortie (le "back buffer")
-    const textureView = context.getCurrentTexture().createView();
-
-    // Creer un command encoder (comme un batch de commandes)
-    const encoder = device.createCommandEncoder();
-
-    // Creer un render pass qui efface le canvas
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: textureView,
-          clearValue: { r, g, b, a: 1.0 },
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    });
-    pass.end();
-
-    // Soumettre les commandes au GPU
-    device.queue.submit([encoder.finish()]);
-  });
-
-  loop.start();
-
-  // Gerer le redimensionnement
-  handleResize(canvas, (width, height) => {
-    console.log("Resized to:", width, "x", height);
-  });
-}
-
-main().catch(console.error);
-```
-
-</details>
-
----
-
-## Résumé
-
-| Concept               | Explication                                                       |
-| --------------------- | ----------------------------------------------------------------- |
-| WebGL                 | API 3D web basee sur OpenGL ES, état global mutable, mature       |
-| WebGPU                | API 3D web moderne, descripteurs immutables, compute shaders      |
-| Three.js              | Abstraction haut-niveau (scene graph) au-dessus de WebGL/WebGPU   |
-| GPU cores             | Des milliers de cores simples, optimises pour le parallelisme     |
-| SIMD                  | Une instruction executee sur des milliers de donnees en parallele |
-| Warp/Wavefront        | Groupe de 32 threads GPU exécutant la même instruction            |
-| VRAM                  | Mémoire dediee du GPU, rapide mais limitee (8-24 GB)              |
-| Bus PCIe              | Goulot d'etranglement pour les transferts CPU ↔ GPU               |
-| Latence vs Throughput | CPU optimise la latence, GPU optimise le throughput               |
-| Device Pixel Ratio    | Rapport pixels CSS / pixels physiques (Retina = 2)                |
-| requestAnimationFrame | Synchronise le rendu avec le taux de rafraichissement ecran       |
-| deltaTime             | Temps entre deux frames, crucial pour des animations fluides      |
-
----
-
-## Pour aller plus loin
-
-- [WebGPU Specification (W3C)](https://www.w3.org/TR/webgpu/)
-- [WebGPU Fundamentals](https://webgpufundamentals.org/)
-- [Three.js Documentation](https://threejs.org/docs/)
-- [GPU Gems (NVIDIA)](https://developer.nvidia.com/gpugems/gpugems/contributors)
-- [Life of a triangle (Fabian Giesen)](https://fgiesen.wordpress.com/2011/07/09/a-trip-through-the-graphics-pipeline-2011-part-1/)
-
----
-
-<!-- parcours-recommande -->
-
-::: tip Parcours recommandé
-
-1. **Screencast** : [screencast 00 prérequis](../screencasts/screencast-00-prerequis.md)
-2. **Lab** : [lab-00-maths-prereq](../labs/lab-00-maths-prereq/README)
-3. **Quiz** : [quiz 00 prérequis](../quizzes/quiz-00-prerequis.html)
-   :::
+> Lab associé : `labs/lab-00-prerequis-et-introduction/README.md`. Vérifier le support WebGPU du navigateur et afficher un premier canvas piloté par le GPU — dans un vrai navigateur (Chrome/Edge), sans harnais. Corrigé complet commenté + variante J+30.
